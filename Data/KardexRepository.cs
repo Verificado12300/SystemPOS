@@ -38,6 +38,10 @@ namespace SistemaPOS.Data
             public decimal CostoMovimiento { get; set; }
             public string Observacion { get; set; }
             public string UsuarioNombre { get; set; }
+            public int OrdenTipo { get; set; }
+            public int ReferenciaID { get; set; }
+            public int ReferenciaDetalleID { get; set; }
+            public string PresentacionInfo { get; set; }
         }
 
         public static List<dynamic> ListarProductos()
@@ -69,11 +73,20 @@ namespace SistemaPOS.Data
             var movimientos = ObtenerMovimientosRaw(productoID, fechaHasta);
             var desde = fechaDesde?.Date;
             var estados = new Dictionary<int, KardexEstado>();
+            var costosSalidaAplicados = new Dictionary<string, decimal>();
             var resultado = new List<KardexMovimiento>();
             bool usarPeps = string.Equals(metodoValorizacion, "PEPS", StringComparison.OrdinalIgnoreCase);
 
             foreach (var m in movimientos)
             {
+                if (string.Equals(m.TipoMovimiento, "ANULACION_VENTA", StringComparison.OrdinalIgnoreCase))
+                {
+                    var keyAnulacion = BuildSalidaKey(m);
+                    decimal costoSalidaAplicado;
+                    if (costosSalidaAplicados.TryGetValue(keyAnulacion, out costoSalidaAplicado) && costoSalidaAplicado > 0)
+                        m.CostoUnitario = costoSalidaAplicado;
+                }
+
                 var estado = ObtenerEstado(estados, m.ProductoID);
                 var stockAnterior = estado.Stock;
 
@@ -81,6 +94,9 @@ namespace SistemaPOS.Data
                 decimal costoMovimiento;
                 AplicarMovimiento(estado, m, usarPeps, out costoUnitarioAplicado, out costoMovimiento);
                 var stockPosterior = estado.Stock;
+
+                if (string.Equals(m.TipoMovimiento, "VENTA", StringComparison.OrdinalIgnoreCase) && m.Salida > 0)
+                    costosSalidaAplicados[BuildSalidaKey(m)] = costoUnitarioAplicado;
 
                 if (desde.HasValue && m.FechaHora.Date < desde.Value)
                 {
@@ -105,7 +121,8 @@ namespace SistemaPOS.Data
                     StockAnterior = stockAnterior,
                     StockPosterior = stockPosterior,
                     Observacion = m.Observacion,
-                    UsuarioNombre = m.UsuarioNombre
+                    UsuarioNombre = m.UsuarioNombre,
+                    PresentacionInfo = m.PresentacionInfo
                 });
             }
 
@@ -231,17 +248,33 @@ namespace SistemaPOS.Data
                             CostoUnitario = ToDecimal(reader.GetValue(9)),
                             CostoMovimiento = ToDecimal(reader.GetValue(10)),
                             Observacion = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
-                            UsuarioNombre = reader.IsDBNull(12) ? string.Empty : reader.GetString(12)
+                            UsuarioNombre = reader.IsDBNull(12) ? string.Empty : reader.GetString(12),
+                            OrdenTipo = Convert.ToInt32(reader.GetValue(13)),
+                            ReferenciaID = Convert.ToInt32(reader.GetValue(14)),
+                            ReferenciaDetalleID = Convert.ToInt32(reader.GetValue(15)),
+                            PresentacionInfo = reader.FieldCount > 16 && !reader.IsDBNull(16) ? reader.GetString(16) : string.Empty
                         });
                     }
                 }
             }
 
             return lista
-                .OrderBy(x => x.ProductoNombre)
-                .ThenBy(x => x.FechaHora)
-                .ThenBy(x => x.TipoMovimiento)
+                .OrderBy(x => x.FechaHora)
+                .ThenBy(x => x.OrdenTipo)
+                .ThenBy(x => x.ReferenciaID)
+                .ThenBy(x => x.ReferenciaDetalleID)
+                .ThenBy(x => x.ProductoNombre)
                 .ToList();
+        }
+
+        private static string BuildSalidaKey(MovimientoRaw movimiento)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0}|{1}|{2}",
+                movimiento.ProductoID,
+                movimiento.ReferenciaID,
+                movimiento.ReferenciaDetalleID);
         }
 
         private static string BuildQuery()
@@ -258,15 +291,26 @@ namespace SistemaPOS.Data
                         c.NumeroCompra AS Documento,
                         cd.CantidadUnidadesBase AS Entrada,
                         0 AS Salida,
-                        cd.CostoUnitario AS CostoUnitario,
-                        (cd.CantidadUnidadesBase * cd.CostoUnitario) AS CostoMovimiento,
+                        CASE
+                            WHEN cd.CantidadUnidadesBase > 0 THEN (cd.Subtotal / cd.CantidadUnidadesBase)
+                            ELSE 0
+                        END AS CostoUnitario,
+                        cd.Subtotal AS CostoMovimiento,
                         COALESCE(c.Observaciones, '') AS Observacion,
-                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre
+                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre,
+                        10 AS OrdenTipo,
+                        c.CompraID AS ReferenciaID,
+                        cd.CompraDetalleID AS ReferenciaDetalleID,
+                        CASE WHEN cd.Cantidad > 0 AND prn.Nombre IS NOT NULL
+                            THEN (printf('%g', cd.Cantidad) || ' ' || prn.Nombre)
+                            ELSE '' END AS PresentacionInfo
                     FROM CompraDetalles cd
                     INNER JOIN Compras c ON c.CompraID = cd.CompraID
                     INNER JOIN Productos p ON p.ProductoID = cd.ProductoID
                     INNER JOIN UnidadesBase ub ON ub.UnidadID = p.UnidadBaseID
                     LEFT JOIN Usuarios u ON u.UsuarioID = c.UsuarioID
+                    LEFT JOIN ProductoPresentaciones ppj ON ppj.ProductoPresentacionID = cd.ProductoPresentacionID
+                    LEFT JOIN Presentaciones prn ON prn.PresentacionID = ppj.PresentacionID
                     UNION ALL
 
                     SELECT
@@ -279,16 +323,23 @@ namespace SistemaPOS.Data
                         v.NumeroVenta AS Documento,
                         0 AS Entrada,
                         vd.CantidadUnidadesBase AS Salida,
-                        COALESCE(pp.CostoBase, 0) AS CostoUnitario,
-                        (vd.CantidadUnidadesBase * COALESCE(pp.CostoBase, 0)) AS CostoMovimiento,
+                        0 AS CostoUnitario,
+                        0 AS CostoMovimiento,
                         COALESCE(v.Observaciones, '') AS Observacion,
-                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre
+                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre,
+                        20 AS OrdenTipo,
+                        v.VentaID AS ReferenciaID,
+                        vd.VentaDetalleID AS ReferenciaDetalleID,
+                        CASE WHEN vd.Cantidad > 0 AND prn.Nombre IS NOT NULL
+                            THEN (printf('%g', vd.Cantidad) || ' ' || prn.Nombre)
+                            ELSE '' END AS PresentacionInfo
                     FROM VentaDetalles vd
                     INNER JOIN Ventas v ON v.VentaID = vd.VentaID
                     INNER JOIN Productos p ON p.ProductoID = vd.ProductoID
                     INNER JOIN UnidadesBase ub ON ub.UnidadID = p.UnidadBaseID
-                    LEFT JOIN ProductoPresentaciones pp ON pp.ProductoPresentacionID = vd.ProductoPresentacionID
                     LEFT JOIN Usuarios u ON u.UsuarioID = v.UsuarioID
+                    LEFT JOIN ProductoPresentaciones ppj ON ppj.ProductoPresentacionID = vd.ProductoPresentacionID
+                    LEFT JOIN Presentaciones prn ON prn.PresentacionID = ppj.PresentacionID
                     UNION ALL
 
                     SELECT
@@ -301,15 +352,26 @@ namespace SistemaPOS.Data
                         (c.NumeroCompra || '-ANUL') AS Documento,
                         0 AS Entrada,
                         cd.CantidadUnidadesBase AS Salida,
-                        cd.CostoUnitario AS CostoUnitario,
-                        (cd.CantidadUnidadesBase * cd.CostoUnitario) AS CostoMovimiento,
+                        CASE
+                            WHEN cd.CantidadUnidadesBase > 0 THEN (cd.Subtotal / cd.CantidadUnidadesBase)
+                            ELSE 0
+                        END AS CostoUnitario,
+                        cd.Subtotal AS CostoMovimiento,
                         COALESCE(c.MotivoAnulacion, '') AS Observacion,
-                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre
+                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre,
+                        30 AS OrdenTipo,
+                        c.CompraID AS ReferenciaID,
+                        cd.CompraDetalleID AS ReferenciaDetalleID,
+                        CASE WHEN cd.Cantidad > 0 AND prn.Nombre IS NOT NULL
+                            THEN (printf('%g', cd.Cantidad) || ' ' || prn.Nombre)
+                            ELSE '' END AS PresentacionInfo
                     FROM CompraDetalles cd
                     INNER JOIN Compras c ON c.CompraID = cd.CompraID
                     INNER JOIN Productos p ON p.ProductoID = cd.ProductoID
                     INNER JOIN UnidadesBase ub ON ub.UnidadID = p.UnidadBaseID
                     LEFT JOIN Usuarios u ON u.UsuarioID = c.UsuarioID
+                    LEFT JOIN ProductoPresentaciones ppj ON ppj.ProductoPresentacionID = cd.ProductoPresentacionID
+                    LEFT JOIN Presentaciones prn ON prn.PresentacionID = ppj.PresentacionID
                     WHERE c.Estado = 'ANULADA' AND c.FechaAnulacion IS NOT NULL
 
                     UNION ALL
@@ -324,16 +386,23 @@ namespace SistemaPOS.Data
                         (v.NumeroVenta || '-ANUL') AS Documento,
                         vd.CantidadUnidadesBase AS Entrada,
                         0 AS Salida,
-                        COALESCE(pp.CostoBase, 0) AS CostoUnitario,
-                        (vd.CantidadUnidadesBase * COALESCE(pp.CostoBase, 0)) AS CostoMovimiento,
+                        0 AS CostoUnitario,
+                        0 AS CostoMovimiento,
                         COALESCE(v.MotivoAnulacion, '') AS Observacion,
-                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre
+                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre,
+                        40 AS OrdenTipo,
+                        v.VentaID AS ReferenciaID,
+                        vd.VentaDetalleID AS ReferenciaDetalleID,
+                        CASE WHEN vd.Cantidad > 0 AND prn.Nombre IS NOT NULL
+                            THEN (printf('%g', vd.Cantidad) || ' ' || prn.Nombre)
+                            ELSE '' END AS PresentacionInfo
                     FROM VentaDetalles vd
                     INNER JOIN Ventas v ON v.VentaID = vd.VentaID
                     INNER JOIN Productos p ON p.ProductoID = vd.ProductoID
                     INNER JOIN UnidadesBase ub ON ub.UnidadID = p.UnidadBaseID
-                    LEFT JOIN ProductoPresentaciones pp ON pp.ProductoPresentacionID = vd.ProductoPresentacionID
                     LEFT JOIN Usuarios u ON u.UsuarioID = v.UsuarioID
+                    LEFT JOIN ProductoPresentaciones ppj ON ppj.ProductoPresentacionID = vd.ProductoPresentacionID
+                    LEFT JOIN Presentaciones prn ON prn.PresentacionID = ppj.PresentacionID
                     WHERE v.Estado = 'ANULADA' AND v.FechaAnulacion IS NOT NULL
 
                     UNION ALL
@@ -345,11 +414,15 @@ namespace SistemaPOS.Data
                         ub.Simbolo AS UnidadSimbolo,
                         datetime(a.Fecha) AS FechaHora,
                         CASE
+                            WHEN a.TipoAjuste = 'ENTRADA' AND a.Motivo = 'Stock inicial' THEN 'STOCK_INICIAL'
                             WHEN a.TipoAjuste = 'ENTRADA' THEN 'AJUSTE_ENTRADA'
                             WHEN a.TipoAjuste = 'SALIDA' THEN 'AJUSTE_SALIDA'
                             ELSE 'AJUSTE_CORRECCION'
                         END AS TipoMovimiento,
-                        ('AJ-' || a.AjusteID) AS Documento,
+                        CASE
+                            WHEN a.TipoAjuste = 'ENTRADA' AND a.Motivo = 'Stock inicial' THEN ('INI-' || a.ProductoID)
+                            ELSE ('AJ-' || a.AjusteID)
+                        END AS Documento,
                         CASE
                             WHEN a.TipoAjuste = 'ENTRADA' THEN a.Cantidad
                             WHEN a.TipoAjuste = 'CORRECCION' AND (a.StockNuevo - a.StockAnterior) > 0 THEN (a.StockNuevo - a.StockAnterior)
@@ -360,10 +433,14 @@ namespace SistemaPOS.Data
                             WHEN a.TipoAjuste = 'CORRECCION' AND (a.StockAnterior - a.StockNuevo) > 0 THEN (a.StockAnterior - a.StockNuevo)
                             ELSE 0
                         END AS Salida,
-                        0 AS CostoUnitario,
+                        a.CostoUnitario AS CostoUnitario,
                         0 AS CostoMovimiento,
                         COALESCE(a.Motivo, '') AS Observacion,
-                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre
+                        COALESCE(u.NombreCompleto, '') AS UsuarioNombre,
+                        CASE WHEN a.TipoAjuste = 'ENTRADA' AND a.Motivo = 'Stock inicial' THEN 5 ELSE 50 END AS OrdenTipo,
+                        a.AjusteID AS ReferenciaID,
+                        a.AjusteID AS ReferenciaDetalleID,
+                        '' AS PresentacionInfo
                     FROM Ajustes a
                     INNER JOIN Productos p ON p.ProductoID = a.ProductoID
                     INNER JOIN UnidadesBase ub ON ub.UnidadID = p.UnidadBaseID
@@ -371,7 +448,7 @@ namespace SistemaPOS.Data
                 ) k
                 WHERE (@ProductoID IS NULL OR k.ProductoID = @ProductoID)
                   AND (@FechaHasta IS NULL OR date(k.FechaHora) <= date(@FechaHasta))
-                ORDER BY k.ProductoNombre, datetime(k.FechaHora), k.TipoMovimiento;";
+                ORDER BY datetime(k.FechaHora), k.OrdenTipo, k.ReferenciaID, k.ReferenciaDetalleID, k.ProductoNombre;";
         }
 
         private static DateTime ParseFechaHora(string value)

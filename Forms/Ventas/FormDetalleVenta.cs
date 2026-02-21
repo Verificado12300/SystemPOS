@@ -128,14 +128,18 @@ namespace SistemaPOS.Forms.Ventas
                     var row = dgvDetalleProductos.Rows[index];
 
                     string simbolo = detalle.UnidadSimbolo ?? "";
-                    string cantidadTexto = ((decimal)detalle.CantidadUnidadesBase).ToString("N2")
-                        + (string.IsNullOrEmpty(simbolo) ? "" : " " + simbolo);
+                    decimal cantPres = (decimal)detalle.Cantidad;
+                    decimal cantBase = (decimal)detalle.CantidadUnidadesBase;
+                    string presStr = cantPres == Math.Floor(cantPres) ? $"{(int)cantPres}" : cantPres.ToString("N2");
+                    string baseStr = string.IsNullOrEmpty(simbolo) ? cantBase.ToString("N2") : $"{cantBase:N2} {simbolo}";
 
                     row.Cells["colNumero"].Value = numero++;
                     row.Cells["colProductoDV"].Value = detalle.Producto;
                     row.Cells["colPresentacionDV"].Value = detalle.Presentacion;
-                    row.Cells["colCantidad"].Value = cantidadTexto;
-                    row.Cells["colPrecioUnitario"].Value = "S/ " + ((decimal)detalle.PrecioUnitario).ToString("N2");
+                    row.Cells["colCantidad"].Value = $"{presStr} {detalle.Presentacion}\n({baseStr})";
+                    string presNombreVenta = string.IsNullOrWhiteSpace(detalle.Presentacion?.ToString())
+                        ? "pres." : detalle.Presentacion.ToString();
+                    row.Cells["colPrecioUnitario"].Value = $"S/ {(decimal)detalle.PrecioUnitario:N2} / {presNombreVenta}";
                     row.Cells["colSubTotal"].Value = "S/ " + ((decimal)detalle.Subtotal).ToString("N2");
                 }
             }

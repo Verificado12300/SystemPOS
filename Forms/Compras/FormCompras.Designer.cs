@@ -71,12 +71,17 @@ namespace SistemaPOS.Forms.Compras
             this.colNumero = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colProductoDV = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colPresentacionDV = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colCantidad = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colCantidadPres = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colCantidadBase = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colCostoUnitario = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colSubTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colEliminar = new System.Windows.Forms.DataGridViewImageColumn();
             this.btnAgregarProducto = new System.Windows.Forms.Button();
             this.txtCostoUnitario = new System.Windows.Forms.TextBox();
+            this.txtCostoUnitarioBase = new System.Windows.Forms.TextBox();
+            this.lblCostoUnitarioBase = new System.Windows.Forms.Label();
+            this.txtCantidadBase = new System.Windows.Forms.TextBox();
+            this.lblCantidadBase = new System.Windows.Forms.Label();
             this.lblCostoUnitario = new System.Windows.Forms.Label();
             this.lblCantidad = new System.Windows.Forms.Label();
             this.cmbPresentacion = new System.Windows.Forms.ComboBox();
@@ -348,6 +353,10 @@ namespace SistemaPOS.Forms.Compras
             this.pnlDetalleProducto.Controls.Add(this.lblSubtotal);
             this.pnlDetalleProducto.Controls.Add(this.dgvProductos);
             this.pnlDetalleProducto.Controls.Add(this.btnAgregarProducto);
+            this.pnlDetalleProducto.Controls.Add(this.txtCostoUnitarioBase);
+            this.pnlDetalleProducto.Controls.Add(this.lblCostoUnitarioBase);
+            this.pnlDetalleProducto.Controls.Add(this.txtCantidadBase);
+            this.pnlDetalleProducto.Controls.Add(this.lblCantidadBase);
             this.pnlDetalleProducto.Controls.Add(this.txtCostoUnitario);
             this.pnlDetalleProducto.Controls.Add(this.lblCostoUnitario);
             this.pnlDetalleProducto.Controls.Add(this.lblCantidad);
@@ -386,7 +395,7 @@ namespace SistemaPOS.Forms.Compras
             //
             // cmbBuscarProducto
             //
-            this.cmbBuscarProducto.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbBuscarProducto.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDown;
             this.cmbBuscarProducto.FormattingEnabled = true;
             this.cmbBuscarProducto.Location = new System.Drawing.Point(114, 53);
             this.cmbBuscarProducto.Name = "cmbBuscarProducto";
@@ -424,7 +433,7 @@ namespace SistemaPOS.Forms.Compras
             this.lblCantidad.Name = "lblCantidad";
             this.lblCantidad.Size = new System.Drawing.Size(63, 17);
             this.lblCantidad.TabIndex = 123;
-            this.lblCantidad.Text = "Cantidad:";
+            this.lblCantidad.Text = "Cant. (pres.):";
             //
             // numCantidad
             //
@@ -453,6 +462,52 @@ namespace SistemaPOS.Forms.Compras
             this.txtCostoUnitario.Size = new System.Drawing.Size(94, 20);
             this.txtCostoUnitario.TabIndex = 126;
             //
+            // txtCostoUnitarioBase
+            //
+            this.txtCostoUnitarioBase.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtCostoUnitarioBase.Location = new System.Drawing.Point(345, 141);
+            this.txtCostoUnitarioBase.Name = "txtCostoUnitarioBase";
+            this.txtCostoUnitarioBase.ReadOnly = true;
+            this.txtCostoUnitarioBase.Size = new System.Drawing.Size(80, 20);
+            this.txtCostoUnitarioBase.TabIndex = 148;
+            this.txtCostoUnitarioBase.TabStop = false;
+            this.txtCostoUnitarioBase.Text = "0.0000";
+            //
+            // lblCostoUnitarioBase
+            //
+            this.lblCostoUnitarioBase.AutoSize = true;
+            this.lblCostoUnitarioBase.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.lblCostoUnitarioBase.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblCostoUnitarioBase.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
+            this.lblCostoUnitarioBase.Location = new System.Drawing.Point(222, 143);
+            this.lblCostoUnitarioBase.Name = "lblCostoUnitarioBase";
+            this.lblCostoUnitarioBase.Size = new System.Drawing.Size(115, 17);
+            this.lblCostoUnitarioBase.TabIndex = 147;
+            this.lblCostoUnitarioBase.Text = "Costo base (S/kg):";
+            //
+            // txtCantidadBase
+            //
+            this.txtCantidadBase.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtCantidadBase.Location = new System.Drawing.Point(320, 114);
+            this.txtCantidadBase.Name = "txtCantidadBase";
+            this.txtCantidadBase.ReadOnly = true;
+            this.txtCantidadBase.Size = new System.Drawing.Size(80, 20);
+            this.txtCantidadBase.TabIndex = 146;
+            this.txtCantidadBase.TabStop = false;
+            this.txtCantidadBase.Text = "0.00";
+            //
+            // lblCantidadBase
+            //
+            this.lblCantidadBase.AutoSize = true;
+            this.lblCantidadBase.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.lblCantidadBase.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblCantidadBase.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
+            this.lblCantidadBase.Location = new System.Drawing.Point(222, 116);
+            this.lblCantidadBase.Name = "lblCantidadBase";
+            this.lblCantidadBase.Size = new System.Drawing.Size(89, 17);
+            this.lblCantidadBase.TabIndex = 145;
+            this.lblCantidadBase.Text = "Cant. base kg:";
+            //
             // btnAgregarProducto
             //
             this.btnAgregarProducto.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(39)))), ((int)(((byte)(174)))), ((int)(((byte)(96)))));
@@ -462,7 +517,7 @@ namespace SistemaPOS.Forms.Compras
             this.btnAgregarProducto.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnAgregarProducto.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnAgregarProducto.ForeColor = System.Drawing.Color.White;
-            this.btnAgregarProducto.Location = new System.Drawing.Point(385, 134);
+            this.btnAgregarProducto.Location = new System.Drawing.Point(385, 157);
             this.btnAgregarProducto.Name = "btnAgregarProducto";
             this.btnAgregarProducto.Size = new System.Drawing.Size(129, 27);
             this.btnAgregarProducto.TabIndex = 127;
@@ -487,7 +542,8 @@ namespace SistemaPOS.Forms.Compras
             this.colNumero,
             this.colProductoDV,
             this.colPresentacionDV,
-            this.colCantidad,
+            this.colCantidadPres,
+            this.colCantidadBase,
             this.colCostoUnitario,
             this.colSubTotal,
             this.colEliminar});
@@ -529,12 +585,19 @@ namespace SistemaPOS.Forms.Compras
             this.colPresentacionDV.Resizable = System.Windows.Forms.DataGridViewTriState.True;
             this.colPresentacionDV.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             //
-            // colCantidad
+            // colCantidadPres
             //
-            this.colCantidad.HeaderText = "Cantidad";
-            this.colCantidad.Name = "colCantidad";
-            this.colCantidad.ReadOnly = true;
-            this.colCantidad.Width = 60;
+            this.colCantidadPres.HeaderText = "Pres. (ref.)";
+            this.colCantidadPres.Name = "colCantidadPres";
+            this.colCantidadPres.ReadOnly = true;
+            this.colCantidadPres.Width = 80;
+            //
+            // colCantidadBase
+            //
+            this.colCantidadBase.HeaderText = "Equivalente";
+            this.colCantidadBase.Name = "colCantidadBase";
+            this.colCantidadBase.ReadOnly = true;
+            this.colCantidadBase.Width = 80;
             //
             // colCostoUnitario
             //
@@ -789,7 +852,8 @@ namespace SistemaPOS.Forms.Compras
         private System.Windows.Forms.DataGridViewTextBoxColumn colNumero;
         private System.Windows.Forms.DataGridViewTextBoxColumn colProductoDV;
         private System.Windows.Forms.DataGridViewTextBoxColumn colPresentacionDV;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colCantidad;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colCantidadPres;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colCantidadBase;
         private System.Windows.Forms.DataGridViewTextBoxColumn colCostoUnitario;
         private System.Windows.Forms.DataGridViewTextBoxColumn colSubTotal;
         private System.Windows.Forms.DataGridViewImageColumn colEliminar;
@@ -810,5 +874,9 @@ namespace SistemaPOS.Forms.Compras
         private System.Windows.Forms.NumericUpDown numCantidad;
         private System.Windows.Forms.Label lblLineaDivisora2;
         private System.Windows.Forms.ComboBox cmbBuscarProducto;
+        private System.Windows.Forms.TextBox txtCostoUnitarioBase;
+        private System.Windows.Forms.Label lblCostoUnitarioBase;
+        private System.Windows.Forms.TextBox txtCantidadBase;
+        private System.Windows.Forms.Label lblCantidadBase;
     }
 }

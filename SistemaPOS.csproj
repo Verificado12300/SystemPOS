@@ -413,6 +413,7 @@
     <Compile Include="Utils\PasswordHelper.cs" />
     <Compile Include="Utils\ReportHelper.cs" />
     <Compile Include="Utils\SesionActual.cs" />
+    <Compile Include="Utils\UiUnitsHelper.cs" />
     <Compile Include="Reports\DataSources\ReportDataSourceHelper.cs" />
     <EmbeddedResource Include="Forms\Compras\FormCompras.resx">
       <DependentUpon>FormCompras.cs</DependentUpon>

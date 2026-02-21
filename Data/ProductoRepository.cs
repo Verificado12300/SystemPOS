@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.SQLite;
 using SistemaPOS.Models;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Data
 {
@@ -275,6 +276,46 @@ namespace SistemaPOS.Data
                             }
                         }
 
+                        // Crear movimiento de stock inicial en Kardex (automático, sin UI).
+                        // Se almacena como TipoAjuste='ENTRADA' + Motivo='Stock inicial' (idempotente).
+                        if (producto.StockTotal > 0)
+                        {
+                            string checkSI = @"SELECT COUNT(*) FROM Ajustes
+                                               WHERE ProductoID = @PID
+                                                 AND TipoAjuste = 'ENTRADA'
+                                                 AND Motivo     = 'Stock inicial'";
+                            long yaExiste;
+                            using (var cmd = new SQLiteCommand(checkSI, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PID", productoID);
+                                yaExiste = (long)cmd.ExecuteScalar();
+                            }
+
+                            if (yaExiste == 0)
+                            {
+                                decimal costoUnitario = CalcularCostoUnitarioBase(presentaciones, productoID, connection, transaction);
+                                int usuarioID = SesionActual.Usuario?.UsuarioID ?? 1;
+
+                                string queryStockInicial = @"
+                                    INSERT INTO Ajustes
+                                    (ProductoID, TipoAjuste, Cantidad, StockAnterior, StockNuevo, CostoUnitario, Motivo, UsuarioID, Fecha)
+                                    VALUES
+                                    (@ProductoID, 'ENTRADA', @Cantidad, 0, @StockNuevo, @CostoUnitario,
+                                     'Stock inicial', @UsuarioID, @Fecha)";
+
+                                using (var cmd = new SQLiteCommand(queryStockInicial, connection, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@ProductoID", productoID);
+                                    cmd.Parameters.AddWithValue("@Cantidad", producto.StockTotal);
+                                    cmd.Parameters.AddWithValue("@StockNuevo", producto.StockTotal);
+                                    cmd.Parameters.AddWithValue("@CostoUnitario", costoUnitario);
+                                    cmd.Parameters.AddWithValue("@UsuarioID", usuarioID);
+                                    cmd.Parameters.AddWithValue("@Fecha", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+
                         transaction.Commit();
                         return true;
                     }
@@ -285,6 +326,67 @@ namespace SistemaPOS.Data
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Calcula el costo unitario base (S/ por u.b.) para registrar el STOCK_INICIAL.
+        /// Prioridad:
+        ///   1. Presentación "Granel" (nombre exacto, ignorando mayúsculas): CostoBase / CantidadUnidades.
+        ///   2. Primera presentación en memoria con CantidadUnidades == 1.
+        ///   3. Mínimo de (CostoBase / CantidadUnidades) entre todas las presentaciones.
+        /// Si ninguna presentación tiene costo > 0, retorna 0.
+        /// </summary>
+        private static decimal CalcularCostoUnitarioBase(
+            List<ProductoPresentacion> presentaciones,
+            int productoID,
+            SQLiteConnection connection,
+            SQLiteTransaction transaction)
+        {
+            // 1. Buscar presentación "Granel" en BD (ya insertada dentro de la misma transacción)
+            string queryGranel = @"
+                SELECT pp.CostoBase, pp.CantidadUnidades
+                FROM ProductoPresentaciones pp
+                INNER JOIN Presentaciones pr ON pr.PresentacionID = pp.PresentacionID
+                WHERE pp.ProductoID = @ProductoID
+                  AND pp.Activo = 1
+                  AND LOWER(pr.Nombre) = 'granel'
+                LIMIT 1";
+
+            using (var cmd = new SQLiteCommand(queryGranel, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@ProductoID", productoID);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        decimal costoGranel = reader.GetDecimal(0);
+                        decimal cantGranel = reader.GetDecimal(1);
+                        if (costoGranel > 0 && cantGranel > 0)
+                            return costoGranel / cantGranel;
+                    }
+                }
+            }
+
+            // 2. Presentación en memoria con CantidadUnidades == 1 (unidad base)
+            foreach (var p in presentaciones)
+            {
+                if (p.CantidadUnidades == 1m && p.CostoBase > 0)
+                    return p.CostoBase;
+            }
+
+            // 3. Mínimo de CostoBase / CantidadUnidades (normaliza cualquier presentación a u.b.)
+            decimal costoMin = decimal.MaxValue;
+            foreach (var p in presentaciones)
+            {
+                if (p.CantidadUnidades > 0 && p.CostoBase > 0)
+                {
+                    decimal costoUnitario = p.CostoBase / p.CantidadUnidades;
+                    if (costoUnitario < costoMin)
+                        costoMin = costoUnitario;
+                }
+            }
+
+            return costoMin == decimal.MaxValue ? 0m : costoMin;
         }
 
         public static string GenerarCodigoProducto()
@@ -308,6 +410,18 @@ namespace SistemaPOS.Data
                 {
                     try
                     {
+                        // Leer StockTotal actual antes de modificarlo (para CORRECCION si cambia)
+                        decimal stockAnterior = 0m;
+                        using (var cmd = new SQLiteCommand(
+                            "SELECT StockTotal FROM Productos WHERE ProductoID = @ID",
+                            connection, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@ID", producto.ProductoID);
+                            var val = cmd.ExecuteScalar();
+                            if (val != null && val != DBNull.Value)
+                                stockAnterior = Convert.ToDecimal(val);
+                        }
+
                         // Actualizar producto
                         string queryProducto = @"
                     UPDATE Productos SET
@@ -394,6 +508,32 @@ namespace SistemaPOS.Data
                                     cmd.Parameters.AddWithValue("@Ganancia", presentacion.Ganancia ?? 0);
                                     cmd.ExecuteNonQuery();
                                 }
+                            }
+                        }
+
+                        // Si el stock cambió por edición directa, registrar CORRECCION en Kardex
+                        decimal stockNuevo = producto.StockTotal;
+                        if (stockNuevo != stockAnterior)
+                        {
+                            decimal diferencia = Math.Abs(stockNuevo - stockAnterior);
+                            int usuarioID = SesionActual.Usuario?.UsuarioID ?? 1;
+
+                            string queryCorreccion = @"
+                                INSERT INTO Ajustes
+                                (ProductoID, TipoAjuste, Cantidad, StockAnterior, StockNuevo, CostoUnitario, Motivo, UsuarioID, Fecha)
+                                VALUES
+                                (@ProductoID, 'CORRECCION', @Cantidad, @StockAnterior, @StockNuevo, 0,
+                                 'Corrección manual de stock', @UsuarioID, @Fecha)";
+
+                            using (var cmd = new SQLiteCommand(queryCorreccion, connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@ProductoID", producto.ProductoID);
+                                cmd.Parameters.AddWithValue("@Cantidad", diferencia);
+                                cmd.Parameters.AddWithValue("@StockAnterior", stockAnterior);
+                                cmd.Parameters.AddWithValue("@StockNuevo", stockNuevo);
+                                cmd.Parameters.AddWithValue("@UsuarioID", usuarioID);
+                                cmd.Parameters.AddWithValue("@Fecha", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                                cmd.ExecuteNonQuery();
                             }
                         }
 

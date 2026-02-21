@@ -29,6 +29,10 @@ namespace SistemaPOS.Forms.Inventario
             cmbMetodo.Items.AddRange(new object[] { "PROMEDIO", "PEPS" });
             cmbMetodo.SelectedIndex = 0;
 
+            dgvKardex.Columns["colPresentaciones"].Visible = false;
+            chkVerPresentacion.CheckedChanged += (_, __) =>
+                dgvKardex.Columns["colPresentaciones"].Visible = chkVerPresentacion.Checked;
+
             btnBuscar.Click += (_, __) => CargarKardex();
             btnLimpiar.Click += (_, __) =>
             {
@@ -90,6 +94,9 @@ namespace SistemaPOS.Forms.Inventario
                 decimal totalEntradas = 0m;
                 decimal totalSalidas = 0m;
 
+                string unidad = data.Count > 0 ? (data[0].UnidadSimbolo ?? "") : "";
+                ActualizarHeadersKardex(unidad);
+
                 foreach (var item in data)
                 {
                     int row = dgvKardex.Rows.Add();
@@ -98,22 +105,22 @@ namespace SistemaPOS.Forms.Inventario
                     dgvKardex.Rows[row].Cells["colTipo"].Value = item.TipoMovimiento;
                     dgvKardex.Rows[row].Cells["colDocumento"].Value = item.Documento;
                     dgvKardex.Rows[row].Cells["colUsuario"].Value = item.UsuarioNombre;
+                    dgvKardex.Rows[row].Cells["colPresentaciones"].Value = item.PresentacionInfo ?? "";
                     dgvKardex.Rows[row].Cells["colEntrada"].Value = item.Entrada == 0 ? "-" : $"{item.Entrada:N2}";
-                    dgvKardex.Rows[row].Cells["colCostoUnitario"].Value = item.Entrada == 0
-                        ? "-"
-                        : $"S/ {item.CostoUnitario:N2} | S/ {item.CostoMovimiento:N2}";
                     dgvKardex.Rows[row].Cells["colSalida"].Value = item.Salida == 0 ? "-" : $"{item.Salida:N2}";
-                    dgvKardex.Rows[row].Cells["colCostoMov"].Value = item.Salida == 0
-                        ? "-"
-                        : $"S/ {item.CostoUnitario:N2} | S/ {item.CostoMovimiento:N2}";
                     dgvKardex.Rows[row].Cells["colStockPosterior"].Value = $"{item.StockPosterior:N2}";
-                    dgvKardex.Rows[row].Cells["colStockAnterior"].Value = $"S/ {item.CostoPromedio:N2}";
+                    dgvKardex.Rows[row].Cells["colCostoUnit"].Value =
+                        item.CostoUnitario == 0 ? "-" : $"S/ {item.CostoUnitario:N2}";
+                    dgvKardex.Rows[row].Cells["colValorMovimiento"].Value =
+                        item.CostoMovimiento == 0 ? "-" : $"S/ {item.CostoMovimiento:N2}";
+                    dgvKardex.Rows[row].Cells["colCostoPromedio"].Value = $"S/ {item.CostoPromedio:N2}";
 
                     totalEntradas += item.Entrada;
                     totalSalidas += item.Salida;
                 }
 
-                lblResumen.Text = $"Movimientos: {data.Count} | Entradas: {totalEntradas:N2} | Salidas: {totalSalidas:N2} | Metodo de valorizacion: {metodo}";
+                string u = UiUnitsHelper.NormalizeUnit(unidad);
+                lblResumen.Text = $"Movimientos: {data.Count} | Entradas: {totalEntradas:N2} {u} | Salidas: {totalSalidas:N2} {u} | Método: {metodo}";
             }
             catch (Exception ex)
             {
@@ -198,6 +205,15 @@ namespace SistemaPOS.Forms.Inventario
                 return "Todos";
 
             return _productos[index].Nombre?.ToString() ?? "Todos";
+        }
+
+        private void ActualizarHeadersKardex(string simbolo)
+        {
+            dgvKardex.Columns["colEntrada"].HeaderText        = UiUnitsHelper.FormatQtyHeader("Entrada", simbolo);
+            dgvKardex.Columns["colSalida"].HeaderText         = UiUnitsHelper.FormatQtyHeader("Salida", simbolo);
+            dgvKardex.Columns["colStockPosterior"].HeaderText = UiUnitsHelper.FormatQtyHeader("Stock", simbolo);
+            dgvKardex.Columns["colCostoUnit"].HeaderText      = UiUnitsHelper.FormatMoneyPerUnit("Costo unitario", simbolo);
+            dgvKardex.Columns["colCostoPromedio"].HeaderText  = UiUnitsHelper.FormatMoneyPerUnit("Costo promedio", simbolo);
         }
     }
 }

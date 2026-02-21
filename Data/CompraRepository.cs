@@ -78,9 +78,11 @@ namespace SistemaPOS.Data
                             {
                                 string queryDetalle = @"
                                     INSERT INTO CompraDetalles (
-                                        CompraID, ProductoID, ProductoPresentacionID, Cantidad, CostoUnitario, Subtotal, CantidadUnidadesBase
+                                        CompraID, ProductoID, ProductoPresentacionID, Cantidad,
+                                        CostoUnitario, CostoPresentacion, Subtotal, CantidadUnidadesBase
                                     ) VALUES (
-                                        @CompraID, @ProductoID, @ProductoPresentacionID, @Cantidad, @CostoUnitario, @Subtotal, @CantidadUnidadesBase
+                                        @CompraID, @ProductoID, @ProductoPresentacionID, @Cantidad,
+                                        @CostoUnitario, @CostoPresentacion, @Subtotal, @CantidadUnidadesBase
                                     )";
 
                                 using (var cmd = new SQLiteCommand(queryDetalle, connection, transaction))
@@ -90,6 +92,7 @@ namespace SistemaPOS.Data
                                     cmd.Parameters.AddWithValue("@ProductoPresentacionID", detalle.ProductoPresentacionID);
                                     cmd.Parameters.AddWithValue("@Cantidad", detalle.Cantidad);
                                     cmd.Parameters.AddWithValue("@CostoUnitario", detalle.CostoUnitario);
+                                    cmd.Parameters.AddWithValue("@CostoPresentacion", detalle.CostoPresentacion);
                                     cmd.Parameters.AddWithValue("@Subtotal", detalle.Subtotal);
                                     cmd.Parameters.AddWithValue("@CantidadUnidadesBase", detalle.CantidadUnidadesBase);
                                     cmd.ExecuteNonQuery();
@@ -284,7 +287,7 @@ namespace SistemaPOS.Data
                     string query = @"
                         SELECT
                             cd.CompraDetalleID, cd.CompraID, cd.ProductoID, cd.ProductoPresentacionID,
-                            cd.Cantidad, cd.CostoUnitario, cd.Subtotal, cd.CantidadUnidadesBase,
+                            cd.Cantidad, cd.CostoUnitario, cd.CostoPresentacion, cd.Subtotal, cd.CantidadUnidadesBase,
                             p.Nombre as ProductoNombre, p.Codigo as ProductoCodigo,
                             pr.Nombre as PresentacionNombre,
                             ub.Simbolo as UnidadSimbolo
@@ -310,12 +313,13 @@ namespace SistemaPOS.Data
                                     ProductoPresentacionID = reader.GetInt32(3),
                                     Cantidad = reader.GetDecimal(4),
                                     CostoUnitario = reader.GetDecimal(5),
-                                    Subtotal = reader.GetDecimal(6),
-                                    CantidadUnidadesBase = reader.GetDecimal(7),
-                                    ProductoNombre = reader.GetString(8),
-                                    ProductoCodigo = reader.GetString(9),
-                                    PresentacionNombre = reader.GetString(10),
-                                    UnidadSimbolo = reader.IsDBNull(11) ? "" : reader.GetString(11)
+                                    CostoPresentacion = reader.GetDecimal(6),
+                                    Subtotal = reader.GetDecimal(7),
+                                    CantidadUnidadesBase = reader.GetDecimal(8),
+                                    ProductoNombre = reader.GetString(9),
+                                    ProductoCodigo = reader.GetString(10),
+                                    PresentacionNombre = reader.GetString(11),
+                                    UnidadSimbolo = reader.IsDBNull(12) ? "" : reader.GetString(12)
                                 });
                             }
                         }

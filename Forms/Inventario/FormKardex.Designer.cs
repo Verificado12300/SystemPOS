@@ -36,12 +36,14 @@ namespace SistemaPOS.Forms.Inventario
             this.colTipo = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colDocumento = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colUsuario = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colPresentaciones = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colEntrada = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colCostoUnitario = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colSalida = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colCostoMov = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colStockPosterior = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colStockAnterior = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colCostoUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colValorMovimiento = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colCostoPromedio = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.chkVerPresentacion = new System.Windows.Forms.CheckBox();
             this.lblResumen = new System.Windows.Forms.Label();
             this.pnlFiltros.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvKardex)).BeginInit();
@@ -62,6 +64,7 @@ namespace SistemaPOS.Forms.Inventario
             this.pnlFiltros.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.pnlFiltros.BackColor = System.Drawing.Color.White;
+            this.pnlFiltros.Controls.Add(this.chkVerPresentacion);
             this.pnlFiltros.Controls.Add(this.btnExportar);
             this.pnlFiltros.Controls.Add(this.btnLimpiar);
             this.pnlFiltros.Controls.Add(this.btnBuscar);
@@ -134,7 +137,18 @@ namespace SistemaPOS.Forms.Inventario
             this.cmbMetodo.Name = "cmbMetodo";
             this.cmbMetodo.Size = new System.Drawing.Size(103, 21);
             this.cmbMetodo.TabIndex = 7;
-            // 
+            //
+            // chkVerPresentacion
+            //
+            this.chkVerPresentacion.AutoSize = true;
+            this.chkVerPresentacion.Checked = false;
+            this.chkVerPresentacion.Location = new System.Drawing.Point(985, 30);
+            this.chkVerPresentacion.Name = "chkVerPresentacion";
+            this.chkVerPresentacion.Size = new System.Drawing.Size(130, 17);
+            this.chkVerPresentacion.TabIndex = 11;
+            this.chkVerPresentacion.Text = "Ver presentacion";
+            this.chkVerPresentacion.UseVisualStyleBackColor = true;
+            //
             // lblMetodo
             // 
             this.lblMetodo.AutoSize = true;
@@ -243,12 +257,13 @@ namespace SistemaPOS.Forms.Inventario
             this.colTipo,
             this.colDocumento,
             this.colUsuario,
+            this.colPresentaciones,
             this.colEntrada,
-            this.colCostoUnitario,
             this.colSalida,
-            this.colCostoMov,
             this.colStockPosterior,
-            this.colStockAnterior});
+            this.colCostoUnit,
+            this.colValorMovimiento,
+            this.colCostoPromedio});
             this.dgvKardex.Location = new System.Drawing.Point(14, 139);
             this.dgvKardex.Name = "dgvKardex";
             this.dgvKardex.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
@@ -286,41 +301,48 @@ namespace SistemaPOS.Forms.Inventario
             this.colUsuario.Name = "colUsuario";
             this.colUsuario.Width = 150;
             // 
+            // colPresentaciones
+            //
+            this.colPresentaciones.HeaderText = "Presentación (ref.)";
+            this.colPresentaciones.Name = "colPresentaciones";
+            this.colPresentaciones.ReadOnly = true;
+            this.colPresentaciones.Width = 110;
+            //
             // colEntrada
-            // 
-            this.colEntrada.HeaderText = "Cantidad";
+            //
+            this.colEntrada.HeaderText = "Entrada (unid.)";
             this.colEntrada.Name = "colEntrada";
             this.colEntrada.Width = 92;
-            // 
-            // colCostoUnitario
-            // 
-            this.colCostoUnitario.HeaderText = "Costos";
-            this.colCostoUnitario.Name = "colCostoUnitario";
-            this.colCostoUnitario.Width = 155;
-            // 
+            //
             // colSalida
-            // 
-            this.colSalida.HeaderText = "Cantidad";
+            //
+            this.colSalida.HeaderText = "Salida (unid.)";
             this.colSalida.Name = "colSalida";
             this.colSalida.Width = 92;
-            // 
-            // colCostoMov
-            // 
-            this.colCostoMov.HeaderText = "Costos";
-            this.colCostoMov.Name = "colCostoMov";
-            this.colCostoMov.Width = 155;
-            // 
+            //
             // colStockPosterior
-            // 
-            this.colStockPosterior.HeaderText = "Stock";
+            //
+            this.colStockPosterior.HeaderText = "Stock (unid.)";
             this.colStockPosterior.Name = "colStockPosterior";
             this.colStockPosterior.Width = 115;
-            // 
-            // colStockAnterior
-            // 
-            this.colStockAnterior.HeaderText = "Costo Promedio";
-            this.colStockAnterior.Name = "colStockAnterior";
-            this.colStockAnterior.Width = 130;
+            //
+            // colCostoUnit
+            //
+            this.colCostoUnit.HeaderText = "Costo unitario (S/ por unid.)";
+            this.colCostoUnit.Name = "colCostoUnit";
+            this.colCostoUnit.Width = 115;
+            //
+            // colValorMovimiento
+            //
+            this.colValorMovimiento.HeaderText = "Valor Mov. (S/)";
+            this.colValorMovimiento.Name = "colValorMovimiento";
+            this.colValorMovimiento.Width = 115;
+            //
+            // colCostoPromedio
+            //
+            this.colCostoPromedio.HeaderText = "Costo promedio (S/ por unid.)";
+            this.colCostoPromedio.Name = "colCostoPromedio";
+            this.colCostoPromedio.Width = 130;
             // 
             // lblResumen
             // 
@@ -375,12 +397,14 @@ namespace SistemaPOS.Forms.Inventario
         private System.Windows.Forms.DataGridViewTextBoxColumn colProducto;
         private System.Windows.Forms.DataGridViewTextBoxColumn colTipo;
         private System.Windows.Forms.DataGridViewTextBoxColumn colDocumento;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colUsuario;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colPresentaciones;
         private System.Windows.Forms.DataGridViewTextBoxColumn colEntrada;
         private System.Windows.Forms.DataGridViewTextBoxColumn colSalida;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colStockAnterior;
         private System.Windows.Forms.DataGridViewTextBoxColumn colStockPosterior;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colCostoUnitario;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colCostoMov;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colUsuario;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colCostoUnit;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colValorMovimiento;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colCostoPromedio;
+        private System.Windows.Forms.CheckBox chkVerPresentacion;
     }
 }

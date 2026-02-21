@@ -140,11 +140,17 @@ namespace SistemaPOS.Forms.Compras
                     row.Cells["colProductoDV"].Value = detalle.ProductoNombre;
                     row.Cells["colPresentacionDV"].Value = detalle.PresentacionNombre;
                     string simbolo = detalle.UnidadSimbolo ?? "";
-                    string cantidadTexto = ((decimal)detalle.CantidadUnidadesBase).ToString("N2")
-                        + (string.IsNullOrEmpty(simbolo) ? "" : " " + simbolo);
-                    row.Cells["colCantidad"].Value = cantidadTexto;
-                    row.Cells["colCostoUnitario"].Value = "S/ " + detalle.CostoUnitario.ToString("N2");
-                    row.Cells["colSubTotal"].Value = "S/ " + detalle.Subtotal.ToString("N2");
+                    decimal cantPres = (decimal)detalle.Cantidad;
+                    decimal cantBase = (decimal)detalle.CantidadUnidadesBase;
+                    string presStr = cantPres == Math.Floor(cantPres) ? $"{(int)cantPres}" : cantPres.ToString("N2");
+                    string baseStr = string.IsNullOrEmpty(simbolo) ? cantBase.ToString("N2") : $"{cantBase:N2} {simbolo}";
+                    row.Cells["colCantidad"].Value = $"{presStr} {detalle.PresentacionNombre}\n({baseStr})";
+                    decimal costoPres = (decimal)detalle.CostoPresentacion;
+                    decimal costoBase = (decimal)detalle.CostoUnitario;
+                    string presLabel  = UiUnitsHelper.NormalizeUnit(simbolo);
+                    row.Cells["colCostoUnitario"].Value =
+                        $"S/ {costoPres:N2}/{detalle.PresentacionNombre}  (= S/ {costoBase:N4}/{presLabel})";
+                    row.Cells["colSubTotal"].Value = "S/ " + ((decimal)detalle.Subtotal).ToString("N2");
                 }
             }
             catch (Exception ex)

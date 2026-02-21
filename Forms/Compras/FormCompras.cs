@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
@@ -15,8 +14,11 @@ namespace SistemaPOS.Forms.Compras
     {
         private int _proveedorID;
         private List<Proveedor> _proveedores;
+        private List<Producto> _productosCatalogo;
         private List<Producto> _productosEncontrados;
         private Producto _productoSeleccionado;
+        private string _unidadBaseSimboloSeleccionado = "";
+        private string _nombrePresentacionSeleccionada = "";
         private bool _actualizandoBusqueda;
         private Timer _timerBusqueda;
 
@@ -39,8 +41,10 @@ namespace SistemaPOS.Forms.Compras
             // SelectionChangeCommitted solo se dispara cuando el usuario selecciona, no programaticamente
             cmbBuscarProducto.SelectionChangeCommitted += CmbBuscarProducto_SelectionChangeCommitted;
             cmbBuscarProducto.KeyDown += CmbBuscarProducto_KeyDown;
+            cmbBuscarProducto.DropDown += CmbBuscarProducto_DropDown;
 
             cmbPresentacion.SelectedIndexChanged += CmbPresentacion_SelectedIndexChanged;
+            numCantidad.ValueChanged += (_, __) => RecalcularDetalleSeleccionado();
             btnAgregarProducto.Click += BtnAgregarProducto_Click;
             dgvProductos.CellClick += DgvProductos_CellClick;
             chkIncluirIGV.CheckedChanged += ChkIncluirIGV_CheckedChanged;
@@ -48,6 +52,7 @@ namespace SistemaPOS.Forms.Compras
             btnGuardar.Click += BtnGuardar_Click;
             btnCancelar.Click += BtnCancelar_Click;
             txtCostoUnitario.KeyPress += TxtSoloNumeros_KeyPress;
+            txtCostoUnitario.TextChanged += (_, __) => RecalcularDetalleSeleccionado();
             btnHistorial.Click += BtnHistorial_Click;
 
             // Timer para debounce de busqueda
@@ -73,6 +78,7 @@ namespace SistemaPOS.Forms.Compras
 
             numCantidad.Minimum = 1;
             numCantidad.Maximum = 99999;
+            numCantidad.DecimalPlaces = 0;
             numCantidad.Value = 1;
 
             cmbTipoComprobante.Items.Clear();
@@ -81,21 +87,32 @@ namespace SistemaPOS.Forms.Compras
             cmbTipoComprobante.Items.Add("GUIA");
             cmbTipoComprobante.SelectedIndex = 0;
 
-            cmbBuscarProducto.AutoCompleteMode = AutoCompleteMode.None;
-            cmbBuscarProducto.DropDownStyle = ComboBoxStyle.DropDown;
+            AplicarConfiguracionSeguraCombo(cmbBuscarProveedor, false);
+            AplicarConfiguracionSeguraCombo(cmbTipoComprobante, false);
+            AplicarConfiguracionSeguraCombo(cmbPresentacion, false);
+            AplicarConfiguracionSeguraCombo(cmbBuscarProducto, true);
+            ValidarConfiguracionesCombo();
 
             dtpVencimiento.Visible = false;
             lblVencimiento.Visible = false;
+
+            txtCantidadBase.ReadOnly = true;
+            txtCantidadBase.Font = new System.Drawing.Font(txtCantidadBase.Font, System.Drawing.FontStyle.Bold);
+            txtCostoUnitarioBase.ReadOnly = true;
+            ActualizarEtiquetasUnidadBase(string.Empty);
         }
 
         private void InicializarFormulario()
         {
             _proveedorID = 0;
             _proveedores = ProveedorRepository.ObtenerTodos();
+            _productosCatalogo = new List<Producto>();
+            _productosEncontrados = new List<Producto>();
             _productoSeleccionado = null;
             lblNombreRazonSocial.Text = "";
 
             CargarProveedoresEnCombo();
+            CargarCatalogoProductos();
 
             dtpFecha.Value = DateTime.Now;
             rbContado.Checked = true;
@@ -144,6 +161,7 @@ namespace SistemaPOS.Forms.Compras
 
         private void CmbBuscarProducto_TextUpdate(object sender, EventArgs e)
         {
+            if (_actualizandoBusqueda) return;
             // Reiniciar timer en cada tecleo (debounce)
             _timerBusqueda.Stop();
             _timerBusqueda.Start();
@@ -153,53 +171,26 @@ namespace SistemaPOS.Forms.Compras
         {
             if (_actualizandoBusqueda) return;
 
-            string busqueda = cmbBuscarProducto.Text.Trim();
-            if (busqueda.Length < 2)
+            string busqueda = (cmbBuscarProducto.Text ?? string.Empty).Trim();
+            if (_productosCatalogo == null || _productosCatalogo.Count == 0)
+                CargarCatalogoProductos();
+
+            List<Producto> filtrados;
+            if (string.IsNullOrWhiteSpace(busqueda))
             {
-                _productosEncontrados = null;
-                _productoSeleccionado = null;
-                return;
-            }
-
-            _productosEncontrados = ProductoRepository.BuscarProductos(busqueda);
-
-            if (_productosEncontrados.Count > 0)
-            {
-                _actualizandoBusqueda = true;
-                try
-                {
-                    string textoActual = cmbBuscarProducto.Text;
-                    int cursorPos = cmbBuscarProducto.SelectionStart;
-
-                    cmbBuscarProducto.BeginUpdate();
-                    cmbBuscarProducto.Items.Clear();
-                    foreach (var p in _productosEncontrados)
-                        cmbBuscarProducto.Items.Add($"{p.Codigo} - {p.Nombre}");
-                    cmbBuscarProducto.EndUpdate();
-
-                    cmbBuscarProducto.Text = textoActual;
-                    cmbBuscarProducto.SelectionStart = textoActual.Length;
-                    cmbBuscarProducto.SelectionLength = 0;
-                    cmbBuscarProducto.DroppedDown = true;
-                    Cursor.Current = Cursors.Default;
-                }
-                finally
-                {
-                    _actualizandoBusqueda = false;
-                }
-
-                if (_productosEncontrados.Count == 1)
-                {
-                    _productoSeleccionado = _productosEncontrados[0];
-                    CargarPresentaciones(_productoSeleccionado.ProductoID);
-                }
+                filtrados = new List<Producto>(_productosCatalogo);
             }
             else
             {
-                _productoSeleccionado = null;
-                cmbPresentacion.DataSource = null;
-                txtCostoUnitario.Clear();
+                filtrados = _productosCatalogo
+                    .Where(p =>
+                        (!string.IsNullOrWhiteSpace(p.Nombre) && p.Nombre.IndexOf(busqueda, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                        (!string.IsNullOrWhiteSpace(p.Codigo) && p.Codigo.IndexOf(busqueda, StringComparison.OrdinalIgnoreCase) >= 0))
+                    .ToList();
             }
+
+            _productosEncontrados = filtrados;
+            RefrescarComboProductosManteniendoTexto(filtrados, busqueda, true);
         }
 
         private void CmbBuscarProducto_SelectionChangeCommitted(object sender, EventArgs e)
@@ -210,13 +201,16 @@ namespace SistemaPOS.Forms.Compras
 
             _productoSeleccionado = _productosEncontrados[cmbBuscarProducto.SelectedIndex];
             CargarPresentaciones(_productoSeleccionado.ProductoID);
+            RecalcularDetalleSeleccionado();
         }
 
         private void CmbBuscarProducto_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter && _productosEncontrados != null && _productosEncontrados.Count > 0)
+            if (e.KeyCode == Keys.Enter)
             {
                 _timerBusqueda.Stop();
+                if (_productosEncontrados == null || _productosEncontrados.Count == 0)
+                    return;
 
                 if (cmbBuscarProducto.SelectedIndex >= 0)
                 {
@@ -234,8 +228,23 @@ namespace SistemaPOS.Forms.Compras
 
                 cmbBuscarProducto.DroppedDown = false;
                 cmbPresentacion.Focus();
+                RecalcularDetalleSeleccionado();
                 e.Handled = true;
                 e.SuppressKeyPress = true;
+            }
+        }
+
+        private void CmbBuscarProducto_DropDown(object sender, EventArgs e)
+        {
+            if (_actualizandoBusqueda) return;
+            if (_productosCatalogo == null || _productosCatalogo.Count == 0)
+                CargarCatalogoProductos();
+
+            string busqueda = (cmbBuscarProducto.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(busqueda))
+            {
+                _productosEncontrados = new List<Producto>(_productosCatalogo);
+                RefrescarComboProductosManteniendoTexto(_productosEncontrados, busqueda, false);
             }
         }
 
@@ -243,6 +252,8 @@ namespace SistemaPOS.Forms.Compras
         {
             var presentaciones = ProductoRepository.ObtenerPresentaciones(productoID);
             string simboloUnidad = ObtenerSimboloUnidadBase(_productoSeleccionado.UnidadBaseID);
+            _unidadBaseSimboloSeleccionado = simboloUnidad ?? string.Empty;
+            ActualizarEtiquetasUnidadBase(_unidadBaseSimboloSeleccionado);
 
             var items = new List<object>();
             foreach (var pres in presentaciones)
@@ -265,7 +276,11 @@ namespace SistemaPOS.Forms.Compras
                 cmbPresentacion.SelectedIndex = 0;
                 var pres = ((dynamic)items[0]).Presentacion;
                 txtCostoUnitario.Text = pres.CostoBase.ToString("N2");
+                _nombrePresentacionSeleccionada = ObtenerNombrePresentacion((int)pres.PresentacionID);
             }
+
+            ActualizarEtiquetasUnidadBase(_unidadBaseSimboloSeleccionado);
+            RecalcularDetalleSeleccionado();
         }
 
         private void CmbPresentacion_SelectedIndexChanged(object sender, EventArgs e)
@@ -277,6 +292,9 @@ namespace SistemaPOS.Forms.Compras
                 var item = (dynamic)cmbPresentacion.SelectedItem;
                 var pres = item.Presentacion;
                 txtCostoUnitario.Text = ((decimal)pres.CostoBase).ToString("N2");
+                _nombrePresentacionSeleccionada = ObtenerNombrePresentacion((int)pres.PresentacionID);
+                ActualizarEtiquetasUnidadBase(_unidadBaseSimboloSeleccionado);
+                RecalcularDetalleSeleccionado();
             }
             catch { }
         }
@@ -317,26 +335,62 @@ namespace SistemaPOS.Forms.Compras
 
             var itemPres = (dynamic)cmbPresentacion.SelectedItem;
             var presentacion = itemPres.Presentacion;
-            int cantidad = (int)numCantidad.Value;
-            decimal subtotal = cantidad * costo;
+            decimal factorPresentacion = (decimal)presentacion.CantidadUnidades;
+            decimal cantidadPresentaciones = numCantidad.Value;
+            decimal cantidadBase = cantidadPresentaciones * factorPresentacion;
+            decimal costoUnitarioBase = factorPresentacion > 0 ? (costo / factorPresentacion) : 0m;
+            decimal subtotal = cantidadBase * costoUnitarioBase;
+            string unidad = _unidadBaseSimboloSeleccionado ?? string.Empty;
+            string cantidadBaseTexto = string.IsNullOrWhiteSpace(unidad)
+                ? $"{cantidadBase:N2}"
+                : $"{cantidadBase:N2} {unidad}";
+            string nombrePresentacion = ObtenerNombrePresentacion((int)presentacion.PresentacionID);
+            string cantPresTexto = cantidadPresentaciones == Math.Floor(cantidadPresentaciones)
+                ? $"{(int)cantidadPresentaciones} {nombrePresentacion}"
+                : $"{cantidadPresentaciones:N2} {nombrePresentacion}";
+
+            // Validación: advertir si el costo calculado por unidad base difiere > 50% del precio de referencia
+            decimal refCostoBase = factorPresentacion > 0
+                ? (decimal)presentacion.CostoBase / factorPresentacion
+                : 0m;
+            if (refCostoBase > 0 && costoUnitarioBase > 0)
+            {
+                decimal desviacion = Math.Abs(costoUnitarioBase - refCostoBase) / refCostoBase;
+                if (desviacion > 0.5m)
+                {
+                    string unidadLabel = UiUnitsHelper.NormalizeUnit(unidad);
+                    string advertencia =
+                        $"El costo calculado por {unidadLabel} (S/ {costoUnitarioBase:N4}) " +
+                        $"difiere más del 50% del precio de referencia (S/ {refCostoBase:N4}).\n\n" +
+                        $"¿Deseas continuar de todas formas?";
+                    var respuesta = MessageBox.Show(advertencia, "Advertencia de Costo",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (respuesta != DialogResult.Yes) return;
+                }
+            }
 
             int index = dgvProductos.Rows.Add();
             DataGridViewRow row = dgvProductos.Rows[index];
 
+            string unidadLabel2 = UiUnitsHelper.NormalizeUnit(unidad);
             row.Cells["colNumero"].Value = dgvProductos.Rows.Count;
             row.Cells["colProductoDV"].Value = _productoSeleccionado.Nombre;
             row.Cells["colPresentacionDV"].Value = cmbPresentacion.Text;
-            row.Cells["colCantidad"].Value = cantidad;
-            row.Cells["colCostoUnitario"].Value = "S/ " + costo.ToString("N2");
+            row.Cells["colCantidadPres"].Value = cantPresTexto;
+            row.Cells["colCantidadBase"].Value = cantidadBaseTexto;
+            row.Cells["colCostoUnitario"].Value = $"S/ {costo:N2}/{nombrePresentacion}  (= S/ {costoUnitarioBase:N4}/{unidadLabel2})";
             row.Cells["colSubTotal"].Value = "S/ " + subtotal.ToString("N2");
 
             row.Tag = new
             {
                 ProductoID = _productoSeleccionado.ProductoID,
                 ProductoPresentacionID = (int)presentacion.ProductoPresentacionID,
-                CostoUnitario = costo,
-                CantidadUnidades = (decimal)presentacion.CantidadUnidades,
-                Cantidad = cantidad
+                CostoPresentacion = costo,
+                CostoUnitarioBase = costoUnitarioBase,
+                FactorPresentacion = factorPresentacion,
+                CantidadPresentaciones = cantidadPresentaciones,
+                CantidadBase = cantidadBase,
+                UnidadBaseSimbolo = unidad
             };
 
             LimpiarCamposProducto();
@@ -347,15 +401,18 @@ namespace SistemaPOS.Forms.Compras
         private void LimpiarCamposProducto()
         {
             _actualizandoBusqueda = true;
-            cmbBuscarProducto.Items.Clear();
             cmbBuscarProducto.Text = "";
             _actualizandoBusqueda = false;
 
             cmbPresentacion.DataSource = null;
             txtCostoUnitario.Clear();
             numCantidad.Value = 1;
+            if (txtCantidadBase != null) txtCantidadBase.Text = "0.00";
+            if (txtCostoUnitarioBase != null) txtCostoUnitarioBase.Text = "0.00";
+            _unidadBaseSimboloSeleccionado = string.Empty;
+            _nombrePresentacionSeleccionada = string.Empty;
+            ActualizarEtiquetasUnidadBase(_unidadBaseSimboloSeleccionado);
             _productoSeleccionado = null;
-            _productosEncontrados = null;
         }
 
         private void DgvProductos_CellClick(object sender, DataGridViewCellEventArgs e)
@@ -385,7 +442,7 @@ namespace SistemaPOS.Forms.Compras
             foreach (DataGridViewRow row in dgvProductos.Rows)
             {
                 var item = (dynamic)row.Tag;
-                subtotal += (decimal)item.CostoUnitario * item.Cantidad;
+                subtotal += (decimal)item.CantidadBase * (decimal)item.CostoUnitarioBase;
             }
 
             decimal igv = chkIncluirIGV.Checked ? subtotal * 0.18m : 0;
@@ -455,14 +512,19 @@ namespace SistemaPOS.Forms.Compras
                 foreach (DataGridViewRow row in dgvProductos.Rows)
                 {
                     var item = (dynamic)row.Tag;
+                    decimal cantidadPresentaciones = (decimal)item.CantidadPresentaciones;
+                    decimal cantidadBase = (decimal)item.CantidadBase;
+                    decimal costoUnitarioBase = (decimal)item.CostoUnitarioBase;
+
                     detalles.Add(new CompraDetalle
                     {
                         ProductoID = item.ProductoID,
                         ProductoPresentacionID = item.ProductoPresentacionID,
-                        Cantidad = item.Cantidad,
-                        CostoUnitario = item.CostoUnitario,
-                        Subtotal = (decimal)item.CostoUnitario * item.Cantidad,
-                        CantidadUnidadesBase = (decimal)item.CantidadUnidades * item.Cantidad
+                        Cantidad = cantidadPresentaciones,
+                        CostoUnitario = costoUnitarioBase,
+                        CostoPresentacion = (decimal)item.CostoPresentacion,
+                        Subtotal = cantidadBase * costoUnitarioBase,
+                        CantidadUnidadesBase = cantidadBase
                     });
                 }
 
@@ -549,6 +611,113 @@ namespace SistemaPOS.Forms.Compras
         {
             var formHistorial = new FormHistorialCompras();
             formHistorial.ShowDialog();
+        }
+
+        private void CargarCatalogoProductos()
+        {
+            _productosCatalogo = ProductoRepository.BuscarProductos("");
+            _productosEncontrados = new List<Producto>(_productosCatalogo);
+            RefrescarComboProductosManteniendoTexto(_productosEncontrados, string.Empty, false);
+        }
+
+        private static void AplicarConfiguracionSeguraCombo(ComboBox combo, bool habilitarBusqueda)
+        {
+            if (combo == null) return;
+
+            if (habilitarBusqueda)
+            {
+                combo.DropDownStyle = ComboBoxStyle.DropDown;
+                combo.AutoCompleteSource = AutoCompleteSource.ListItems;
+                combo.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            }
+            else
+            {
+                combo.DropDownStyle = ComboBoxStyle.DropDownList;
+                combo.AutoCompleteMode = AutoCompleteMode.None;
+                combo.AutoCompleteSource = AutoCompleteSource.None;
+            }
+        }
+
+        private void ValidarConfiguracionesCombo()
+        {
+            var combos = new[] { cmbBuscarProveedor, cmbTipoComprobante, cmbPresentacion, cmbBuscarProducto };
+            foreach (var combo in combos)
+            {
+                if (combo == null) continue;
+
+                bool invalido =
+                    combo.DropDownStyle == ComboBoxStyle.DropDownList &&
+                    combo.AutoCompleteMode != AutoCompleteMode.None &&
+                    combo.AutoCompleteSource != AutoCompleteSource.ListItems;
+
+                if (invalido)
+                {
+                    combo.AutoCompleteMode = AutoCompleteMode.None;
+                    combo.AutoCompleteSource = AutoCompleteSource.None;
+                }
+            }
+        }
+
+        private void RefrescarComboProductosManteniendoTexto(List<Producto> productos, string texto, bool abrirDropdown)
+        {
+            _actualizandoBusqueda = true;
+            try
+            {
+                cmbBuscarProducto.BeginUpdate();
+                cmbBuscarProducto.Items.Clear();
+                foreach (var p in productos)
+                    cmbBuscarProducto.Items.Add($"{p.Codigo} - {p.Nombre}");
+                cmbBuscarProducto.EndUpdate();
+
+                cmbBuscarProducto.Text = texto;
+                cmbBuscarProducto.SelectionStart = cmbBuscarProducto.Text.Length;
+                cmbBuscarProducto.SelectionLength = 0;
+                if (abrirDropdown)
+                    cmbBuscarProducto.DroppedDown = true;
+            }
+            finally
+            {
+                _actualizandoBusqueda = false;
+            }
+        }
+
+        private void RecalcularDetalleSeleccionado()
+        {
+            if (_productoSeleccionado == null || cmbPresentacion.SelectedItem == null)
+            {
+                if (txtCantidadBase != null) txtCantidadBase.Text = "0.00";
+                if (txtCostoUnitarioBase != null) txtCostoUnitarioBase.Text = "0.00";
+                ActualizarEtiquetasUnidadBase(string.Empty);
+                return;
+            }
+
+            var item = (dynamic)cmbPresentacion.SelectedItem;
+            var presentacion = item.Presentacion;
+            decimal factorPresentacion = (decimal)presentacion.CantidadUnidades;
+            decimal cantidadPresentaciones = numCantidad.Value;
+            decimal cantidadBase = cantidadPresentaciones * factorPresentacion;
+
+            decimal costoPresentacion = 0m;
+            TryParseDecimal(txtCostoUnitario.Text, out costoPresentacion);
+            decimal costoUnitarioBase = factorPresentacion > 0
+                ? (costoPresentacion / factorPresentacion)
+                : 0m;
+
+            if (txtCantidadBase != null) txtCantidadBase.Text = cantidadBase.ToString("N2");
+            if (txtCostoUnitarioBase != null) txtCostoUnitarioBase.Text = costoUnitarioBase.ToString("N4");
+            ActualizarEtiquetasUnidadBase(_unidadBaseSimboloSeleccionado);
+        }
+
+        private void ActualizarEtiquetasUnidadBase(string simbolo)
+        {
+            string unidad = UiUnitsHelper.NormalizeUnit(simbolo);
+            string pres   = string.IsNullOrWhiteSpace(_nombrePresentacionSeleccionada)
+                            ? "pres." : _nombrePresentacionSeleccionada;
+
+            if (lblCostoUnitario != null)     lblCostoUnitario.Text     = $"Costo por {pres} (S/):";
+            if (lblCantidad != null)          lblCantidad.Text           = $"Cantidad ({pres}):";
+            if (lblCantidadBase != null)      lblCantidadBase.Text       = $"Equivalente ({unidad}):";
+            if (lblCostoUnitarioBase != null) lblCostoUnitarioBase.Text  = UiUnitsHelper.FormatMoneyPerUnit("Costo unitario", simbolo) + ":";
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

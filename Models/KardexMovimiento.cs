@@ -21,5 +21,6 @@ namespace SistemaPOS.Models
         public decimal StockPosterior { get; set; }
         public string Observacion { get; set; }
         public string UsuarioNombre { get; set; }
+        public string PresentacionInfo { get; set; }
     }
 }

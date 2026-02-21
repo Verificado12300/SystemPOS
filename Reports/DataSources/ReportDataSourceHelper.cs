@@ -330,6 +330,7 @@ namespace SistemaPOS.Reports.DataSources
             dt.Columns.Add("CostoSaldo", typeof(decimal));
             dt.Columns.Add("CostoPromedio", typeof(decimal));
             dt.Columns.Add("Usuario", typeof(string));
+            dt.Columns.Add("PresentacionInfo", typeof(string));
 
             List<KardexMovimiento> movimientos = KardexRepository.ObtenerMovimientos(
                 productoID, fechaDesde, fechaHasta, metodoValorizacion);
@@ -351,7 +352,8 @@ namespace SistemaPOS.Reports.DataSources
                     mov.CostoMovimiento,
                     mov.CostoSaldo,
                     mov.CostoPromedio,
-                    mov.UsuarioNombre
+                    mov.UsuarioNombre,
+                    mov.PresentacionInfo ?? ""
                 );
             }
 
