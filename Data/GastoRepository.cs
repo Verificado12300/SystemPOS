@@ -10,25 +10,70 @@ namespace SistemaPOS.Data
         public static bool Crear(Gasto gasto)
         {
             using (var connection = DatabaseConnection.GetConnection())
+            using (var transaction = connection.BeginTransaction())
             {
-                string query = @"
-                    INSERT INTO Gastos (Fecha, Hora, Concepto, Monto, Categoria, MetodoPago, Comprobante, Observaciones, CajaID, UsuarioID)
-                    VALUES (@Fecha, @Hora, @Concepto, @Monto, @Categoria, @MetodoPago, @Comprobante, @Observaciones, @CajaID, @UsuarioID)";
-
-                using (var cmd = new SQLiteCommand(query, connection))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@Fecha", gasto.Fecha.ToString("yyyy-MM-dd"));
-                    cmd.Parameters.AddWithValue("@Hora", $"{gasto.Hora.Hours:D2}:{gasto.Hora.Minutes:D2}:{gasto.Hora.Seconds:D2}");
-                    cmd.Parameters.AddWithValue("@Concepto", gasto.Concepto);
-                    cmd.Parameters.AddWithValue("@Monto", gasto.Monto);
-                    cmd.Parameters.AddWithValue("@Categoria", gasto.Categoria);
-                    cmd.Parameters.AddWithValue("@MetodoPago", gasto.MetodoPago);
-                    cmd.Parameters.AddWithValue("@Comprobante", (object)gasto.Comprobante ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Observaciones", (object)gasto.Observaciones ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@CajaID", gasto.CajaID.HasValue ? (object)gasto.CajaID.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@UsuarioID", gasto.UsuarioID);
-                    cmd.ExecuteNonQuery();
+                    string query = @"
+                        INSERT INTO Gastos (Fecha, Hora, Concepto, Monto, Categoria, MetodoPago, Comprobante, Observaciones, CajaID, UsuarioID)
+                        VALUES (@Fecha, @Hora, @Concepto, @Monto, @Categoria, @MetodoPago, @Comprobante, @Observaciones, @CajaID, @UsuarioID)";
+
+                    using (var cmd = new SQLiteCommand(query, connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@Fecha", gasto.Fecha.ToString("yyyy-MM-dd"));
+                        cmd.Parameters.AddWithValue("@Hora", $"{gasto.Hora.Hours:D2}:{gasto.Hora.Minutes:D2}:{gasto.Hora.Seconds:D2}");
+                        cmd.Parameters.AddWithValue("@Concepto", gasto.Concepto);
+                        cmd.Parameters.AddWithValue("@Monto", gasto.Monto);
+                        cmd.Parameters.AddWithValue("@Categoria", gasto.Categoria);
+                        cmd.Parameters.AddWithValue("@MetodoPago", gasto.MetodoPago);
+                        cmd.Parameters.AddWithValue("@Comprobante", (object)gasto.Comprobante ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@Observaciones", (object)gasto.Observaciones ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@CajaID", gasto.CajaID.HasValue ? (object)gasto.CajaID.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue("@UsuarioID", gasto.UsuarioID);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    int gastoID;
+                    using (var cmd = new SQLiteCommand("SELECT last_insert_rowid()", connection, transaction))
+                        gastoID = Convert.ToInt32(cmd.ExecuteScalar());
+
+                    // ===== ASIENTO CONTABLE =====
+                    try
+                    {
+                        var asiento = new Models.AsientoContable
+                        {
+                            Fecha = gasto.Fecha,
+                            Hora = gasto.Hora,
+                            TipoOperacion = "GASTO",
+                            Documento = gasto.Comprobante ?? $"GASTO-{gastoID}",
+                            ReferenciaID = gastoID,
+                            UsuarioID = gasto.UsuarioID,
+                            Glosa = $"Gasto: {gasto.Concepto}"
+                        };
+
+                        var ctaGasto = ContabilidadRepository.ObtenerCuentaPorCodigo("502", connection, transaction);
+                        string codigoPago = ContabilidadRepository.ObtenerCodigoCuentaEfectivo(gasto.MetodoPago);
+                        var ctaPago = ContabilidadRepository.ObtenerCuentaPorCodigo(codigoPago, connection, transaction);
+
+                        if (ctaGasto != null && ctaPago != null && gasto.Monto > 0)
+                        {
+                            asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaGasto.CuentaID, Debe = gasto.Monto, Descripcion = gasto.Concepto });
+                            asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaPago.CuentaID, Haber = gasto.Monto, Descripcion = $"Pago {gasto.MetodoPago}" });
+                            ContabilidadRepository.CrearAsientoCompleto(asiento, connection, transaction);
+                        }
+                    }
+                    catch
+                    {
+                        // No bloquear el gasto si falla el asiento contable
+                    }
+
+                    transaction.Commit();
                     return true;
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
                 }
             }
         }

@@ -226,6 +226,95 @@ namespace SistemaPOS.Data
                     {
                         // Ignorar para mantener compatibilidad con instalaciones antiguas.
                     }
+
+                    // =========================================================
+                    // MIGRACION: Contabilidad de partida doble
+                    // =========================================================
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+                            CREATE TABLE IF NOT EXISTS CuentasContables (
+                                CuentaID   INTEGER PRIMARY KEY AUTOINCREMENT,
+                                Codigo     TEXT NOT NULL UNIQUE,
+                                Nombre     TEXT NOT NULL,
+                                Tipo       TEXT NOT NULL CHECK(Tipo IN ('ACTIVO','PASIVO','PATRIMONIO','INGRESO','GASTO')),
+                                Activa     INTEGER NOT NULL DEFAULT 1
+                            );";
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+                            CREATE TABLE IF NOT EXISTS Asientos (
+                                AsientoID      INTEGER PRIMARY KEY AUTOINCREMENT,
+                                Fecha          TEXT NOT NULL,
+                                Hora           TEXT NOT NULL,
+                                TipoOperacion  TEXT NOT NULL CHECK(TipoOperacion IN ('VENTA','COMPRA','AJUSTE','GASTO','COBRO','PAGO','ANULACION')),
+                                Documento      TEXT NULL,
+                                ReferenciaID   INTEGER NULL,
+                                UsuarioID      INTEGER NULL,
+                                Glosa          TEXT NULL,
+                                TotalDebe      REAL NOT NULL DEFAULT 0,
+                                TotalHaber     REAL NOT NULL DEFAULT 0
+                            );";
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+                            CREATE TABLE IF NOT EXISTS AsientosDetalle (
+                                DetalleID   INTEGER PRIMARY KEY AUTOINCREMENT,
+                                AsientoID   INTEGER NOT NULL,
+                                CuentaID    INTEGER NOT NULL,
+                                Debe        REAL NOT NULL DEFAULT 0,
+                                Haber       REAL NOT NULL DEFAULT 0,
+                                Descripcion TEXT NULL,
+                                FOREIGN KEY(AsientoID) REFERENCES Asientos(AsientoID),
+                                FOREIGN KEY(CuentaID)  REFERENCES CuentasContables(CuentaID),
+                                CHECK((Debe > 0 AND Haber = 0) OR (Haber > 0 AND Debe = 0))
+                            );";
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // Indices para contabilidad
+                    string[] indexesContabilidad = new[]
+                    {
+                        "CREATE INDEX IF NOT EXISTS idx_asientos_fecha    ON Asientos(Fecha);",
+                        "CREATE INDEX IF NOT EXISTS idx_detalle_asiento   ON AsientosDetalle(AsientoID);",
+                        "CREATE INDEX IF NOT EXISTS idx_detalle_cuenta    ON AsientosDetalle(CuentaID);"
+                    };
+                    foreach (var idx in indexesContabilidad)
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = idx;
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    // Seed idempotente de cuentas contables (INSERT OR IGNORE por Codigo)
+                    string[] cuentas = new[]
+                    {
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('101','Caja','ACTIVO');",
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('102','Bancos','ACTIVO');",
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('103','Cuentas por Cobrar','ACTIVO');",
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('201','Inventario','ACTIVO');",
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('401','Ventas','INGRESO');",
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('501','Costo de Ventas','GASTO');",
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('502','Gastos Operativos','GASTO');",
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('601','Cuentas por Pagar','PASIVO');",
+                        "INSERT OR IGNORE INTO CuentasContables (Codigo,Nombre,Tipo) VALUES ('701','Capital Inicial','PATRIMONIO');"
+                    };
+                    foreach (var sql in cuentas)
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = sql;
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
                 }
             }
             catch (Exception ex)

@@ -205,6 +205,45 @@ namespace SistemaPOS.Data
                             cmd.ExecuteNonQuery();
                         }
 
+                        // ===== ASIENTO CONTABLE: Pago a proveedor =====
+                        try
+                        {
+                            string numCompra = null;
+                            using (var cmd = new SQLiteCommand(
+                                "SELECT c.NumeroCompra FROM CuentasPorPagar cp INNER JOIN Compras c ON c.CompraID = cp.CompraID WHERE cp.CuentaPorPagarID = @ID",
+                                connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@ID", pago.CuentaPorPagarID);
+                                numCompra = cmd.ExecuteScalar()?.ToString();
+                            }
+
+                            var asiento = new Models.AsientoContable
+                            {
+                                Fecha = pago.Fecha,
+                                Hora = pago.Hora,
+                                TipoOperacion = "PAGO",
+                                Documento = pago.Comprobante ?? $"PAGO-{pago.CuentaPorPagarID}",
+                                ReferenciaID = pago.CuentaPorPagarID,
+                                UsuarioID = pago.UsuarioID,
+                                Glosa = $"Pago proveedor CxP {numCompra}"
+                            };
+
+                            var ctaCxP = ContabilidadRepository.ObtenerCuentaPorCodigo("601", connection, transaction);
+                            string codigoPago = ContabilidadRepository.ObtenerCodigoCuentaEfectivo(pago.MetodoPago);
+                            var ctaPago = ContabilidadRepository.ObtenerCuentaPorCodigo(codigoPago, connection, transaction);
+
+                            if (ctaCxP != null && ctaPago != null && pago.Monto > 0)
+                            {
+                                asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCxP.CuentaID, Debe = pago.Monto, Descripcion = "Cancelacion CxP" });
+                                asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaPago.CuentaID, Haber = pago.Monto, Descripcion = $"Pago {pago.MetodoPago}" });
+                                ContabilidadRepository.CrearAsientoCompleto(asiento, connection, transaction);
+                            }
+                        }
+                        catch
+                        {
+                            // No bloquear el pago si falla el asiento
+                        }
+
                         transaction.Commit();
                         return true;
                     }

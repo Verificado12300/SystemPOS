@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\AjusteRepository.cs" />
+    <Compile Include="Data\ContabilidadRepository.cs" />
     <Compile Include="Data\CajaRepository.cs" />
     <Compile Include="Data\CategoriaRepository.cs" />
     <Compile Include="Data\ClienteRepository.cs" />
@@ -375,6 +376,15 @@
     <Compile Include="Forms\Ventas\FormVentas.Designer.cs">
       <DependentUpon>FormVentas.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\Finanzas\FormContabilidad.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Finanzas\FormContabilidad.Designer.cs">
+      <DependentUpon>FormContabilidad.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Models\AsientoContable.cs" />
+    <Compile Include="Models\AsientoDetalleContable.cs" />
+    <Compile Include="Models\CuentaContable.cs" />
     <Compile Include="Models\Ajuste.cs" />
     <Compile Include="Models\Caja.cs" />
     <Compile Include="Models\Categoria.cs" />
@@ -470,6 +480,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Finanzas\FormRegistrarPagoProveedor.resx">
       <DependentUpon>FormRegistrarPagoProveedor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Finanzas\FormContabilidad.resx">
+      <DependentUpon>FormContabilidad.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Reportes\FormReportes.resx">
       <DependentUpon>FormReportes.cs</DependentUpon>
