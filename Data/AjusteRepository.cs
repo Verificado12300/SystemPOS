@@ -58,6 +58,70 @@ namespace SistemaPOS.Data
                             cmd.ExecuteNonQuery();
                         }
 
+                        // ===== ASIENTO CONTABLE =====
+                        try
+                        {
+                            // Obtener ID del ajuste recien insertado para usarlo como referencia
+                            int ajusteID;
+                            using (var cmd2 = new SQLiteCommand("SELECT last_insert_rowid()", connection, transaction))
+                                ajusteID = Convert.ToInt32(cmd2.ExecuteScalar());
+
+                            decimal costoUnitario = ContabilidadRepository.ObtenerCostoPromedioUnitarioProducto(productoID, connection, transaction);
+
+                            bool esEntrada = tipoAjuste == "ENTRADA"
+                                || (tipoAjuste == "CORRECCION" && stockNuevo > stockAnterior);
+                            bool esSalida = tipoAjuste == "SALIDA"
+                                || (tipoAjuste == "CORRECCION" && stockNuevo < stockAnterior);
+
+                            decimal cantidadNeta = tipoAjuste == "CORRECCION"
+                                ? Math.Abs(stockNuevo - stockAnterior)
+                                : cantidad;
+
+                            decimal valorAjuste = cantidadNeta * costoUnitario;
+
+                            if (valorAjuste > 0.001m)
+                            {
+                                var asiento = new Models.AsientoContable
+                                {
+                                    Fecha = fecha,
+                                    Hora = fecha.TimeOfDay,
+                                    TipoOperacion = "AJUSTE",
+                                    Documento = $"AJ-{ajusteID}",
+                                    ReferenciaID = ajusteID,
+                                    UsuarioID = usuarioID,
+                                    Glosa = $"Ajuste inventario {tipoAjuste}: {motivo ?? ""}"
+                                };
+
+                                var ctaInv = ContabilidadRepository.ObtenerCuentaPorCodigo("201", connection, transaction);
+
+                                if (esEntrada && ctaInv != null)
+                                {
+                                    var ctaCapital = ContabilidadRepository.ObtenerCuentaPorCodigo("701", connection, transaction);
+                                    if (ctaCapital != null)
+                                    {
+                                        asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaInv.CuentaID, Debe = valorAjuste, Descripcion = "Entrada inventario ajuste" });
+                                        asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCapital.CuentaID, Haber = valorAjuste, Descripcion = "Ajuste inventario" });
+                                    }
+                                }
+                                else if (esSalida && ctaInv != null)
+                                {
+                                    var ctaCosto = ContabilidadRepository.ObtenerCuentaPorCodigo("501", connection, transaction);
+                                    if (ctaCosto != null)
+                                    {
+                                        asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCosto.CuentaID, Debe = valorAjuste, Descripcion = "Salida inventario ajuste" });
+                                        asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaInv.CuentaID, Haber = valorAjuste, Descripcion = "Salida inventario ajuste" });
+                                    }
+                                }
+
+                                if (asiento.Detalles.Count >= 2)
+                                    ContabilidadRepository.CrearAsientoCompleto(asiento, connection, transaction);
+                            }
+                        }
+                        catch
+                        {
+                            // No bloquear el ajuste si falla el asiento contable
+                        }
+
                         transaction.Commit();
                         return true;
                     }

@@ -39,6 +39,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnFlujoCaja = new System.Windows.Forms.Button();
             this.lblReportes = new System.Windows.Forms.Label();
             this.btnCuentasPagar = new System.Windows.Forms.Button();
+            this.btnContabilidad = new System.Windows.Forms.Button();
             this.btnCobros = new System.Windows.Forms.Button();
             this.btnGastos = new System.Windows.Forms.Button();
             this.btnCaja = new System.Windows.Forms.Button();
@@ -195,6 +196,7 @@ namespace SistemaPOS.Forms.Principal
             this.pnlMenu.Controls.Add(this.btnEstadoResultados);
             this.pnlMenu.Controls.Add(this.btnFlujoCaja);
             this.pnlMenu.Controls.Add(this.lblReportes);
+            this.pnlMenu.Controls.Add(this.btnContabilidad);
             this.pnlMenu.Controls.Add(this.btnCuentasPagar);
             this.pnlMenu.Controls.Add(this.btnCobros);
             this.pnlMenu.Controls.Add(this.btnGastos);
@@ -268,7 +270,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnReportes.ForeColor = System.Drawing.Color.Black;
             this.btnReportes.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_ReportesGenerales;
             this.btnReportes.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnReportes.Location = new System.Drawing.Point(0, 801);
+            this.btnReportes.Location = new System.Drawing.Point(0, 840);
             this.btnReportes.Name = "btnReportes";
             this.btnReportes.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnReportes.Size = new System.Drawing.Size(250, 35);
@@ -289,7 +291,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnBalanceGeneral.ForeColor = System.Drawing.Color.Black;
             this.btnBalanceGeneral.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_BalanceGeneral;
             this.btnBalanceGeneral.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnBalanceGeneral.Location = new System.Drawing.Point(0, 762);
+            this.btnBalanceGeneral.Location = new System.Drawing.Point(0, 801);
             this.btnBalanceGeneral.Name = "btnBalanceGeneral";
             this.btnBalanceGeneral.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnBalanceGeneral.Size = new System.Drawing.Size(250, 35);
@@ -310,7 +312,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnEstadoResultados.ForeColor = System.Drawing.Color.Black;
             this.btnEstadoResultados.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_EstadoDeResultado;
             this.btnEstadoResultados.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnEstadoResultados.Location = new System.Drawing.Point(0, 723);
+            this.btnEstadoResultados.Location = new System.Drawing.Point(0, 762);
             this.btnEstadoResultados.Name = "btnEstadoResultados";
             this.btnEstadoResultados.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnEstadoResultados.Size = new System.Drawing.Size(250, 35);
@@ -331,7 +333,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnFlujoCaja.ForeColor = System.Drawing.Color.Black;
             this.btnFlujoCaja.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_FlujoDeCaja;
             this.btnFlujoCaja.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnFlujoCaja.Location = new System.Drawing.Point(0, 684);
+            this.btnFlujoCaja.Location = new System.Drawing.Point(0, 723);
             this.btnFlujoCaja.Name = "btnFlujoCaja";
             this.btnFlujoCaja.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnFlujoCaja.Size = new System.Drawing.Size(250, 35);
@@ -346,7 +348,7 @@ namespace SistemaPOS.Forms.Principal
             this.lblReportes.AutoSize = true;
             this.lblReportes.Font = new System.Drawing.Font("Inter V Semi Bold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblReportes.ForeColor = System.Drawing.SystemColors.AppWorkspace;
-            this.lblReportes.Location = new System.Drawing.Point(15, 666);
+            this.lblReportes.Location = new System.Drawing.Point(15, 705);
             this.lblReportes.Name = "lblReportes";
             this.lblReportes.Size = new System.Drawing.Size(66, 14);
             this.lblReportes.TabIndex = 18;
@@ -372,9 +374,29 @@ namespace SistemaPOS.Forms.Principal
             this.btnCuentasPagar.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnCuentasPagar.UseVisualStyleBackColor = false;
             this.btnCuentasPagar.Click += new System.EventHandler(this.BtnCuentasPagar_Click);
-            // 
+            //
+            // btnContabilidad
+            //
+            this.btnContabilidad.BackColor = System.Drawing.Color.White;
+            this.btnContabilidad.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnContabilidad.FlatAppearance.BorderSize = 0;
+            this.btnContabilidad.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnContabilidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnContabilidad.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnContabilidad.ForeColor = System.Drawing.Color.Black;
+            this.btnContabilidad.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnContabilidad.Location = new System.Drawing.Point(0, 662);
+            this.btnContabilidad.Name = "btnContabilidad";
+            this.btnContabilidad.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
+            this.btnContabilidad.Size = new System.Drawing.Size(250, 35);
+            this.btnContabilidad.TabIndex = 29;
+            this.btnContabilidad.Text = "       Contabilidad";
+            this.btnContabilidad.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnContabilidad.UseVisualStyleBackColor = false;
+            this.btnContabilidad.Click += new System.EventHandler(this.BtnContabilidad_Click);
+            //
             // btnCobros
-            // 
+            //
             this.btnCobros.BackColor = System.Drawing.Color.White;
             this.btnCobros.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnCobros.FlatAppearance.BorderSize = 0;
@@ -907,6 +929,7 @@ namespace SistemaPOS.Forms.Principal
         private System.Windows.Forms.Button btnGastos;
         private System.Windows.Forms.Button btnCobros;
         private System.Windows.Forms.Button btnCuentasPagar;
+        private System.Windows.Forms.Button btnContabilidad;
         private System.Windows.Forms.Label lblReportes;
         private System.Windows.Forms.Button btnFlujoCaja;
         private System.Windows.Forms.Button btnEstadoResultados;

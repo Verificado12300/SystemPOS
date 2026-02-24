@@ -108,7 +108,7 @@ namespace SistemaPOS.Data
                                 }
                             }
 
-                            // Registrar crÃ©dito si corresponde
+                            // Registrar credito si corresponde
                             if (compra.Estado == "CREDITO")
                             {
                                 DateTime vencimiento = fechaVencimientoCredito ?? DateTime.Now.AddDays(30);
@@ -129,6 +129,16 @@ namespace SistemaPOS.Data
                                     cmd.Parameters.AddWithValue("@FechaVencimiento", vencimiento.ToString("yyyy-MM-dd"));
                                     cmd.ExecuteNonQuery();
                                 }
+                            }
+
+                            // ===== ASIENTO CONTABLE =====
+                            try
+                            {
+                                CrearAsientoCompra(compra, (int)compraID, connection, transaction);
+                            }
+                            catch
+                            {
+                                throw;
                             }
 
                             transaction.Commit();
@@ -469,6 +479,16 @@ namespace SistemaPOS.Data
                             cmd.ExecuteNonQuery();
                         }
 
+                        // ===== ASIENTO DE ANULACION =====
+                        try
+                        {
+                            CrearAsientoAnulacionCompra(compraID, motivo, connection, transaction);
+                        }
+                        catch
+                        {
+                            // No bloquear la anulacion si falla el asiento contable
+                        }
+
                         transaction.Commit();
                         return true;
                     }
@@ -504,6 +524,112 @@ namespace SistemaPOS.Data
                 int siguiente = Convert.ToInt32(cmd.ExecuteScalar());
                 return $"{anio}-{siguiente:D6}";
             }
+        }
+
+        // =====================================================================
+        // Crea el asiento contable para una compra
+        // =====================================================================
+        private static void CrearAsientoCompra(Compra compra, int compraID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            var asiento = new Models.AsientoContable
+            {
+                Fecha = compra.Fecha,
+                Hora = compra.Hora,
+                TipoOperacion = "COMPRA",
+                Documento = compra.NumeroCompra,
+                ReferenciaID = compraID,
+                UsuarioID = compra.UsuarioID,
+                Glosa = $"Compra {compra.NumeroCompra}"
+            };
+
+            // Debe: Inventario
+            var ctaInv = ContabilidadRepository.ObtenerCuentaPorCodigo("201", conn, tx);
+            if (ctaInv != null && compra.Total > 0)
+                asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaInv.CuentaID, Debe = compra.Total, Descripcion = "Ingreso inventario" });
+
+            // Haber: segun metodo de pago
+            if (compra.MetodoPago == "CREDITO" || compra.Estado == "CREDITO")
+            {
+                var ctaCxP = ContabilidadRepository.ObtenerCuentaPorCodigo("601", conn, tx);
+                if (ctaCxP != null && compra.Total > 0)
+                    asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCxP.CuentaID, Haber = compra.Total, Descripcion = "Cuenta por pagar proveedor" });
+            }
+            else
+            {
+                string codigoCuenta = ContabilidadRepository.ObtenerCodigoCuentaEfectivo(compra.MetodoPago);
+                var ctaPago = ContabilidadRepository.ObtenerCuentaPorCodigo(codigoCuenta, conn, tx);
+                if (ctaPago != null && compra.Total > 0)
+                    asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaPago.CuentaID, Haber = compra.Total, Descripcion = $"Pago compra {compra.MetodoPago}" });
+            }
+
+            if (asiento.Detalles.Count >= 2)
+                ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
+
+        // =====================================================================
+        // Crea el asiento de anulacion de una compra (reverso)
+        // =====================================================================
+        private static void CrearAsientoAnulacionCompra(int compraID, string motivo,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            string queryCompra = "SELECT NumeroCompra, Fecha, Hora, Total, MetodoPago, Estado, UsuarioID FROM Compras WHERE CompraID = @CompraID";
+            string numeroCompra = null;
+            DateTime fecha = DateTime.Now;
+            TimeSpan hora = DateTime.Now.TimeOfDay;
+            decimal total = 0;
+            string metodoPago = "EFECTIVO";
+            string estado = "COMPLETADA";
+            int usuarioID = 0;
+
+            using (var cmd = new SQLiteCommand(queryCompra, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@CompraID", compraID);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (!reader.Read()) return;
+                    numeroCompra = reader.GetString(0);
+                    fecha = DateTime.Parse(reader.GetString(1));
+                    hora = TimeSpan.Parse(reader.GetString(2));
+                    total = reader.GetDecimal(3);
+                    metodoPago = reader.GetString(4);
+                    estado = reader.GetString(5);
+                    usuarioID = reader.GetInt32(6);
+                }
+            }
+
+            var asiento = new Models.AsientoContable
+            {
+                Fecha = DateTime.Now,
+                Hora = DateTime.Now.TimeOfDay,
+                TipoOperacion = "ANULACION",
+                Documento = numeroCompra + "-ANUL",
+                ReferenciaID = compraID,
+                UsuarioID = usuarioID,
+                Glosa = $"Anulacion compra {numeroCompra}: {motivo}"
+            };
+
+            // Revertir: Haber Inventario, Debe a la cuenta de pago original
+            var ctaInv = ContabilidadRepository.ObtenerCuentaPorCodigo("201", conn, tx);
+            if (ctaInv != null && total > 0)
+                asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaInv.CuentaID, Haber = total, Descripcion = "Reverso inventario" });
+
+            if (metodoPago == "CREDITO" || estado == "CREDITO")
+            {
+                var ctaCxP = ContabilidadRepository.ObtenerCuentaPorCodigo("601", conn, tx);
+                if (ctaCxP != null && total > 0)
+                    asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCxP.CuentaID, Debe = total, Descripcion = "Reverso CxP" });
+            }
+            else
+            {
+                string codigoCuenta = ContabilidadRepository.ObtenerCodigoCuentaEfectivo(metodoPago);
+                var ctaPago = ContabilidadRepository.ObtenerCuentaPorCodigo(codigoCuenta, conn, tx);
+                if (ctaPago != null && total > 0)
+                    asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaPago.CuentaID, Debe = total, Descripcion = $"Reverso pago {metodoPago}" });
+            }
+
+            if (asiento.Detalles.Count >= 2)
+                ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
     }
 }

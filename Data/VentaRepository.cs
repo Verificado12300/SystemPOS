@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Linq;
 
 namespace SistemaPOS.Data
 {
@@ -84,6 +85,18 @@ namespace SistemaPOS.Data
 
                             long ventaID = connection.LastInsertRowId;
 
+                            // Obtener costos promedio ANTES de descontar stock
+                            var costosPorProducto = new Dictionary<int, decimal>();
+                            foreach (var detalle in detalles)
+                            {
+                                if (!costosPorProducto.ContainsKey(detalle.ProductoID))
+                                {
+                                    costosPorProducto[detalle.ProductoID] =
+                                        ContabilidadRepository.ObtenerCostoPromedioUnitarioProducto(
+                                            detalle.ProductoID, connection, transaction);
+                                }
+                            }
+
                             foreach (var detalle in detalles)
                             {
                                 string queryDetalle = @"
@@ -143,6 +156,17 @@ namespace SistemaPOS.Data
                                         DateTime.Now.AddDays(30).ToString("yyyy-MM-dd"));
                                     cmd.ExecuteNonQuery();
                                 }
+                            }
+
+                            // ===== ASIENTO CONTABLE =====
+                            try
+                            {
+                                CrearAsientoVenta(venta, (int)ventaID, detalles, costosPorProducto, connection, transaction);
+                            }
+                            catch
+                            {
+                                // Si falla el asiento, el rollback se hace en el catch externo
+                                throw;
                             }
 
                             transaction.Commit();
@@ -319,7 +343,7 @@ namespace SistemaPOS.Data
                         }
 
                         string queryAnular = @"
-                            UPDATE Ventas 
+                            UPDATE Ventas
                             SET Estado = 'ANULADA',
                                 FechaAnulacion = @FechaAnulacion,
                                 MotivoAnulacion = @Motivo
@@ -331,6 +355,16 @@ namespace SistemaPOS.Data
                             cmd.Parameters.AddWithValue("@FechaAnulacion", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
                             cmd.Parameters.AddWithValue("@Motivo", motivo);
                             cmd.ExecuteNonQuery();
+                        }
+
+                        // ===== ASIENTO DE ANULACION =====
+                        try
+                        {
+                            CrearAsientoAnulacionVenta(ventaID, motivo, connection, transaction);
+                        }
+                        catch
+                        {
+                            // No bloquear la anulacion si falla el asiento contable
                         }
 
                         transaction.Commit();
@@ -492,6 +526,192 @@ namespace SistemaPOS.Data
                 int siguiente = Convert.ToInt32(cmd.ExecuteScalar());
                 return $"{anio}-{siguiente:D6}";
             }
+        }
+
+        // =====================================================================
+        // Crea el asiento contable para una venta (dentro de la misma tx)
+        // =====================================================================
+        private static void CrearAsientoVenta(Venta venta, int ventaID, List<VentaDetalle> detalles,
+            Dictionary<int, decimal> costosPorProducto,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            var now = DateTime.Now;
+            var asiento = new AsientoContable
+            {
+                Fecha = venta.Fecha,
+                Hora = venta.Hora,
+                TipoOperacion = "VENTA",
+                Documento = venta.NumeroVenta,
+                ReferenciaID = ventaID,
+                UsuarioID = venta.UsuarioID,
+                Glosa = $"Venta {venta.NumeroVenta}"
+            };
+
+            // Determinar cuenta de cobro segun metodo de pago
+            if (venta.MetodoPago == "CREDITO")
+            {
+                var cxc = ContabilidadRepository.ObtenerCuentaPorCodigo("103", conn, tx);
+                if (cxc != null && venta.Total > 0)
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = cxc.CuentaID, Debe = venta.Total, Descripcion = "CxC Venta credito" });
+            }
+            else if (venta.MetodoPago == "MIXTO")
+            {
+                decimal montoCaja = venta.MontoEfectivo + venta.MontoYape;
+                decimal montoBanco = venta.MontoTarjeta + venta.MontoTransferencia;
+                var caja = ContabilidadRepository.ObtenerCuentaPorCodigo("101", conn, tx);
+                var banco = ContabilidadRepository.ObtenerCuentaPorCodigo("102", conn, tx);
+                if (caja != null && montoCaja > 0)
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = caja.CuentaID, Debe = montoCaja, Descripcion = "Cobro efectivo/yape" });
+                if (banco != null && montoBanco > 0)
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = banco.CuentaID, Debe = montoBanco, Descripcion = "Cobro tarjeta/transferencia" });
+            }
+            else
+            {
+                string codigoCuenta = ContabilidadRepository.ObtenerCodigoCuentaEfectivo(venta.MetodoPago);
+                var ctaCobro = ContabilidadRepository.ObtenerCuentaPorCodigo(codigoCuenta, conn, tx);
+                if (ctaCobro != null && venta.Total > 0)
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = ctaCobro.CuentaID, Debe = venta.Total, Descripcion = $"Cobro {venta.MetodoPago}" });
+            }
+
+            // Haber: Ventas
+            var ctaVentas = ContabilidadRepository.ObtenerCuentaPorCodigo("401", conn, tx);
+            if (ctaVentas != null && venta.Total > 0)
+                asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = ctaVentas.CuentaID, Haber = venta.Total, Descripcion = "Ingreso por ventas" });
+
+            // Costo de Ventas (COGS)
+            decimal totalCOGS = 0m;
+            foreach (var det in detalles)
+            {
+                decimal costoUnitario = costosPorProducto.ContainsKey(det.ProductoID)
+                    ? costosPorProducto[det.ProductoID] : 0m;
+                totalCOGS += det.CantidadUnidadesBase * costoUnitario;
+            }
+
+            if (totalCOGS > 0.001m)
+            {
+                var ctaCosto = ContabilidadRepository.ObtenerCuentaPorCodigo("501", conn, tx);
+                var ctaInv = ContabilidadRepository.ObtenerCuentaPorCodigo("201", conn, tx);
+                if (ctaCosto != null && ctaInv != null)
+                {
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = ctaCosto.CuentaID, Debe = totalCOGS, Descripcion = "Costo de ventas" });
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = ctaInv.CuentaID, Haber = totalCOGS, Descripcion = "Salida de inventario" });
+                }
+            }
+
+            if (asiento.Detalles.Count >= 2)
+                ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
+
+        // =====================================================================
+        // Crea el asiento de anulacion de una venta (reverso)
+        // =====================================================================
+        private static void CrearAsientoAnulacionVenta(int ventaID, string motivo,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            // Obtener datos de la venta anulada
+            string queryVenta = "SELECT NumeroVenta, Fecha, Hora, Total, MetodoPago, MontoEfectivo, MontoYape, MontoTarjeta, MontoTransferencia, UsuarioID FROM Ventas WHERE VentaID = @VentaID";
+            string numeroVenta = null;
+            DateTime fecha = DateTime.Now;
+            TimeSpan hora = DateTime.Now.TimeOfDay;
+            decimal total = 0;
+            string metodoPago = "EFECTIVO";
+            decimal montoEfectivo = 0, montoYape = 0, montoTarjeta = 0, montoTransf = 0;
+            int usuarioID = 0;
+
+            using (var cmd = new SQLiteCommand(queryVenta, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@VentaID", ventaID);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (!reader.Read()) return;
+                    numeroVenta = reader.GetString(0);
+                    fecha = DateTime.Parse(reader.GetString(1));
+                    hora = TimeSpan.Parse(reader.GetString(2));
+                    total = reader.GetDecimal(3);
+                    metodoPago = reader.GetString(4);
+                    montoEfectivo = reader.GetDecimal(5);
+                    montoYape = reader.GetDecimal(6);
+                    montoTarjeta = reader.GetDecimal(7);
+                    montoTransf = reader.GetDecimal(8);
+                    usuarioID = reader.GetInt32(9);
+                }
+            }
+
+            // Obtener detalles para revertir COGS
+            var detallesVenta = new List<(int ProductoID, decimal CantidadBase)>();
+            string queryDetalles = "SELECT ProductoID, CantidadUnidadesBase FROM VentaDetalles WHERE VentaID = @VentaID";
+            using (var cmd = new SQLiteCommand(queryDetalles, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@VentaID", ventaID);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                        detallesVenta.Add((reader.GetInt32(0), reader.GetDecimal(1)));
+                }
+            }
+
+            var asiento = new AsientoContable
+            {
+                Fecha = DateTime.Now,
+                Hora = DateTime.Now.TimeOfDay,
+                TipoOperacion = "ANULACION",
+                Documento = numeroVenta + "-ANUL",
+                ReferenciaID = ventaID,
+                UsuarioID = usuarioID,
+                Glosa = $"Anulacion venta {numeroVenta}: {motivo}"
+            };
+
+            // Revertir cobro: Haber a la cuenta de cobro, Debe a Ventas
+            var ctaVentas = ContabilidadRepository.ObtenerCuentaPorCodigo("401", conn, tx);
+            if (ctaVentas != null && total > 0)
+                asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = ctaVentas.CuentaID, Debe = total, Descripcion = "Anulacion ingreso ventas" });
+
+            if (metodoPago == "CREDITO")
+            {
+                var cxc = ContabilidadRepository.ObtenerCuentaPorCodigo("103", conn, tx);
+                if (cxc != null && total > 0)
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = cxc.CuentaID, Haber = total, Descripcion = "Reverso CxC" });
+            }
+            else if (metodoPago == "MIXTO")
+            {
+                decimal montoCaja = montoEfectivo + montoYape;
+                decimal montoBanco = montoTarjeta + montoTransf;
+                var caja = ContabilidadRepository.ObtenerCuentaPorCodigo("101", conn, tx);
+                var banco = ContabilidadRepository.ObtenerCuentaPorCodigo("102", conn, tx);
+                if (caja != null && montoCaja > 0)
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = caja.CuentaID, Haber = montoCaja, Descripcion = "Reverso caja" });
+                if (banco != null && montoBanco > 0)
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = banco.CuentaID, Haber = montoBanco, Descripcion = "Reverso banco" });
+            }
+            else
+            {
+                string codigoCuenta = ContabilidadRepository.ObtenerCodigoCuentaEfectivo(metodoPago);
+                var ctaCobro = ContabilidadRepository.ObtenerCuentaPorCodigo(codigoCuenta, conn, tx);
+                if (ctaCobro != null && total > 0)
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = ctaCobro.CuentaID, Haber = total, Descripcion = $"Reverso cobro {metodoPago}" });
+            }
+
+            // Revertir COGS: Inventario Debe, CostoVentas Haber
+            decimal totalCOGS = 0m;
+            foreach (var (prodID, cantBase) in detallesVenta)
+            {
+                decimal costoUnitario = ContabilidadRepository.ObtenerCostoPromedioUnitarioProducto(prodID, conn, tx);
+                totalCOGS += cantBase * costoUnitario;
+            }
+
+            if (totalCOGS > 0.001m)
+            {
+                var ctaCosto = ContabilidadRepository.ObtenerCuentaPorCodigo("501", conn, tx);
+                var ctaInv = ContabilidadRepository.ObtenerCuentaPorCodigo("201", conn, tx);
+                if (ctaCosto != null && ctaInv != null)
+                {
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = ctaInv.CuentaID, Debe = totalCOGS, Descripcion = "Reverso inventario" });
+                    asiento.Detalles.Add(new AsientoDetalleContable { CuentaID = ctaCosto.CuentaID, Haber = totalCOGS, Descripcion = "Reverso costo ventas" });
+                }
+            }
+
+            if (asiento.Detalles.Count >= 2)
+                ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
     }
 }
