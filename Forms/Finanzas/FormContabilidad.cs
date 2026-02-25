@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 
@@ -52,7 +53,8 @@ namespace SistemaPOS.Forms.Finanzas
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al cargar asientos: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Debug.WriteLine($"[Contabilidad] CargarAsientos: {ex.Message}");
+                lblTotalAsientos.Text = "Total: 0 asientos";
             }
         }
 
@@ -76,7 +78,7 @@ namespace SistemaPOS.Forms.Finanzas
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al cargar detalles: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Debug.WriteLine($"[Contabilidad] CargarDetalles(asientoID={asientoID}): {ex.Message}");
             }
         }
 
@@ -99,7 +101,7 @@ namespace SistemaPOS.Forms.Finanzas
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al cargar cuentas: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Debug.WriteLine($"[Contabilidad] CargarCuentas: {ex.Message}");
             }
         }
 

@@ -226,6 +226,233 @@ namespace SistemaPOS.Data
                     {
                         // Ignorar para mantener compatibilidad con instalaciones antiguas.
                     }
+
+                    // Migración: tabla Ajustes — eliminar STOCK_INICIAL del CHECK y añadir CostoUnitario.
+                    // El tipo 'STOCK_INICIAL' ya no existe en BD; se usa ENTRADA + Motivo='Stock inicial'.
+                    // SQLite no permite ALTER CONSTRAINT, se requiere recrear la tabla cuando hay cambios.
+                    try
+                    {
+                        string tableSql;
+                        bool hasCostoUnitario;
+
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT sql FROM sqlite_master WHERE type='table' AND name='Ajustes'";
+                            tableSql = cmd.ExecuteScalar()?.ToString() ?? "";
+                        }
+
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Ajustes') WHERE name='CostoUnitario'";
+                            hasCostoUnitario = (long)cmd.ExecuteScalar() > 0;
+                        }
+
+                        if (tableSql.Contains("STOCK_INICIAL"))
+                        {
+                            // Tabla tiene el tipo obsoleto STOCK_INICIAL en el CHECK.
+                            // Pasos: convertir filas existentes → recrear sin ese tipo.
+                            string selCosto = hasCostoUnitario ? "CostoUnitario" : "0";
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "PRAGMA foreign_keys = OFF";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Tabla destino con CHECK correcto (sin STOCK_INICIAL) y columna CostoUnitario
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = @"
+                                    CREATE TABLE Ajustes_Mig (
+                                        AjusteID       INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        ProductoID     INTEGER NOT NULL,
+                                        TipoAjuste     TEXT(20) NOT NULL CHECK(TipoAjuste IN ('ENTRADA','SALIDA','CORRECCION')),
+                                        Cantidad       REAL NOT NULL,
+                                        StockAnterior  REAL NOT NULL,
+                                        StockNuevo     REAL NOT NULL,
+                                        CostoUnitario  REAL DEFAULT 0,
+                                        Motivo         TEXT(300),
+                                        UsuarioID      INTEGER NOT NULL,
+                                        Fecha          TEXT DEFAULT CURRENT_TIMESTAMP,
+                                        FOREIGN KEY (ProductoID) REFERENCES Productos(ProductoID),
+                                        FOREIGN KEY (UsuarioID)  REFERENCES Usuarios(UsuarioID)
+                                    )";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Copiar datos: STOCK_INICIAL → ENTRADA con Motivo='Stock inicial'
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = $@"
+                                    INSERT INTO Ajustes_Mig
+                                        (AjusteID, ProductoID, TipoAjuste, Cantidad,
+                                         StockAnterior, StockNuevo, CostoUnitario, Motivo, UsuarioID, Fecha)
+                                    SELECT
+                                        AjusteID, ProductoID,
+                                        CASE WHEN TipoAjuste = 'STOCK_INICIAL' THEN 'ENTRADA' ELSE TipoAjuste END,
+                                        Cantidad, StockAnterior, StockNuevo,
+                                        {selCosto},
+                                        CASE WHEN TipoAjuste = 'STOCK_INICIAL' THEN 'Stock inicial' ELSE Motivo END,
+                                        UsuarioID, Fecha
+                                    FROM Ajustes";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "DROP TABLE Ajustes";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "ALTER TABLE Ajustes_Mig RENAME TO Ajustes";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "PRAGMA foreign_keys = ON";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                        else if (!hasCostoUnitario)
+                        {
+                            // CHECK ya es correcto pero falta la columna CostoUnitario
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "ALTER TABLE Ajustes ADD COLUMN CostoUnitario REAL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                        // else: tabla ya en estado correcto, nada que hacer
+                    }
+                    catch { }
+
+                    // Migración: tablas de contabilidad de partida doble.
+                    // Agregadas después del commit inicial; instalaciones antiguas no las tienen.
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                CREATE TABLE IF NOT EXISTS CuentasContables (
+                                    CuentaID  INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    Codigo    TEXT(20)  NOT NULL UNIQUE,
+                                    Nombre    TEXT(200) NOT NULL,
+                                    Tipo      TEXT(20)  NOT NULL CHECK(Tipo IN ('ACTIVO','PASIVO','PATRIMONIO','INGRESO','GASTO')),
+                                    Activa    INTEGER   NOT NULL DEFAULT 1 CHECK(Activa IN (0,1))
+                                )";
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                CREATE TABLE IF NOT EXISTS Asientos (
+                                    AsientoID     INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    Fecha         TEXT NOT NULL,
+                                    Hora          TEXT NOT NULL,
+                                    TipoOperacion TEXT(20) NOT NULL,
+                                    Documento     TEXT(100),
+                                    ReferenciaID  INTEGER,
+                                    UsuarioID     INTEGER,
+                                    Glosa         TEXT(500),
+                                    TotalDebe     REAL NOT NULL DEFAULT 0,
+                                    TotalHaber    REAL NOT NULL DEFAULT 0,
+                                    FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
+                                )";
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                CREATE TABLE IF NOT EXISTS AsientosDetalle (
+                                    DetalleID   INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    AsientoID   INTEGER NOT NULL,
+                                    CuentaID    INTEGER NOT NULL,
+                                    Debe        REAL    NOT NULL DEFAULT 0,
+                                    Haber       REAL    NOT NULL DEFAULT 0,
+                                    Descripcion TEXT(300),
+                                    FOREIGN KEY (AsientoID) REFERENCES Asientos(AsientoID) ON DELETE CASCADE,
+                                    FOREIGN KEY (CuentaID)  REFERENCES CuentasContables(CuentaID)
+                                )";
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // Índices contables
+                        string[] idxContabilidad = new[]
+                        {
+                            "CREATE INDEX IF NOT EXISTS idx_asientos_fecha            ON Asientos(Fecha);",
+                            "CREATE INDEX IF NOT EXISTS idx_asientos_tipo             ON Asientos(TipoOperacion);",
+                            "CREATE INDEX IF NOT EXISTS idx_asientosdetalle_asiento   ON AsientosDetalle(AsientoID);",
+                            "CREATE INDEX IF NOT EXISTS idx_asientosdetalle_cuenta    ON AsientosDetalle(CuentaID);",
+                            "CREATE UNIQUE INDEX IF NOT EXISTS idx_cuentascontables_codigo ON CuentasContables(Codigo);"
+                        };
+                        foreach (var idx in idxContabilidad)
+                        {
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = idx;
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        // Seed plan de cuentas básico (INSERT OR IGNORE para no duplicar)
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                INSERT OR IGNORE INTO CuentasContables (Codigo, Nombre, Tipo, Activa) VALUES
+                                ('101', 'Caja',                     'ACTIVO',     1),
+                                ('102', 'Bancos',                   'ACTIVO',     1),
+                                ('120', 'Cuentas por Cobrar',       'ACTIVO',     1),
+                                ('140', 'Mercaderías / Inventario', 'ACTIVO',     1),
+                                ('200', 'Cuentas por Pagar',        'PASIVO',     1),
+                                ('210', 'Tributos por Pagar',       'PASIVO',     1),
+                                ('300', 'Capital',                  'PATRIMONIO', 1),
+                                ('400', 'Ventas',                   'INGRESO',    1),
+                                ('500', 'Costo de Ventas',          'GASTO',      1),
+                                ('600', 'Gastos Operativos',        'GASTO',      1)";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch { }
+
+                    // Migración: CostoPresentacion en CompraDetalles
+                    // Guarda el costo por presentación ingresado por el usuario (ej. S/90 por Saco),
+                    // además del CostoUnitario base (S/1.80 por kg) que ya existía.
+                    try
+                    {
+                        string schemaCD;
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT sql FROM sqlite_master WHERE type='table' AND name='CompraDetalles'";
+                            schemaCD = cmd.ExecuteScalar()?.ToString() ?? "";
+                        }
+
+                        if (!schemaCD.Contains("CostoPresentacion"))
+                        {
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "ALTER TABLE CompraDetalles ADD COLUMN CostoPresentacion REAL NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            // Backfill: costoPres = costoBase × factor, donde factor = CantidadUnidadesBase / Cantidad
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = @"
+                                    UPDATE CompraDetalles
+                                    SET CostoPresentacion = CASE
+                                        WHEN Cantidad > 0 THEN ROUND(CostoUnitario * (CantidadUnidadesBase / Cantidad), 4)
+                                        ELSE CostoUnitario
+                                    END
+                                    WHERE CostoPresentacion = 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    catch { }
                 }
             }
             catch (Exception ex)

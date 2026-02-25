@@ -419,6 +419,43 @@ CREATE TABLE IF NOT EXISTS PagosProveedores (
 );
 
 -- ============================================================
+-- MÓDULO: CONTABILIDAD (partida doble)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS CuentasContables (
+    CuentaID  INTEGER PRIMARY KEY AUTOINCREMENT,
+    Codigo    TEXT(20)  NOT NULL UNIQUE,
+    Nombre    TEXT(200) NOT NULL,
+    Tipo      TEXT(20)  NOT NULL CHECK(Tipo IN ('ACTIVO','PASIVO','PATRIMONIO','INGRESO','GASTO')),
+    Activa    INTEGER   NOT NULL DEFAULT 1 CHECK(Activa IN (0,1))
+);
+
+CREATE TABLE IF NOT EXISTS Asientos (
+    AsientoID     INTEGER PRIMARY KEY AUTOINCREMENT,
+    Fecha         TEXT NOT NULL,
+    Hora          TEXT NOT NULL,
+    TipoOperacion TEXT(20) NOT NULL,
+    Documento     TEXT(100),
+    ReferenciaID  INTEGER,
+    UsuarioID     INTEGER,
+    Glosa         TEXT(500),
+    TotalDebe     REAL NOT NULL DEFAULT 0,
+    TotalHaber    REAL NOT NULL DEFAULT 0,
+    FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
+);
+
+CREATE TABLE IF NOT EXISTS AsientosDetalle (
+    DetalleID   INTEGER PRIMARY KEY AUTOINCREMENT,
+    AsientoID   INTEGER NOT NULL,
+    CuentaID    INTEGER NOT NULL,
+    Debe        REAL    NOT NULL DEFAULT 0,
+    Haber       REAL    NOT NULL DEFAULT 0,
+    Descripcion TEXT(300),
+    FOREIGN KEY (AsientoID) REFERENCES Asientos(AsientoID) ON DELETE CASCADE,
+    FOREIGN KEY (CuentaID)  REFERENCES CuentasContables(CuentaID)
+);
+
+-- ============================================================
 -- MÓDULO: AUDITORÍA
 -- ============================================================
 
@@ -560,6 +597,19 @@ INSERT INTO ConfigGeneral (Clave, Valor, Descripcion, Tipo, Categoria) VALUES
 ('RESPALDO_AUTOMATICO', 'false', 'Activar respaldo automático', 'BOOLEAN', 'Respaldo'),
 ('FRECUENCIA_RESPALDO', '7', 'Días entre respaldos automáticos', 'INTEGER', 'Respaldo');
 
+-- Plan de cuentas contables inicial
+INSERT OR IGNORE INTO CuentasContables (Codigo, Nombre, Tipo, Activa) VALUES
+('101', 'Caja',                    'ACTIVO',     1),
+('102', 'Bancos',                  'ACTIVO',     1),
+('120', 'Cuentas por Cobrar',      'ACTIVO',     1),
+('140', 'Mercaderías / Inventario','ACTIVO',     1),
+('200', 'Cuentas por Pagar',       'PASIVO',     1),
+('210', 'Tributos por Pagar',      'PASIVO',     1),
+('300', 'Capital',                 'PATRIMONIO', 1),
+('400', 'Ventas',                  'INGRESO',    1),
+('500', 'Costo de Ventas',         'GASTO',      1),
+('600', 'Gastos Operativos',       'GASTO',      1);
+
 -- ============================================================
 -- ÍNDICES
 -- ============================================================
@@ -585,6 +635,12 @@ CREATE INDEX idx_gastos_caja ON Gastos(CajaID);
 CREATE INDEX idx_cuentasporpagar_proveedor ON CuentasPorPagar(ProveedorID);
 CREATE INDEX idx_cuentasporpagar_estado ON CuentasPorPagar(Estado);
 CREATE INDEX idx_pagosproveedores_cuenta ON PagosProveedores(CuentaPorPagarID);
+
+CREATE INDEX idx_asientos_fecha       ON Asientos(Fecha);
+CREATE INDEX idx_asientos_tipo        ON Asientos(TipoOperacion);
+CREATE INDEX idx_asientosdetalle_asiento ON AsientosDetalle(AsientoID);
+CREATE INDEX idx_asientosdetalle_cuenta  ON AsientosDetalle(CuentaID);
+CREATE UNIQUE INDEX idx_cuentascontables_codigo ON CuentasContables(Codigo);
 
 -- ============================================================
 -- FIN DEL SCRIPT
