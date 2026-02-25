@@ -384,6 +384,85 @@ namespace SistemaPOS.Data
         }
 
         // ==================================================================
+        // GASTOS OPERATIVOS
+        // ==================================================================
+
+        /// <summary>
+        /// Asiento al registrar un gasto operativo.
+        ///   Dr 600 Gastos Operativos = Monto
+        ///   Cr 101 Caja / 102 Bancos / 200 CxP  (según MetodoPago)
+        /// EFECTIVO/YAPE → 101;  TARJETA/TRANSFERENCIA → 102;  CREDITO → 200
+        /// </summary>
+        public static void RegistrarGasto(
+            long gastoID, string concepto, DateTime fecha, TimeSpan hora,
+            decimal monto, string metodoPago, int usuarioID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            if (monto <= 0m) return;
+
+            var asiento = BuildAsiento("GASTO", $"GASTO-{gastoID}", gastoID, usuarioID,
+                fecha, hora, $"Gasto: {concepto}");
+
+            var cuentaGastos = GetCuenta("600", conn, tx);
+            AddLine(asiento, cuentaGastos.CuentaID, monto, 0m, $"Gasto operativo: {concepto}");
+
+            string codigoCr = MetodoPagoCompraACuenta(metodoPago); // reutiliza mapping existente
+            var cuentaCr = GetCuenta(codigoCr, conn, tx);
+            AddLine(asiento, cuentaCr.CuentaID, 0m, monto, $"Pago gasto ({metodoPago})");
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
+
+        /// <summary>
+        /// Reverso del asiento de gasto al eliminar/anular.
+        /// Debe llamarse ANTES de borrar el registro de la tabla Gastos
+        /// para poder leer los datos del gasto dentro de la misma transacción.
+        ///   Dr 101/102/200  (según MetodoPago original)
+        ///   Cr 600 Gastos Operativos
+        /// Si el gastoID no existe, retorna silenciosamente.
+        /// </summary>
+        public static void ReversarGasto(int gastoID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            const string sql = @"
+                SELECT Concepto, Fecha, Hora, Monto, MetodoPago, UsuarioID
+                FROM   Gastos WHERE GastoID = @ID";
+
+            using (var cmd = new SQLiteCommand(sql, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@ID", gastoID);
+                using (var r = cmd.ExecuteReader())
+                {
+                    if (!r.Read()) return;
+
+                    string concepto = r.GetString(0);
+                    DateTime fecha  = DateTime.Parse(r.GetString(1));
+                    TimeSpan hora   = TimeSpan.Parse(r.GetString(2));
+                    decimal monto   = r.GetDecimal(3);
+                    string metodo   = r.GetString(4);
+                    int usuarioID   = r.IsDBNull(5) ? 1 : r.GetInt32(5);
+
+                    if (monto <= 0m) return;
+
+                    var asiento = BuildAsiento("ANULACION", $"GASTO-{gastoID}", gastoID, usuarioID,
+                        DateTime.Now.Date, DateTime.Now.TimeOfDay,
+                        $"Anulación gasto: {concepto}");
+
+                    // Cr Caja/Bancos/CxP → lado opuesto, ahora es Debe
+                    string codigoDr = MetodoPagoCompraACuenta(metodo);
+                    var cuentaDr = GetCuenta(codigoDr, conn, tx);
+                    AddLine(asiento, cuentaDr.CuentaID, monto, 0m, $"Anulación pago gasto ({metodo})");
+
+                    // Dr 600 → lado opuesto, ahora es Haber
+                    var cuentaGastos = GetCuenta("600", conn, tx);
+                    AddLine(asiento, cuentaGastos.CuentaID, 0m, monto, $"Anulación gasto: {concepto}");
+
+                    ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+                }
+            }
+        }
+
+        // ==================================================================
         // HELPERS PRIVADOS
         // ==================================================================
 
