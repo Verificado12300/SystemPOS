@@ -104,6 +104,110 @@ namespace SistemaPOS.Data
             }
         }
 
+        /// <summary>
+        /// Asiento de COSTO DE VENTAS al registrar una venta.
+        ///   Dr 500 Costo de Ventas = Σ(costo_promedio × cantidad) por producto
+        ///   Cr 140 Inventario       = mismo total
+        /// Si no hay costo calculable para un ítem se usa fallback (CostoPromPonderado del producto).
+        /// Si el total sigue en 0, omite silenciosamente sin romper la transacción.
+        /// </summary>
+        public static void RegistrarCostoVenta(
+            long ventaID, string numeroVenta, DateTime fecha, TimeSpan hora,
+            System.Collections.Generic.List<(int ProductoID, decimal CantidadBase)> detalles,
+            int usuarioID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            decimal totalCOGS = 0m;
+            foreach (var d in detalles)
+            {
+                decimal costoUnit = ContabilidadRepository
+                    .ObtenerCostoPromedioUnitarioProducto(d.ProductoID, conn, tx);
+
+                if (costoUnit <= 0m)
+                {
+                    costoUnit = ObtenerCostoProdFallback(d.ProductoID, conn, tx);
+                    if (costoUnit > 0m)
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[COGS] Fallback costo para productoID={d.ProductoID}: {costoUnit:N2}");
+                }
+
+                if (costoUnit <= 0m) continue; // producto sin precio de costo: omitir silenciosamente
+                totalCOGS += costoUnit * d.CantidadBase;
+            }
+
+            if (totalCOGS <= 0m) return;
+
+            var asiento = BuildAsiento("VENTA", numeroVenta, ventaID, usuarioID,
+                fecha, hora, $"Costo de venta {numeroVenta}");
+
+            var cuentaCOGS = GetCuenta("500", conn, tx);
+            var cuentaInv  = GetCuenta("140", conn, tx);
+            AddLine(asiento, cuentaCOGS.CuentaID, totalCOGS, 0m,       "Costo de ventas");
+            AddLine(asiento, cuentaInv.CuentaID,  0m, totalCOGS, "Salida de inventario por venta");
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
+
+        /// <summary>
+        /// Reverso exacto del asiento de costo al anular una venta.
+        /// Busca el monto COGS del asiento original (TipoOperacion='VENTA', cuenta 500)
+        /// y genera la entrada inversa: Dr 140 / Cr 500.
+        /// Si la venta original no tenía asiento de costo, retorna silenciosamente.
+        /// </summary>
+        public static void ReversarCostoVenta(int ventaID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            // Obtener el monto COGS del asiento original de esta venta
+            const string sqlCOGS = @"
+                SELECT ad.Debe
+                FROM   Asientos a
+                JOIN   AsientosDetalle ad ON a.AsientoID = ad.AsientoID
+                JOIN   CuentasContables cc ON ad.CuentaID = cc.CuentaID
+                WHERE  a.RefID          = @VentaID
+                  AND  a.TipoOperacion  = 'VENTA'
+                  AND  cc.Codigo        = '500'
+                LIMIT 1";
+
+            decimal monto = 0m;
+            using (var cmd = new SQLiteCommand(sqlCOGS, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@VentaID", ventaID);
+                var r = cmd.ExecuteScalar();
+                if (r == null || r == DBNull.Value) return; // no había COGS → nada que revertir
+                monto = Convert.ToDecimal(r);
+            }
+            if (monto <= 0m) return;
+
+            // Obtener metadatos de la venta para el asiento de reversión
+            const string sqlVenta = @"
+                SELECT NumeroVenta, Fecha, Hora, UsuarioID
+                FROM   Ventas WHERE VentaID = @ID";
+            using (var cmd = new SQLiteCommand(sqlVenta, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@ID", ventaID);
+                using (var r = cmd.ExecuteReader())
+                {
+                    if (!r.Read()) return;
+
+                    string numVenta = r.GetString(0);
+                    DateTime fecha  = DateTime.Parse(r.GetString(1));
+                    TimeSpan hora   = TimeSpan.Parse(r.GetString(2));
+                    int usuarioID   = r.IsDBNull(3) ? 1 : r.GetInt32(3);
+
+                    var asiento = BuildAsiento("ANULACION", numVenta, ventaID, usuarioID,
+                        DateTime.Now.Date, DateTime.Now.TimeOfDay,
+                        $"Reversión costo venta {numVenta}");
+
+                    var cuentaInv  = GetCuenta("140", conn, tx);
+                    var cuentaCOGS = GetCuenta("500", conn, tx);
+                    AddLine(asiento, cuentaInv.CuentaID,  monto, 0m, "Devolución de inventario");
+                    AddLine(asiento, cuentaCOGS.CuentaID, 0m, monto, "Reversión costo de ventas");
+
+                    ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+                }
+            }
+        }
+
         // ==================================================================
         // COMPRAS
         // ==================================================================
@@ -378,6 +482,21 @@ namespace SistemaPOS.Data
                 Haber       = haber,
                 Descripcion = descripcion
             });
+        }
+
+        /// <summary>
+        /// Fallback: retorna CostoPromPonderado del producto cuando el promedio móvil es 0.
+        /// </summary>
+        private static decimal ObtenerCostoProdFallback(int productoID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            const string sql = "SELECT CostoPromPonderado FROM Productos WHERE ProductoID = @id";
+            using (var cmd = new SQLiteCommand(sql, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@id", productoID);
+                var r = cmd.ExecuteScalar();
+                return (r != null && r != DBNull.Value) ? Convert.ToDecimal(r) : 0m;
+            }
         }
 
         private static CuentaContable GetCuenta(string codigo,

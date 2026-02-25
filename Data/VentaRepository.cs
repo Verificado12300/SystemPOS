@@ -155,6 +155,13 @@ namespace SistemaPOS.Data
                                 venta.MontoTarjeta, venta.MontoTransferencia,
                                 venta.UsuarioID, connection, transaction);
 
+                            // Asiento contable: costo de ventas (Dr 500 / Cr 140)
+                            var detalleCostos = detalles
+                                .ConvertAll(d => (d.ProductoID, d.CantidadUnidadesBase));
+                            ContabilidadService.RegistrarCostoVenta(
+                                ventaID, venta.NumeroVenta, venta.Fecha, venta.Hora,
+                                detalleCostos, venta.UsuarioID, connection, transaction);
+
                             transaction.Commit();
                             return true;
                         }
@@ -343,8 +350,9 @@ namespace SistemaPOS.Data
                             cmd.ExecuteNonQuery();
                         }
 
-                        // Asiento de reversión (Anulación)
+                        // Asiento de reversión (Anulación) — ingreso y costo
                         ContabilidadService.ReversarVenta(ventaID, connection, transaction);
+                        ContabilidadService.ReversarCostoVenta(ventaID, connection, transaction);
 
                         transaction.Commit();
                         return true;
