@@ -313,6 +313,12 @@ namespace SistemaPOS.Data
                                     cmd.Parameters.AddWithValue("@Fecha", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
                                     cmd.ExecuteNonQuery();
                                 }
+
+                                // Asiento de apertura de inventario (skip silencioso si costo == 0)
+                                ContabilidadService.RegistrarInventarioInicial(
+                                    productoID, producto.Nombre,
+                                    producto.StockTotal, costoUnitario,
+                                    usuarioID, connection, transaction);
                             }
                         }
 

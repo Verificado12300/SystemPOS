@@ -117,7 +117,9 @@ namespace SistemaPOS.Forms.Finanzas
                 // Usar reflection para obtener AsientoID del tipo anonimo
                 var prop = row.DataBoundItem.GetType().GetProperty("AsientoID");
                 if (prop == null) return;
-                int asientoID = (int)prop.GetValue(row.DataBoundItem);
+                var val = prop.GetValue(row.DataBoundItem);
+                if (val == null) return;
+                int asientoID = Convert.ToInt32(val);
                 CargarDetalles(asientoID);
             }
             catch { }

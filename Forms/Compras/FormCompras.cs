@@ -21,6 +21,7 @@ namespace SistemaPOS.Forms.Compras
         private string _nombrePresentacionSeleccionada = "";
         private bool _actualizandoBusqueda;
         private Timer _timerBusqueda;
+        private decimal _tasaIGV = 0.18m;
 
         public FormCompras()
         {
@@ -29,6 +30,21 @@ namespace SistemaPOS.Forms.Compras
             ConfigurarEventos();
             ConfigurarControles();
             InicializarFormulario();
+
+            // Leer tasa IGV de configuración
+            try
+            {
+                using (var conn = DatabaseConnection.GetConnection())
+                using (var cmd = new System.Data.SQLite.SQLiteCommand(
+                    "SELECT Valor FROM ConfigGeneral WHERE Clave = 'IGV' LIMIT 1", conn))
+                {
+                    var v = cmd.ExecuteScalar()?.ToString();
+                    if (decimal.TryParse(v, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal tasa))
+                        _tasaIGV = tasa / 100m;
+                }
+            }
+            catch { }
         }
 
         private void ConfigurarEventos()
@@ -296,7 +312,10 @@ namespace SistemaPOS.Forms.Compras
                 ActualizarEtiquetasUnidadBase(_unidadBaseSimboloSeleccionado);
                 RecalcularDetalleSeleccionado();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[FormCompras] CmbPresentacion: {ex.Message}");
+            }
         }
 
         private string ObtenerSimboloUnidadBase(int unidadBaseID)
@@ -445,7 +464,7 @@ namespace SistemaPOS.Forms.Compras
                 subtotal += (decimal)item.CantidadBase * (decimal)item.CostoUnitarioBase;
             }
 
-            decimal igv = chkIncluirIGV.Checked ? subtotal * 0.18m : 0;
+            decimal igv = chkIncluirIGV.Checked ? subtotal * _tasaIGV : 0;
             decimal total = subtotal + igv;
 
             txtSubtotal.Text = subtotal.ToString("N2");

@@ -19,6 +19,7 @@ namespace SistemaPOS.Forms.Ventas
         private int _cajaID;
         private List<dynamic> _todosLosClientes; // Cache de clientes
         private bool _actualizandoDesdeEdicion; // Flag para evitar ciclo al editar cantidad/total
+        private decimal _tasaIGV = 0.18m;
 
         public FormVentas()
         {
@@ -36,6 +37,21 @@ namespace SistemaPOS.Forms.Ventas
             bool puedeDescontar = usuarioActual != null && (usuarioActual.PermisoDescuentos || usuarioActual.RolID == 1);
             txtDescuento.ReadOnly = !puedeDescontar;
             txtDescuento.BackColor = puedeDescontar ? System.Drawing.SystemColors.Window : System.Drawing.SystemColors.Control;
+
+            // Leer tasa IGV de configuración
+            try
+            {
+                using (var conn = DatabaseConnection.GetConnection())
+                using (var cmd = new System.Data.SQLite.SQLiteCommand(
+                    "SELECT Valor FROM ConfigGeneral WHERE Clave = 'IGV' LIMIT 1", conn))
+                {
+                    var v = cmd.ExecuteScalar()?.ToString();
+                    if (decimal.TryParse(v, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out decimal tasa))
+                        _tasaIGV = tasa / 100m;
+                }
+            }
+            catch { }
         }
 
         private void ConfigurarEventos()
@@ -242,8 +258,11 @@ namespace SistemaPOS.Forms.Ventas
                     {
                         try
                         {
-                            var ms = new System.IO.MemoryStream(producto.Imagen);
-                            row.Cells["colImagen"].Value = System.Drawing.Image.FromStream(ms);
+                            using (var ms = new System.IO.MemoryStream(producto.Imagen))
+                            using (var img = System.Drawing.Image.FromStream(ms))
+                            {
+                                row.Cells["colImagen"].Value = new System.Drawing.Bitmap(img);
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -347,7 +366,10 @@ namespace SistemaPOS.Forms.Ventas
                 {
                     var item = (dynamic)row.Tag;
                     if (item.ProductoID == productoID)
-                        cantidadYaEnCarrito += Convert.ToDecimal(row.Cells["colCantidad"].Value);
+                    {
+                        var _cv = row.Cells["colCantidad"].Value;
+                        cantidadYaEnCarrito += (_cv != null && decimal.TryParse(_cv.ToString(), out decimal _cvp)) ? _cvp : 0m;
+                    }
                 }
             }
 
@@ -373,7 +395,8 @@ namespace SistemaPOS.Forms.Ventas
                     var item = (dynamic)row.Tag;
                     if (item.ProductoID == productoID && item.PresentacionID == presentacion.ProductoPresentacionID)
                     {
-                        decimal cantidad = Convert.ToDecimal(row.Cells["colCantidad"].Value);
+                        var _cv = row.Cells["colCantidad"].Value;
+                        decimal cantidad = (_cv != null && decimal.TryParse(_cv.ToString(), out decimal _cvp)) ? _cvp : 0m;
                         row.Cells["colCantidad"].Value = cantidad + presentacion.CantidadUnidades;
                         ActualizarTotalFila(row.Index);
                         return;
@@ -413,7 +436,8 @@ namespace SistemaPOS.Forms.Ventas
 
             if (dgvCarritoVenta.Columns[e.ColumnIndex].Name == "colAumentar")
             {
-                decimal cantidad = Convert.ToDecimal(row.Cells["colCantidad"].Value);
+                var _cv = row.Cells["colCantidad"].Value;
+                decimal cantidad = (_cv != null && decimal.TryParse(_cv.ToString(), out decimal _cvp)) ? _cvp : 0m;
                 var itemAum = (dynamic)row.Tag;
                 decimal step = (decimal)itemAum.CantidadUnidades;
                 row.Cells["colCantidad"].Value = cantidad + step;
@@ -421,7 +445,8 @@ namespace SistemaPOS.Forms.Ventas
             }
             else if (dgvCarritoVenta.Columns[e.ColumnIndex].Name == "colDisminuir")
             {
-                decimal cantidad = Convert.ToDecimal(row.Cells["colCantidad"].Value);
+                var _cv2 = row.Cells["colCantidad"].Value;
+                decimal cantidad = (_cv2 != null && decimal.TryParse(_cv2.ToString(), out decimal _cvp2)) ? _cvp2 : 0m;
                 var itemDis = (dynamic)row.Tag;
                 decimal step = (decimal)itemDis.CantidadUnidades;
                 if (cantidad > step)
@@ -523,10 +548,13 @@ namespace SistemaPOS.Forms.Ventas
         private void ActualizarTotalFila(int rowIndex)
         {
             DataGridViewRow row = dgvCarritoVenta.Rows[rowIndex];
-            decimal cantidadBase = Convert.ToDecimal(row.Cells["colCantidad"].Value);
+            var _cv = row.Cells["colCantidad"].Value;
+            decimal cantidadBase = (_cv != null && decimal.TryParse(_cv.ToString(), out decimal _cvp)) ? _cvp : 0m;
 
             var item = (dynamic)row.Tag;
-            decimal cantidadPresentaciones = cantidadBase / (decimal)item.CantidadUnidades;
+            decimal _cantUnidades = (decimal)item.CantidadUnidades;
+            if (_cantUnidades <= 0) return;
+            decimal cantidadPresentaciones = cantidadBase / _cantUnidades;
             decimal total = cantidadPresentaciones * (decimal)item.PrecioUnitario;
 
             row.Cells["colTotalDV"].Value = "S/ " + total.ToString("N2");
@@ -545,7 +573,7 @@ namespace SistemaPOS.Forms.Ventas
                     subtotal += totalFila;
             }
 
-            decimal igv = chkIGV.Checked ? subtotal * 0.18m : 0;
+            decimal igv = chkIGV.Checked ? subtotal * _tasaIGV : 0;
             decimal descuento = decimal.TryParse(txtDescuento.Text, out decimal desc) ? desc : 0;
             decimal maxDescuento = subtotal + igv;
             if (descuento > maxDescuento) descuento = maxDescuento;
@@ -755,8 +783,11 @@ namespace SistemaPOS.Forms.Ventas
                     if (row.IsNewRow) continue;
 
                     var item = (dynamic)row.Tag;
-                    decimal cantidadBase = Convert.ToDecimal(row.Cells["colCantidad"].Value);
-                    decimal cantidadPresentaciones = cantidadBase / (decimal)item.CantidadUnidades;
+                    var _cv = row.Cells["colCantidad"].Value;
+                    decimal cantidadBase = (_cv != null && decimal.TryParse(_cv.ToString(), out decimal _cvp)) ? _cvp : 0m;
+                    decimal cantidadUnidades = (decimal)item.CantidadUnidades;
+                    if (cantidadUnidades <= 0) continue;
+                    decimal cantidadPresentaciones = cantidadBase / cantidadUnidades;
 
                     detalles.Add(new VentaDetalle
                     {

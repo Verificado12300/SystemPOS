@@ -215,13 +215,15 @@ namespace SistemaPOS.Forms.Configuracion
                     return false;
             }
 
-            // Códigos de prueba que siempre funcionan
+            // Códigos de prueba (solo en compilaciones Debug)
+#if DEBUG
             if (codigo == "TEST-1234-5678-ABCD" ||
                 codigo == "DEMO-2024-FULL-VERS" ||
                 limpio.StartsWith("ACTV"))
             {
                 return true;
             }
+#endif
 
             // Validación por checksum simple (último carácter)
             int suma = 0;

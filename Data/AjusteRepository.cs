@@ -23,12 +23,17 @@ namespace SistemaPOS.Data
                 {
                     try
                     {
-                        // Insertar el ajuste
+                        // Calcular costo unitario ANTES del INSERT para no contaminar
+                        // el cálculo de promedio con el movimiento que vamos a insertar
+                        decimal costoUnit = ContabilidadRepository
+                            .ObtenerCostoPromedioUnitarioProducto(productoID, connection, transaction);
+
+                        // Insertar el ajuste (incluye CostoUnitario para auditoría)
                         string queryAjuste = @"
                             INSERT INTO Ajustes
-                            (ProductoID, TipoAjuste, Cantidad, StockAnterior, StockNuevo, Motivo, UsuarioID, Fecha)
+                            (ProductoID, TipoAjuste, Cantidad, StockAnterior, StockNuevo, CostoUnitario, Motivo, UsuarioID, Fecha)
                             VALUES
-                            (@ProductoID, @TipoAjuste, @Cantidad, @StockAnterior, @StockNuevo, @Motivo, @UsuarioID, @Fecha)";
+                            (@ProductoID, @TipoAjuste, @Cantidad, @StockAnterior, @StockNuevo, @CostoUnitario, @Motivo, @UsuarioID, @Fecha)";
 
                         using (var cmd = new SQLiteCommand(queryAjuste, connection, transaction))
                         {
@@ -37,11 +42,14 @@ namespace SistemaPOS.Data
                             cmd.Parameters.AddWithValue("@Cantidad", cantidad);
                             cmd.Parameters.AddWithValue("@StockAnterior", stockAnterior);
                             cmd.Parameters.AddWithValue("@StockNuevo", stockNuevo);
+                            cmd.Parameters.AddWithValue("@CostoUnitario", costoUnit);
                             cmd.Parameters.AddWithValue("@Motivo", motivo ?? "");
                             cmd.Parameters.AddWithValue("@UsuarioID", usuarioID);
                             cmd.Parameters.AddWithValue("@Fecha", fecha.ToString("yyyy-MM-dd HH:mm:ss"));
                             cmd.ExecuteNonQuery();
                         }
+
+                        long ajusteID = connection.LastInsertRowId;
 
                         // Actualizar el stock del producto
                         string queryStock = @"
@@ -58,69 +66,12 @@ namespace SistemaPOS.Data
                             cmd.ExecuteNonQuery();
                         }
 
-                        // ===== ASIENTO CONTABLE =====
-                        try
-                        {
-                            // Obtener ID del ajuste recien insertado para usarlo como referencia
-                            int ajusteID;
-                            using (var cmd2 = new SQLiteCommand("SELECT last_insert_rowid()", connection, transaction))
-                                ajusteID = Convert.ToInt32(cmd2.ExecuteScalar());
-
-                            decimal costoUnitario = ContabilidadRepository.ObtenerCostoPromedioUnitarioProducto(productoID, connection, transaction);
-
-                            bool esEntrada = tipoAjuste == "ENTRADA"
-                                || (tipoAjuste == "CORRECCION" && stockNuevo > stockAnterior);
-                            bool esSalida = tipoAjuste == "SALIDA"
-                                || (tipoAjuste == "CORRECCION" && stockNuevo < stockAnterior);
-
-                            decimal cantidadNeta = tipoAjuste == "CORRECCION"
-                                ? Math.Abs(stockNuevo - stockAnterior)
-                                : cantidad;
-
-                            decimal valorAjuste = cantidadNeta * costoUnitario;
-
-                            if (valorAjuste > 0.001m)
-                            {
-                                var asiento = new Models.AsientoContable
-                                {
-                                    Fecha = fecha,
-                                    Hora = fecha.TimeOfDay,
-                                    TipoOperacion = "AJUSTE",
-                                    Documento = $"AJ-{ajusteID}",
-                                    ReferenciaID = ajusteID,
-                                    UsuarioID = usuarioID,
-                                    Glosa = $"Ajuste inventario {tipoAjuste}: {motivo ?? ""}"
-                                };
-
-                                var ctaInv = ContabilidadRepository.ObtenerCuentaPorCodigo("201", connection, transaction);
-
-                                if (esEntrada && ctaInv != null)
-                                {
-                                    var ctaCapital = ContabilidadRepository.ObtenerCuentaPorCodigo("701", connection, transaction);
-                                    if (ctaCapital != null)
-                                    {
-                                        asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaInv.CuentaID, Debe = valorAjuste, Descripcion = "Entrada inventario ajuste" });
-                                        asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCapital.CuentaID, Haber = valorAjuste, Descripcion = "Ajuste inventario" });
-                                    }
-                                }
-                                else if (esSalida && ctaInv != null)
-                                {
-                                    var ctaCosto = ContabilidadRepository.ObtenerCuentaPorCodigo("501", connection, transaction);
-                                    if (ctaCosto != null)
-                                    {
-                                        asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCosto.CuentaID, Debe = valorAjuste, Descripcion = "Salida inventario ajuste" });
-                                        asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaInv.CuentaID, Haber = valorAjuste, Descripcion = "Salida inventario ajuste" });
-                                    }
-                                }
-
-                                if (asiento.Detalles.Count >= 2)
-                                    ContabilidadRepository.CrearAsientoCompleto(asiento, connection, transaction);
-                            }
-                        }
-                        catch
-                        {
-                            // No bloquear el ajuste si falla el asiento contable
-                        }
+                        // Asiento contable (skip silencioso si costo == 0)
+                        ContabilidadService.RegistrarAjusteInventario(
+                            (int)ajusteID, productoID, tipoAjuste,
+                            stockAnterior, stockNuevo, costoUnit,
+                            motivo, usuarioID, fecha,
+                            connection, transaction);
 
                         transaction.Commit();
                         return true;

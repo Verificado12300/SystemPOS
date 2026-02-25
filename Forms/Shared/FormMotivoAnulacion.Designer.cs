@@ -86,6 +86,7 @@ namespace SistemaPOS.Forms.Shared
             this.btnAceptar.TabIndex = 0;
             this.btnAceptar.Text = "Aceptar";
             this.btnAceptar.UseVisualStyleBackColor = false;
+            this.btnAceptar.Click += new System.EventHandler(this.BtnAceptar_Click);
             //
             // btnCancelar
             //
@@ -101,6 +102,7 @@ namespace SistemaPOS.Forms.Shared
             this.btnCancelar.TabIndex = 1;
             this.btnCancelar.Text = "Cancelar";
             this.btnCancelar.UseVisualStyleBackColor = false;
+            this.btnCancelar.Click += new System.EventHandler(this.BtnCancelar_Click);
             //
             // pnlBody
             //

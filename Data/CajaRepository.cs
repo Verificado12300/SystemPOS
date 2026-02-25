@@ -206,7 +206,8 @@ namespace SistemaPOS.Data
                         using (var cmd = new SQLiteCommand(queryGastos, connection, transaction))
                         {
                             cmd.Parameters.AddWithValue("@cajaID", cajaID);
-                            resumen.TotalGastos = Convert.ToDecimal(cmd.ExecuteScalar());
+                            var _r = cmd.ExecuteScalar();
+                            resumen.TotalGastos = (_r != null && _r != DBNull.Value) ? Convert.ToDecimal(_r) : 0m;
                         }
 
                         decimal efectivoEsperado = caja.MontoInicial + resumen.TotalEfectivo - resumen.TotalGastos;
@@ -325,7 +326,8 @@ namespace SistemaPOS.Data
                 using (var cmd = new SQLiteCommand(queryGastos, connection))
                 {
                     cmd.Parameters.AddWithValue("@cajaID", cajaID);
-                    resumen.TotalGastos = Convert.ToDecimal(cmd.ExecuteScalar());
+                    var _r = cmd.ExecuteScalar();
+                    resumen.TotalGastos = (_r != null && _r != DBNull.Value) ? Convert.ToDecimal(_r) : 0m;
                 }
             }
 

@@ -90,6 +90,7 @@
   <ItemGroup>
     <Compile Include="Data\AjusteRepository.cs" />
     <Compile Include="Data\ContabilidadRepository.cs" />
+    <Compile Include="Data\ContabilidadService.cs" />
     <Compile Include="Data\CajaRepository.cs" />
     <Compile Include="Data\CategoriaRepository.cs" />
     <Compile Include="Data\ClienteRepository.cs" />
