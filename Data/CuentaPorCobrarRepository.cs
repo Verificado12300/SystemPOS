@@ -207,42 +207,6 @@ namespace SistemaPOS.Data
                         cmd.ExecuteNonQuery();
                     }
 
-                    // ===== ASIENTO CONTABLE: Cobro a cliente =====
-                    try
-                    {
-                        string numVenta = null;
-                        using (var cmd = new SQLiteCommand("SELECT NumeroVenta FROM Ventas WHERE VentaID = @VentaID", connection, transaction))
-                        {
-                            cmd.Parameters.AddWithValue("@VentaID", ventaID);
-                            numVenta = cmd.ExecuteScalar()?.ToString();
-                        }
-
-                        var asiento = new Models.AsientoContable
-                        {
-                            Fecha = fechaPago,
-                            Hora = DateTime.Now.TimeOfDay,
-                            TipoOperacion = "COBRO",
-                            Documento = numVenta ?? $"COBRO-{ventaID}",
-                            ReferenciaID = ventaID,
-                            Glosa = $"Cobro venta credito {numVenta}"
-                        };
-
-                        string codigoCuenta = ContabilidadRepository.ObtenerCodigoCuentaEfectivo(metodoPago);
-                        var ctaCobro = ContabilidadRepository.ObtenerCuentaPorCodigo(codigoCuenta, connection, transaction);
-                        var ctaCxC = ContabilidadRepository.ObtenerCuentaPorCodigo("103", connection, transaction);
-
-                        if (ctaCobro != null && ctaCxC != null && monto > 0)
-                        {
-                            asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCobro.CuentaID, Debe = monto, Descripcion = $"Cobro {metodoPago}" });
-                            asiento.Detalles.Add(new Models.AsientoDetalleContable { CuentaID = ctaCxC.CuentaID, Haber = monto, Descripcion = "Cancelacion CxC" });
-                            ContabilidadRepository.CrearAsientoCompleto(asiento, connection, transaction);
-                        }
-                    }
-                    catch
-                    {
-                        // No bloquear el cobro si falla el asiento
-                    }
-
                     string upsertCredito = @"
                         INSERT INTO CreditosVentas (VentaID, ClienteID, MontoTotal, MontoPagado, Saldo, FechaVencimiento, Estado, FechaRegistro, FechaPago)
                         VALUES (

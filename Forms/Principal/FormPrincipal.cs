@@ -77,7 +77,6 @@ namespace SistemaPOS.Forms.Principal
                 btnGastos.Enabled = true;
                 btnCobros.Enabled = true;
                 btnCuentasPagar.Enabled = true;
-                btnContabilidad.Enabled = true;
                 btnFlujoCaja.Enabled = true;
                 btnEstadoResultados.Enabled = true;
                 btnBalanceGeneral.Enabled = true;
@@ -106,7 +105,6 @@ namespace SistemaPOS.Forms.Principal
             btnGastos.Enabled = u.PermisoFinanzas;
             btnCobros.Enabled = u.PermisoFinanzas;
             btnCuentasPagar.Enabled = u.PermisoFinanzas;
-            btnContabilidad.Enabled = u.PermisoFinanzas || u.PermisoReportes;
 
             btnFlujoCaja.Enabled = u.PermisoReportes;
             btnEstadoResultados.Enabled = u.PermisoReportes;
@@ -454,12 +452,6 @@ namespace SistemaPOS.Forms.Principal
             AbrirFormEnPanel(new Finanzas.FormCuentasPorPagar(), btnCuentasPagar);
         }
 
-        private void BtnContabilidad_Click(object sender, EventArgs e)
-        {
-            if (!TienePermiso(u => u.PermisoFinanzas || u.PermisoReportes, "Contabilidad")) return;
-            AbrirFormEnPanel(new Finanzas.FormContabilidad(), btnContabilidad);
-        }
-
         private void BtnFlujoCaja_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoReportes, "Flujo de Caja")) return;
@@ -616,6 +608,11 @@ namespace SistemaPOS.Forms.Principal
                 login.ShowDialog();
                 this.Close();
             }
+        }
+
+        private void BtnContabilidad_Click(object sender, EventArgs e)
+        {
+            AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormContabilidad(), btnContabilidad);
         }
     }
 }
