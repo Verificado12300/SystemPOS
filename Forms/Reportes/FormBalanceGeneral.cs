@@ -34,17 +34,18 @@ namespace SistemaPOS.Forms.Reportes
             try
             {
                 dgvBalance.Rows.Clear();
-                var balance = BalanceRepository.Calcular(dtpFecha.Value);
+                var bg = ContabilidadService.ObtenerBalanceGeneral(dtpFecha.Value.Date);
 
                 // ACTIVOS
                 int idx = dgvBalance.Rows.Add("ACTIVOS", "");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);
 
-                dgvBalance.Rows.Add("  Efectivo en Caja", $"S/ {balance.Efectivo:N2}");
-                dgvBalance.Rows.Add("  Inventario", $"S/ {balance.Inventario:N2}");
-                dgvBalance.Rows.Add("  Cuentas por Cobrar", $"S/ {balance.CuentasPorCobrar:N2}");
+                dgvBalance.Rows.Add("  Caja (101)",               $"S/ {bg.Caja:N2}");
+                dgvBalance.Rows.Add("  Bancos (102)",              $"S/ {bg.Bancos:N2}");
+                dgvBalance.Rows.Add("  Cuentas por Cobrar (120)",  $"S/ {bg.CxC:N2}");
+                dgvBalance.Rows.Add("  Inventario (140)",          $"S/ {bg.Inventario:N2}");
 
-                idx = dgvBalance.Rows.Add("TOTAL ACTIVOS", $"S/ {balance.TotalActivos:N2}");
+                idx = dgvBalance.Rows.Add("TOTAL ACTIVOS", $"S/ {bg.TotalActivos:N2}");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);
                 dgvBalance.Rows[idx].DefaultCellStyle.ForeColor = Color.FromArgb(39, 174, 96);
 
@@ -54,9 +55,9 @@ namespace SistemaPOS.Forms.Reportes
                 idx = dgvBalance.Rows.Add("PASIVOS", "");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);
 
-                dgvBalance.Rows.Add("  Cuentas por Pagar", $"S/ {balance.CuentasPorPagar:N2}");
+                dgvBalance.Rows.Add("  Cuentas por Pagar (200)", $"S/ {bg.CxP:N2}");
 
-                idx = dgvBalance.Rows.Add("TOTAL PASIVOS", $"S/ {balance.TotalPasivos:N2}");
+                idx = dgvBalance.Rows.Add("TOTAL PASIVOS", $"S/ {bg.TotalPasivos:N2}");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);
                 dgvBalance.Rows[idx].DefaultCellStyle.ForeColor = Color.FromArgb(192, 57, 43);
 
@@ -66,17 +67,30 @@ namespace SistemaPOS.Forms.Reportes
                 idx = dgvBalance.Rows.Add("PATRIMONIO", "");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);
 
-                dgvBalance.Rows.Add("  Capital", $"S/ {balance.Capital:N2}");
-                dgvBalance.Rows.Add("  Utilidad Acumulada", $"S/ {balance.UtilidadAcumulada:N2}");
+                dgvBalance.Rows.Add("  Capital (300)",       $"S/ {bg.Capital:N2}");
+                dgvBalance.Rows.Add("  Utilidad del período", $"S/ {bg.Utilidad:N2}");
 
-                idx = dgvBalance.Rows.Add("PATRIMONIO NETO", $"S/ {balance.TotalPatrimonio:N2}");
+                idx = dgvBalance.Rows.Add("PATRIMONIO NETO", $"S/ {bg.TotalPatrimonio:N2}");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold | FontStyle.Italic);
                 dgvBalance.Rows[idx].DefaultCellStyle.ForeColor = Color.FromArgb(52, 152, 219);
                 dgvBalance.Rows[idx].DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240);
+
+                dgvBalance.Rows.Add("", "");
+
+                // CUADRATURA
+                string checkLabel = bg.Cuadra
+                    ? $"✓ Cuadra  (dif. S/ {bg.Diferencia:N2})"
+                    : $"✗ NO cuadra  (dif. S/ {bg.Diferencia:N2})";
+                idx = dgvBalance.Rows.Add("ACTIVOS = PASIVOS + PATRIMONIO", checkLabel);
+                dgvBalance.Rows[idx].DefaultCellStyle.Font =
+                    new Font(dgvBalance.Font, FontStyle.Bold);
+                dgvBalance.Rows[idx].DefaultCellStyle.ForeColor =
+                    bg.Cuadra ? Color.Green : Color.Red;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

@@ -420,6 +420,24 @@ namespace SistemaPOS.Data
                     }
                     catch { }
 
+                    // Migración: CostoPromPonderado en Productos
+                    // Columna de fallback para costo promedio ponderado cuando no hay kardex histórico.
+                    // Compatible con BD existentes (ALTER TABLE seguro).
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Productos') WHERE name='CostoPromPonderado'";
+                            bool hasCol = (long)cmd.ExecuteScalar() > 0;
+                            if (!hasCol)
+                            {
+                                cmd.CommandText = "ALTER TABLE Productos ADD COLUMN CostoPromPonderado REAL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    catch { }
+
                     // Migración: CostoPresentacion en CompraDetalles
                     // Guarda el costo por presentación ingresado por el usuario (ej. S/90 por Saco),
                     // además del CostoUnitario base (S/1.80 por kg) que ya existía.

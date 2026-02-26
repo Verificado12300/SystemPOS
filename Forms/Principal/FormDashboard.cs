@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using SistemaPOS.Controls;
 using SistemaPOS.Data;
+using SistemaPOS.Models;
 
 namespace SistemaPOS.Forms.Principal
 {
@@ -103,6 +104,23 @@ namespace SistemaPOS.Forms.Principal
             }
         }
 
+        private (DateTime desde, DateTime hasta) ObtenerRangoDates(string periodo)
+        {
+            DateTime hoy = DateTime.Today;
+            switch (periodo)
+            {
+                case "semana":
+                    int diasDesdelunes = ((int)hoy.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+                    return (hoy.AddDays(-diasDesdelunes), hoy.AddDays(6 - diasDesdelunes));
+                case "mes":
+                    return (new DateTime(hoy.Year, hoy.Month, 1),
+                            new DateTime(hoy.Year, hoy.Month,
+                                         DateTime.DaysInMonth(hoy.Year, hoy.Month)));
+                default: // "dia"
+                    return (hoy, hoy);
+            }
+        }
+
         private void CargarTodo()
         {
             try
@@ -119,8 +137,11 @@ namespace SistemaPOS.Forms.Principal
                 lblTopTitulo.Text = $"TOP PRODUCTOS {tituloPeriodo}";
                 lblOperacionesTitulo.Text = $"OPERACIONES {tituloPeriodo}";
 
-                CargarKPIVentas(periodo);
-                CargarKPIUtilidad(periodo);
+                var (desde, hasta) = ObtenerRangoDates(periodo);
+                var er = ContabilidadService.ObtenerEstadoResultados(desde, hasta);
+
+                CargarKPIVentas(periodo, er);
+                CargarKPIUtilidad(er);
                 CargarKPIAlertas();
                 CargarGrafico(periodo);
                 CargarTopProductos(periodo);
@@ -134,22 +155,23 @@ namespace SistemaPOS.Forms.Principal
             }
         }
 
-        private void CargarKPIVentas(string periodo)
+        private void CargarKPIVentas(string periodo, EstadoResultadosDTO er)
         {
-            var (total, cantidad) = DashboardRepository.ObtenerVentasPorPeriodo(periodo);
+            var (_, cantidad) = DashboardRepository.ObtenerVentasPorPeriodo(periodo);
             lblKPIVentasTitulo.Text = $"VENTAS {ObtenerTituloPeriodo()}";
-            lblKPIVentasValor.Text = $"S/ {total:N2}";
-            lblKPIVentasCant.Text = $"{cantidad} operaciones";
+            lblKPIVentasValor.Text  = $"S/ {er.Ventas:N2}";
+            lblKPIVentasCant.Text   = $"{cantidad} operaciones";
         }
 
-        private void CargarKPIUtilidad(string periodo)
+        private void CargarKPIUtilidad(EstadoResultadosDTO er)
         {
-            decimal utilidad = DashboardRepository.ObtenerUtilidadEstimada(periodo);
-            decimal margen = DashboardRepository.ObtenerMargenPorcentaje(periodo);
-            lblKPIUtilidadTitulo.Text = $"UTILIDAD {ObtenerTituloPeriodo()}";
-            lblKPIUtilidadValor.Text = $"S/ {utilidad:N2}";
+            decimal margen = er.Ventas > 0
+                ? er.UtilidadOperativa / er.Ventas * 100m
+                : 0m;
+            lblKPIUtilidadTitulo.Text     = $"UTILIDAD {ObtenerTituloPeriodo()}";
+            lblKPIUtilidadValor.Text      = $"S/ {er.UtilidadOperativa:N2}";
             lblKPIUtilidadPorcentaje.Text = $"Margen: {margen:N1}%";
-            lblKPIUtilidadValor.ForeColor = utilidad >= 0
+            lblKPIUtilidadValor.ForeColor = er.UtilidadOperativa >= 0
                 ? Color.FromArgb(39, 174, 96)
                 : Color.FromArgb(231, 76, 60);
         }

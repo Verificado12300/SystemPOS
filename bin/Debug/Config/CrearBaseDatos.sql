@@ -608,7 +608,6 @@ INSERT OR IGNORE INTO CuentasContables (Codigo, Nombre, Tipo, Activa) VALUES
 ('300', 'Capital',                 'PATRIMONIO', 1),
 ('400', 'Ventas',                  'INGRESO',    1),
 ('500', 'Costo de Ventas',         'GASTO',      1),
-('503', 'Ajuste de Inventario',    'GASTO',      1),
 ('600', 'Gastos Operativos',       'GASTO',      1);
 
 -- ============================================================

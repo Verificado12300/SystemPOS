@@ -163,7 +163,7 @@ namespace SistemaPOS.Data
                 FROM   Asientos a
                 JOIN   AsientosDetalle ad ON a.AsientoID = ad.AsientoID
                 JOIN   CuentasContables cc ON ad.CuentaID = cc.CuentaID
-                WHERE  a.RefID          = @VentaID
+                WHERE  a.ReferenciaID   = @VentaID
                   AND  a.TipoOperacion  = 'VENTA'
                   AND  cc.Codigo        = '500'
                 LIMIT 1";
@@ -564,18 +564,56 @@ namespace SistemaPOS.Data
         }
 
         /// <summary>
-        /// Fallback: retorna CostoPromPonderado del producto cuando el promedio móvil es 0.
+        /// Fallback de costo cuando el kardex histórico retorna 0.
+        /// Orden de prioridad:
+        ///   2) Productos.CostoPromPonderado   (campo estático, actualizable por el usuario)
+        ///   3) MIN(ProductoPresentaciones.CostoBase / CantidadUnidades)  (último precio de compra conocido)
+        ///   4) 0  (sin error; el asiento COGS se omite silenciosamente)
         /// </summary>
         private static decimal ObtenerCostoProdFallback(int productoID,
             SQLiteConnection conn, SQLiteTransaction tx)
         {
-            const string sql = "SELECT CostoPromPonderado FROM Productos WHERE ProductoID = @id";
-            using (var cmd = new SQLiteCommand(sql, conn, tx))
+            // PRIORIDAD 2: CostoPromPonderado en tabla Productos
+            const string sql2 = "SELECT COALESCE(CostoPromPonderado, 0) FROM Productos WHERE ProductoID = @id";
+            using (var cmd = new SQLiteCommand(sql2, conn, tx))
             {
                 cmd.Parameters.AddWithValue("@id", productoID);
                 var r = cmd.ExecuteScalar();
-                return (r != null && r != DBNull.Value) ? Convert.ToDecimal(r) : 0m;
+                decimal v = (r != null && r != DBNull.Value) ? Convert.ToDecimal(r) : 0m;
+                if (v > 0m)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[COGS Fallback P2] ProductoID={productoID} CostoPromPonderado={v:N4}");
+                    return v;
+                }
             }
+
+            // PRIORIDAD 3: costo base por unidad desde presentaciones activas
+            const string sql3 = @"
+                SELECT MIN(CASE WHEN pp.CantidadUnidades > 0
+                                THEN pp.CostoBase / pp.CantidadUnidades
+                                ELSE 0 END)
+                FROM   ProductoPresentaciones pp
+                WHERE  pp.ProductoID = @id
+                  AND  pp.Activo = 1
+                  AND  pp.CostoBase > 0";
+            using (var cmd = new SQLiteCommand(sql3, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@id", productoID);
+                var r = cmd.ExecuteScalar();
+                decimal v = (r != null && r != DBNull.Value) ? Convert.ToDecimal(r) : 0m;
+                if (v > 0m)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[COGS Fallback P3] ProductoID={productoID} CostoBase/Unidades={v:N4}");
+                    return v;
+                }
+            }
+
+            // PRIORIDAD 4: sin costo conocido — el llamador omitirá el asiento COGS
+            System.Diagnostics.Debug.WriteLine(
+                $"[COGS Fallback P4] ProductoID={productoID} sin costo, asiento COGS omitido");
+            return 0m;
         }
 
         private static CuentaContable GetCuenta(string codigo,
@@ -587,6 +625,274 @@ namespace SistemaPOS.Data
                     $"Cuenta contable '{codigo}' no encontrada o inactiva. " +
                     "Verifique el plan de cuentas en Configuración.");
             return cuenta;
+        }
+
+        // ==================================================================
+        // ESTADO DE RESULTADOS (solo lectura desde asientos)
+        // ==================================================================
+
+        /// <summary>
+        /// Lee saldos de AsientosDetalle para las cuentas 400, 500 y 600
+        /// en el rango de fechas indicado y devuelve el Estado de Resultados.
+        /// Solo lectura. Abre su propia conexión (no recibe tx).
+        /// Si no hay asientos en el período devuelve 0 en todos los campos.
+        ///   Ventas       = SUM(Haber - Debe) cuenta 400
+        ///   CostoVentas  = SUM(Debe - Haber) cuenta 500
+        ///   Gastos       = SUM(Debe - Haber) cuenta 600
+        /// </summary>
+        // ==================================================================
+        // FLUJO DE CAJA (solo lectura desde asientos)
+        // ==================================================================
+
+        /// <summary>
+        /// Calcula el Flujo de Caja leyendo movimientos de cuentas 101 (Caja)
+        /// y 102 (Bancos) desde AsientosDetalle. Una sola pasada SQL.
+        ///   Entrada = ad.Debe  cuando cc.Codigo IN ('101','102')
+        ///   Salida  = ad.Haber cuando cc.Codigo IN ('101','102')
+        /// Asientos que no tocan 101/102 quedan automáticamente excluidos.
+        ///
+        /// Verificación de consistencia (SQL directo en DB):
+        ///   SELECT SUM(ad.Debe - ad.Haber)
+        ///   FROM   AsientosDetalle ad
+        ///   JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
+        ///   JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
+        ///   WHERE  cc.Codigo IN ('101','102')
+        ///     AND  a.Fecha >= '@Desde' AND a.Fecha &lt;= '@Hasta';
+        ///   -- debe coincidir con DTO.Neto (TotalEntradas - TotalSalidas)
+        /// </summary>
+        public static FlujoCajaDTO ObtenerFlujoCaja(DateTime desde, DateTime hasta)
+        {
+            const string sql = @"
+                SELECT
+                    a.Fecha,
+                    cc.Codigo,
+                    COALESCE(SUM(ad.Debe),  0) AS Entradas,
+                    COALESCE(SUM(ad.Haber), 0) AS Salidas
+                FROM   AsientosDetalle ad
+                JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
+                JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
+                WHERE  cc.Codigo IN ('101', '102')
+                  AND  a.Fecha >= @Desde AND a.Fecha <= @Hasta
+                GROUP  BY a.Fecha, cc.Codigo
+                ORDER  BY a.Fecha, cc.Codigo";
+
+            var dto      = new FlujoCajaDTO();
+            var porFecha = new Dictionary<DateTime, FlujoCajaDiaDTO>();
+
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var cmd  = new SQLiteCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@Desde", desde.ToString("yyyy-MM-dd"));
+                cmd.Parameters.AddWithValue("@Hasta", hasta.ToString("yyyy-MM-dd"));
+
+                using (var r = cmd.ExecuteReader())
+                {
+                    while (r.Read())
+                    {
+                        DateTime fecha    = DateTime.Parse(r.GetString(0));
+                        string   codigo   = r.GetString(1);
+                        decimal  entradas = r.GetDecimal(2);
+                        decimal  salidas  = r.GetDecimal(3);
+
+                        // Acumular por origen
+                        if (codigo == "101")
+                        {
+                            dto.EntradasCaja   += entradas;
+                            dto.SalidasCaja    += salidas;
+                        }
+                        else
+                        {
+                            dto.EntradasBancos += entradas;
+                            dto.SalidasBancos  += salidas;
+                        }
+
+                        // Acumular por día (suma 101+102)
+                        if (!porFecha.ContainsKey(fecha))
+                            porFecha[fecha] = new FlujoCajaDiaDTO { Fecha = fecha };
+                        porFecha[fecha].Entradas += entradas;
+                        porFecha[fecha].Salidas  += salidas;
+                    }
+                }
+            }
+
+            dto.TotalEntradas = dto.EntradasCaja + dto.EntradasBancos;
+            dto.TotalSalidas  = dto.SalidasCaja  + dto.SalidasBancos;
+
+            foreach (var kv in porFecha)
+                dto.DetallesPorDia.Add(kv.Value);
+            dto.DetallesPorDia.Sort((a, b) => a.Fecha.CompareTo(b.Fecha));
+
+            return dto;
+        }
+
+        public static SistemaPOS.Models.EstadoResultadosDTO ObtenerEstadoResultados(
+            DateTime desde, DateTime hasta)
+        {
+            const string sql = @"
+                SELECT
+                    COALESCE(SUM(CASE WHEN cc.Codigo = '400' THEN ad.Haber - ad.Debe ELSE 0 END), 0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo = '500' THEN ad.Debe - ad.Haber ELSE 0 END), 0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo = '600' THEN ad.Debe - ad.Haber ELSE 0 END), 0)
+                FROM   AsientosDetalle ad
+                JOIN   CuentasContables cc ON ad.CuentaID = cc.CuentaID
+                JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
+                WHERE  a.Fecha >= @Desde AND a.Fecha <= @Hasta";
+
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var cmd = new SQLiteCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@Desde", desde.ToString("yyyy-MM-dd"));
+                cmd.Parameters.AddWithValue("@Hasta", hasta.ToString("yyyy-MM-dd"));
+
+                using (var r = cmd.ExecuteReader())
+                {
+                    var dto = new SistemaPOS.Models.EstadoResultadosDTO();
+                    if (r.Read())
+                    {
+                        dto.Ventas      = r.IsDBNull(0) ? 0m : r.GetDecimal(0);
+                        dto.CostoVentas = r.IsDBNull(1) ? 0m : r.GetDecimal(1);
+                        dto.Gastos      = r.IsDBNull(2) ? 0m : r.GetDecimal(2);
+                    }
+                    dto.UtilidadBruta     = dto.Ventas - dto.CostoVentas;
+                    dto.UtilidadOperativa = dto.UtilidadBruta - dto.Gastos;
+                    return dto;
+                }
+            }
+        }
+
+        // ==================================================================
+        // BALANCE DE COMPROBACIÓN (solo lectura desde asientos)
+        // ==================================================================
+
+        /// <summary>
+        /// Devuelve una fila por cuenta con los movimientos Debe/Haber
+        /// acumulados en el rango de fechas. Saldo = Debe - Haber.
+        /// Ordenado por cc.Codigo. Lista vacía si no hay movimientos.
+        ///
+        /// Verificación SQL directa equivalente:
+        ///   SELECT cc.Codigo, cc.Nombre, cc.Tipo,
+        ///          COALESCE(SUM(ad.Debe),0)  AS Debe,
+        ///          COALESCE(SUM(ad.Haber),0) AS Haber,
+        ///          COALESCE(SUM(ad.Debe),0) - COALESCE(SUM(ad.Haber),0) AS Saldo
+        ///   FROM   AsientosDetalle ad
+        ///   JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
+        ///   JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
+        ///   WHERE  a.Fecha &gt;= '@Desde' AND a.Fecha &lt;= '@Hasta'
+        ///   GROUP  BY cc.CuentaID, cc.Codigo, cc.Nombre, cc.Tipo
+        ///   ORDER  BY cc.Codigo;
+        ///   -- En partida doble perfecta: SUM(Debe) == SUM(Haber)
+        /// </summary>
+        public static List<BalanceComprobacionItemDTO> ObtenerBalanceComprobacion(
+            DateTime desde, DateTime hasta)
+        {
+            const string sql = @"
+                SELECT
+                    cc.Codigo,
+                    cc.Nombre,
+                    cc.Tipo,
+                    COALESCE(SUM(ad.Debe),  0) AS Debe,
+                    COALESCE(SUM(ad.Haber), 0) AS Haber
+                FROM   AsientosDetalle ad
+                JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
+                JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
+                WHERE  a.Fecha >= @Desde AND a.Fecha <= @Hasta
+                GROUP  BY cc.CuentaID, cc.Codigo, cc.Nombre, cc.Tipo
+                ORDER  BY cc.Codigo";
+
+            var lista = new List<BalanceComprobacionItemDTO>();
+
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var cmd  = new SQLiteCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@Desde", desde.ToString("yyyy-MM-dd"));
+                cmd.Parameters.AddWithValue("@Hasta", hasta.ToString("yyyy-MM-dd"));
+
+                using (var r = cmd.ExecuteReader())
+                {
+                    while (r.Read())
+                    {
+                        lista.Add(new BalanceComprobacionItemDTO
+                        {
+                            Codigo = r.GetString(0),
+                            Nombre = r.GetString(1),
+                            Tipo   = r.GetString(2),
+                            Debe   = r.IsDBNull(3) ? 0m : r.GetDecimal(3),
+                            Haber  = r.IsDBNull(4) ? 0m : r.GetDecimal(4)
+                        });
+                    }
+                }
+            }
+
+            return lista;
+        }
+
+        // ==================================================================
+        // BALANCE GENERAL (solo lectura desde asientos — acumulado)
+        // ==================================================================
+
+        /// <summary>
+        /// Calcula el Balance General acumulado hasta la fecha de corte
+        /// leyendo saldos de AsientosDetalle. Una sola pasada SQL.
+        ///
+        /// NOTA fecha: Asientos.Fecha = "yyyy-MM-dd" (sin hora).
+        /// El patrón a.Fecha &lt;= @FechaCorte ya incluye todos los
+        /// asientos del día de corte. Si en el futuro se almacenara hora,
+        /// usar a.Fecha &lt; fechaCorte.AddDays(1).ToString("yyyy-MM-dd").
+        ///
+        /// Verificación de cuadratura (SQL directo):
+        ///   SELECT
+        ///     SUM(CASE WHEN cc.Codigo IN ('101','102','120','140') THEN ad.Debe-ad.Haber ELSE 0 END)
+        ///    -SUM(CASE WHEN cc.Codigo IN ('200','300','400') THEN ad.Haber-ad.Debe ELSE 0 END)
+        ///    +SUM(CASE WHEN cc.Codigo IN ('500','600')       THEN ad.Debe-ad.Haber ELSE 0 END)
+        ///   FROM AsientosDetalle ad
+        ///   JOIN CuentasContables cc ON ad.CuentaID=cc.CuentaID
+        ///   JOIN Asientos a ON ad.AsientoID=a.AsientoID
+        ///   WHERE a.Fecha &lt;= '@FechaCorte';
+        ///   -- debe retornar 0.00 (o &lt; 0.01 por redondeos)
+        /// </summary>
+        public static BalanceGeneralDTO ObtenerBalanceGeneral(DateTime fechaCorte)
+        {
+            const string sql = @"
+                SELECT
+                    COALESCE(SUM(CASE WHEN cc.Codigo='101' THEN ad.Debe-ad.Haber ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo='102' THEN ad.Debe-ad.Haber ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo='120' THEN ad.Debe-ad.Haber ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo='140' THEN ad.Debe-ad.Haber ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo='200' THEN ad.Haber-ad.Debe ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo='300' THEN ad.Haber-ad.Debe ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo='400' THEN ad.Haber-ad.Debe ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo='500' THEN ad.Debe-ad.Haber ELSE 0 END),0),
+                    COALESCE(SUM(CASE WHEN cc.Codigo='600' THEN ad.Debe-ad.Haber ELSE 0 END),0)
+                FROM   AsientosDetalle ad
+                JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
+                JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
+                WHERE  a.Fecha <= @FechaCorte
+                  AND  cc.Codigo IN ('101','102','120','140','200','300','400','500','600')";
+
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var cmd  = new SQLiteCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@FechaCorte", fechaCorte.ToString("yyyy-MM-dd"));
+
+                using (var r = cmd.ExecuteReader())
+                {
+                    var dto = new BalanceGeneralDTO();
+                    if (r.Read())
+                    {
+                        dto.Caja       = r.IsDBNull(0) ? 0m : r.GetDecimal(0);
+                        dto.Bancos     = r.IsDBNull(1) ? 0m : r.GetDecimal(1);
+                        dto.CxC        = r.IsDBNull(2) ? 0m : r.GetDecimal(2);
+                        dto.Inventario = r.IsDBNull(3) ? 0m : r.GetDecimal(3);
+                        dto.CxP        = r.IsDBNull(4) ? 0m : r.GetDecimal(4);
+                        dto.Capital    = r.IsDBNull(5) ? 0m : r.GetDecimal(5);
+                        decimal ventas = r.IsDBNull(6) ? 0m : r.GetDecimal(6);
+                        decimal costo  = r.IsDBNull(7) ? 0m : r.GetDecimal(7);
+                        decimal gastos = r.IsDBNull(8) ? 0m : r.GetDecimal(8);
+                        dto.Utilidad   = ventas - costo - gastos;
+                    }
+                    return dto;
+                }
+            }
         }
     }
 }

@@ -36,45 +36,52 @@ namespace SistemaPOS.Forms.Reportes
             try
             {
                 dgvEstadoResultados.Rows.Clear();
-                var estado = EstadoResultadosRepository.Calcular(dtpDesde.Value, dtpHasta.Value);
+                var er = ContabilidadService.ObtenerEstadoResultados(
+                    dtpDesde.Value.Date, dtpHasta.Value.Date);
 
-                // Ingresos
+                // INGRESOS
                 int idx = dgvEstadoResultados.Rows.Add("INGRESOS", "");
-                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font = new Font(dgvEstadoResultados.Font, FontStyle.Bold);
+                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font =
+                    new Font(dgvEstadoResultados.Font, FontStyle.Bold);
 
-                dgvEstadoResultados.Rows.Add("  Ventas", $"S/ {estado.VentasBrutas:N2}");
+                dgvEstadoResultados.Rows.Add("  Ventas", $"S/ {er.Ventas:N2}");
 
-                // Costos
+                // COSTOS
                 idx = dgvEstadoResultados.Rows.Add("COSTOS", "");
-                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font = new Font(dgvEstadoResultados.Font, FontStyle.Bold);
+                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font =
+                    new Font(dgvEstadoResultados.Font, FontStyle.Bold);
 
-                dgvEstadoResultados.Rows.Add("  Costo de Mercadería", $"S/ {estado.CostoMercaderia:N2}");
+                dgvEstadoResultados.Rows.Add("  Costo de Ventas", $"S/ {er.CostoVentas:N2}");
 
-                // Utilidad Bruta
-                idx = dgvEstadoResultados.Rows.Add("UTILIDAD BRUTA", $"S/ {estado.UtilidadBruta:N2}");
-                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font = new Font(dgvEstadoResultados.Font, FontStyle.Bold);
-                dgvEstadoResultados.Rows[idx].DefaultCellStyle.ForeColor = estado.UtilidadBruta >= 0 ? Color.Green : Color.Red;
+                // UTILIDAD BRUTA
+                idx = dgvEstadoResultados.Rows.Add("UTILIDAD BRUTA", $"S/ {er.UtilidadBruta:N2}");
+                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font =
+                    new Font(dgvEstadoResultados.Font, FontStyle.Bold);
+                dgvEstadoResultados.Rows[idx].DefaultCellStyle.ForeColor =
+                    er.UtilidadBruta >= 0 ? Color.Green : Color.Red;
 
-                // Gastos Operativos
+                // GASTOS OPERATIVOS
                 idx = dgvEstadoResultados.Rows.Add("GASTOS OPERATIVOS", "");
-                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font = new Font(dgvEstadoResultados.Font, FontStyle.Bold);
+                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font =
+                    new Font(dgvEstadoResultados.Font, FontStyle.Bold);
 
-                foreach (var gasto in estado.GastosPorCategoria)
-                {
-                    dgvEstadoResultados.Rows.Add($"  {gasto.Key}", $"S/ {gasto.Value:N2}");
-                }
+                dgvEstadoResultados.Rows.Add("  Total Gastos", $"S/ {er.Gastos:N2}");
 
-                dgvEstadoResultados.Rows.Add("  Total Gastos", $"S/ {estado.TotalGastos:N2}");
-
-                // Utilidad Neta
-                idx = dgvEstadoResultados.Rows.Add("UTILIDAD NETA", $"S/ {estado.UtilidadNeta:N2}");
-                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font = new Font(dgvEstadoResultados.Font, FontStyle.Bold | FontStyle.Italic);
-                dgvEstadoResultados.Rows[idx].DefaultCellStyle.ForeColor = estado.UtilidadNeta >= 0 ? Color.FromArgb(39, 174, 96) : Color.FromArgb(192, 57, 43);
-                dgvEstadoResultados.Rows[idx].DefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240);
+                // UTILIDAD OPERATIVA
+                idx = dgvEstadoResultados.Rows.Add("UTILIDAD OPERATIVA", $"S/ {er.UtilidadOperativa:N2}");
+                dgvEstadoResultados.Rows[idx].DefaultCellStyle.Font =
+                    new Font(dgvEstadoResultados.Font, FontStyle.Bold | FontStyle.Italic);
+                dgvEstadoResultados.Rows[idx].DefaultCellStyle.ForeColor =
+                    er.UtilidadOperativa >= 0
+                        ? Color.FromArgb(39, 174, 96)
+                        : Color.FromArgb(192, 57, 43);
+                dgvEstadoResultados.Rows[idx].DefaultCellStyle.BackColor =
+                    Color.FromArgb(240, 240, 240);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

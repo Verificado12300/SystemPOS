@@ -36,34 +36,59 @@ namespace SistemaPOS.Forms.Reportes
             try
             {
                 dgvFlujoCaja.Rows.Clear();
-                var items = FlujoCajaRepository.ObtenerFlujoCaja(dtpDesde.Value, dtpHasta.Value);
 
-                decimal totalIngresos = 0;
-                decimal totalEgresos = 0;
+                // Adaptar encabezados para vista por día desde asientos contables
+                dgvFlujoCaja.Columns["colConcepto"].HeaderText  = "Fecha";
+                dgvFlujoCaja.Columns["colIngresos"].HeaderText  = "Entradas";
+                dgvFlujoCaja.Columns["colEgresos"].HeaderText   = "Salidas";
+                dgvFlujoCaja.Columns["colFlujoNeto"].HeaderText = "Neto";
 
-                foreach (var item in items)
+                var fc = ContabilidadService.ObtenerFlujoCaja(
+                    dtpDesde.Value.Date, dtpHasta.Value.Date);
+
+                // Detalle por día
+                foreach (var dia in fc.DetallesPorDia)
                 {
-                    decimal flujoItem = item.Ingreso - item.Egreso;
-                    dgvFlujoCaja.Rows.Add(
-                        item.Concepto,
-                        item.Ingreso > 0 ? $"S/ {item.Ingreso:N2}" : "-",
-                        item.Egreso > 0 ? $"S/ {item.Egreso:N2}" : "-",
-                        $"S/ {flujoItem:N2}"
-                    );
-                    totalIngresos += item.Ingreso;
-                    totalEgresos += item.Egreso;
+                    int idx = dgvFlujoCaja.Rows.Add(
+                        dia.Fecha.ToString("dd/MM/yyyy"),
+                        dia.Entradas > 0 ? $"S/ {dia.Entradas:N2}" : "-",
+                        dia.Salidas  > 0 ? $"S/ {dia.Salidas:N2}"  : "-",
+                        $"S/ {dia.Neto:N2}");
+                    if (dia.Neto < 0)
+                        dgvFlujoCaja.Rows[idx].DefaultCellStyle.ForeColor = Color.Red;
                 }
 
-                decimal flujoNeto = totalIngresos - totalEgresos;
+                // Separador + desglose por origen (Caja / Bancos)
+                if (fc.TotalEntradas > 0 || fc.TotalSalidas > 0)
+                {
+                    dgvFlujoCaja.Rows.Add("─────────────", "", "", "");
 
-                lblTotalIngresos.Text = $"S/ {totalIngresos:N2}";
-                lblTotalEgresos.Text = $"S/ {totalEgresos:N2}";
-                lblFlujoNeto.Text = $"S/ {flujoNeto:N2}";
-                lblFlujoNeto.ForeColor = flujoNeto >= 0 ? Color.Green : Color.Red;
+                    int iCaja = dgvFlujoCaja.Rows.Add(
+                        "Caja (101)",
+                        fc.EntradasCaja > 0 ? $"S/ {fc.EntradasCaja:N2}" : "-",
+                        fc.SalidasCaja  > 0 ? $"S/ {fc.SalidasCaja:N2}"  : "-",
+                        $"S/ {fc.EntradasCaja - fc.SalidasCaja:N2}");
+                    dgvFlujoCaja.Rows[iCaja].DefaultCellStyle.Font =
+                        new Font(dgvFlujoCaja.Font, FontStyle.Italic);
+
+                    int iBancos = dgvFlujoCaja.Rows.Add(
+                        "Bancos (102)",
+                        fc.EntradasBancos > 0 ? $"S/ {fc.EntradasBancos:N2}" : "-",
+                        fc.SalidasBancos  > 0 ? $"S/ {fc.SalidasBancos:N2}"  : "-",
+                        $"S/ {fc.EntradasBancos - fc.SalidasBancos:N2}");
+                    dgvFlujoCaja.Rows[iBancos].DefaultCellStyle.Font =
+                        new Font(dgvFlujoCaja.Font, FontStyle.Italic);
+                }
+
+                lblTotalIngresos.Text      = $"S/ {fc.TotalEntradas:N2}";
+                lblTotalEgresos.Text       = $"S/ {fc.TotalSalidas:N2}";
+                lblFlujoNeto.Text          = $"S/ {fc.Neto:N2}";
+                lblFlujoNeto.ForeColor     = fc.Neto >= 0 ? Color.Green : Color.Red;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

@@ -227,6 +227,12 @@
     <Compile Include="Forms\Reportes\FormBalanceGeneral.Designer.cs">
       <DependentUpon>FormBalanceGeneral.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\Reportes\FormBalanceComprobacion.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Reportes\FormBalanceComprobacion.Designer.cs">
+      <DependentUpon>FormBalanceComprobacion.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Configuracion\FormRespaldo.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -383,6 +389,10 @@
     <Compile Include="Forms\Finanzas\FormContabilidad.Designer.cs">
       <DependentUpon>FormContabilidad.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\BalanceComprobacionItemDTO.cs" />
+    <Compile Include="Models\BalanceGeneralDTO.cs" />
+    <Compile Include="Models\EstadoResultadosDTO.cs" />
+    <Compile Include="Models\FlujoCajaDTO.cs" />
     <Compile Include="Models\AsientoContable.cs" />
     <Compile Include="Models\AsientoDetalleContable.cs" />
     <Compile Include="Models\CuentaContable.cs" />
