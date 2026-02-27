@@ -26,6 +26,7 @@ namespace SistemaPOS.Forms.Principal
             this.mnuImpresoras = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuRespaldo = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuGeneral = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuPapelera = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuLicencia = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuSep = new System.Windows.Forms.ToolStripSeparator();
             this.mnuReportes = new System.Windows.Forms.ToolStripMenuItem();
@@ -87,6 +88,7 @@ namespace SistemaPOS.Forms.Principal
             this.mnuRespaldo,
             this.mnuReportes,
             this.mnuGeneral,
+            this.mnuPapelera,
             this.mnuLicencia,
             this.mnuSep});
             this.cmsUsuarioConfig.Name = "cmsUsuarioConfig";
@@ -147,9 +149,16 @@ namespace SistemaPOS.Forms.Principal
             this.mnuGeneral.Size = new System.Drawing.Size(180, 22);
             this.mnuGeneral.Text = "General";
             this.mnuGeneral.Click += new System.EventHandler(this.MnuGeneral_Click);
-            // 
+            //
+            // mnuPapelera
+            //
+            this.mnuPapelera.Name = "mnuPapelera";
+            this.mnuPapelera.Size = new System.Drawing.Size(180, 22);
+            this.mnuPapelera.Text = "Papelera";
+            this.mnuPapelera.Click += new System.EventHandler(this.MnuPapelera_Click);
+            //
             // mnuLicencia
-            // 
+            //
             this.mnuLicencia.Name = "mnuLicencia";
             this.mnuLicencia.Size = new System.Drawing.Size(180, 22);
             this.mnuLicencia.Text = "Licencia";
@@ -949,6 +958,7 @@ namespace SistemaPOS.Forms.Principal
         private System.Windows.Forms.ToolStripMenuItem mnuImpresoras;
         private System.Windows.Forms.ToolStripMenuItem mnuRespaldo;
         private System.Windows.Forms.ToolStripMenuItem mnuGeneral;
+        private System.Windows.Forms.ToolStripMenuItem mnuPapelera;
         private System.Windows.Forms.ToolStripMenuItem mnuLicencia;
         private System.Windows.Forms.ToolStripSeparator mnuSep;
         private System.Windows.Forms.ToolStripMenuItem mnuReportes;

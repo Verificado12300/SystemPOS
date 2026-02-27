@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using SistemaPOS.Models;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Data
 {
@@ -74,7 +75,7 @@ namespace SistemaPOS.Data
                 string query = @"
                     SELECT GastoID, Fecha, Hora, Concepto, Monto, Categoria, MetodoPago,
                            Comprobante, Observaciones, CajaID, UsuarioID
-                    FROM Gastos WHERE 1=1";
+                    FROM Gastos WHERE (Eliminado IS NULL OR Eliminado = 0)";
 
                 if (fechaDesde.HasValue)
                     query += " AND Fecha >= @FechaDesde";
@@ -154,21 +155,27 @@ namespace SistemaPOS.Data
                                 throw new Exception(
                                     $"No se puede eliminar el gasto: tiene {info.Cantidad} pago(s) registrado(s) " +
                                     $"por S/ {info.Total:N2}. Revierte los pagos antes de anular.");
-
-                            CuentaPorPagarRepository.MarcarAnulada(cxpId.Value, connection, transaction);
                         }
 
-                        // Reversar el asiento ANTES de borrar el registro (necesita leer datos del gasto)
-                        ContabilidadService.ReversarGasto(gastoID, connection, transaction);
-
-                        string query = "DELETE FROM Gastos WHERE GastoID = @GastoID";
-                        using (var cmd = new SQLiteCommand(query, connection, transaction))
+                        // Leer datos del gasto para el resumen en PapeleraLog
+                        string resumen = "";
+                        using (var cmd = new SQLiteCommand(
+                            "SELECT Fecha, Concepto, Monto FROM Gastos WHERE GastoID=@id",
+                            connection, transaction))
                         {
-                            cmd.Parameters.AddWithValue("@GastoID", gastoID);
-                            int filas = cmd.ExecuteNonQuery();
-                            transaction.Commit();
-                            return filas > 0;
+                            cmd.Parameters.AddWithValue("@id", gastoID);
+                            using (var r = cmd.ExecuteReader())
+                            {
+                                if (r.Read())
+                                    resumen = $"{r.GetString(0)} | {r.GetString(1)} | S/ {Convert.ToDecimal(r.GetValue(2)):N2}";
+                            }
                         }
+
+                        string usuarioNombre = SesionActual.Usuario?.NombreUsuario ?? "Sistema";
+                        PapeleraService.SoftDelete("GASTO", gastoID, resumen, usuarioNombre,
+                            connection, transaction);
+                        transaction.Commit();
+                        return true;
                     }
                     catch
                     {
@@ -183,7 +190,7 @@ namespace SistemaPOS.Data
         {
             using (var connection = DatabaseConnection.GetConnection())
             {
-                string query = "SELECT COALESCE(SUM(Monto), 0) FROM Gastos WHERE Fecha >= @FechaDesde AND Fecha <= @FechaHasta";
+                string query = "SELECT COALESCE(SUM(Monto), 0) FROM Gastos WHERE Fecha >= @FechaDesde AND Fecha <= @FechaHasta AND (Eliminado IS NULL OR Eliminado = 0)";
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@FechaDesde", fechaDesde.ToString("yyyy-MM-dd"));
@@ -203,6 +210,7 @@ namespace SistemaPOS.Data
                     SELECT Categoria, SUM(Monto) as Total
                     FROM Gastos
                     WHERE Fecha >= @FechaDesde AND Fecha <= @FechaHasta
+                      AND (Eliminado IS NULL OR Eliminado = 0)
                     GROUP BY Categoria ORDER BY Total DESC";
 
                 using (var cmd = new SQLiteCommand(query, connection))

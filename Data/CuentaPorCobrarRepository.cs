@@ -55,7 +55,8 @@ namespace SistemaPOS.Data
                     INNER JOIN Clientes c ON c.ClienteID = v.ClienteID
                     LEFT JOIN CreditosVentas cv ON cv.VentaID = v.VentaID
                     WHERE v.MetodoPago = 'CREDITO'
-                      AND v.Estado != 'ANULADA'";
+                      AND v.Estado != 'ANULADA'
+                      AND (v.Eliminado IS NULL OR v.Eliminado = 0)";
 
                 if (clienteID.HasValue && clienteID.Value > 0)
                     query += " AND v.ClienteID = @ClienteID";

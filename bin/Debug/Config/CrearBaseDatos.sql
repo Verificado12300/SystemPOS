@@ -256,6 +256,11 @@ CREATE TABLE IF NOT EXISTS Ventas (
     Observaciones TEXT(500),
     FechaAnulacion TEXT,
     MotivoAnulacion TEXT(300),
+    Eliminado INTEGER NOT NULL DEFAULT 0,
+    EliminadoFecha TEXT NULL,
+    EliminadoPor TEXT NULL,
+    RestauradoFecha TEXT NULL,
+    RestauradoPor TEXT NULL,
     FOREIGN KEY (ClienteID) REFERENCES Clientes(ClienteID),
     FOREIGN KEY (CajaID) REFERENCES Cajas(CajaID),
     FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
@@ -338,6 +343,11 @@ CREATE TABLE IF NOT EXISTS Compras (
     Observaciones TEXT(500),
     FechaAnulacion TEXT,
     MotivoAnulacion TEXT(300),
+    Eliminado INTEGER NOT NULL DEFAULT 0,
+    EliminadoFecha TEXT NULL,
+    EliminadoPor TEXT NULL,
+    RestauradoFecha TEXT NULL,
+    RestauradoPor TEXT NULL,
     FOREIGN KEY (ProveedorID) REFERENCES Proveedores(ProveedorID),
     FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
 );
@@ -392,6 +402,11 @@ CREATE TABLE IF NOT EXISTS Gastos (
     ProveedorID   INTEGER NULL,
     CajaID        INTEGER,
     UsuarioID     INTEGER NOT NULL,
+    Eliminado INTEGER NOT NULL DEFAULT 0,
+    EliminadoFecha TEXT NULL,
+    EliminadoPor TEXT NULL,
+    RestauradoFecha TEXT NULL,
+    RestauradoPor TEXT NULL,
     FOREIGN KEY (CajaID)    REFERENCES Cajas(CajaID),
     FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
 );
@@ -664,6 +679,20 @@ CREATE INDEX idx_asientos_tipo        ON Asientos(TipoOperacion);
 CREATE INDEX idx_asientosdetalle_asiento ON AsientosDetalle(AsientoID);
 CREATE INDEX idx_asientosdetalle_cuenta  ON AsientosDetalle(CuentaID);
 CREATE UNIQUE INDEX idx_cuentascontables_codigo ON CuentasContables(Codigo);
+
+-- ============================================================
+-- MÓDULO: PAPELERA GLOBAL
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS PapeleraLog (
+    LogId        INTEGER PRIMARY KEY AUTOINCREMENT,
+    Entidad      TEXT    NOT NULL,
+    EntidadId    INTEGER NOT NULL,
+    Accion       TEXT    NOT NULL,
+    Fecha        TEXT    NOT NULL,
+    Usuario      TEXT    NOT NULL,
+    DatosResumen TEXT    NOT NULL DEFAULT ''
+);
 
 -- ============================================================
 -- FIN DEL SCRIPT

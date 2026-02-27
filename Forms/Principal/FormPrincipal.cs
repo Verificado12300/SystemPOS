@@ -122,12 +122,19 @@ namespace SistemaPOS.Forms.Principal
         private void ConfigurarMenuUsuario()
         {
             _menuUsuario = new ContextMenuStrip();
-            _menuUsuario.Items.Add("Mi cuenta", null, (_, __) => MostrarMiCuenta());
-            _menuUsuario.Items.Add("Empresa", null, (_, __) => BtnEmpresa_Click(_, __));
-            _menuUsuario.Items.Add("Usuarios y roles", null, (_, __) => BtnUsuarios_Click(_, __));
-            _menuUsuario.Items.Add("Reportes", null, (_, __) => BtnReportes_Click(_, __));
-            _menuUsuario.Items.Add(new ToolStripSeparator());
-            _menuUsuario.Items.Add("Cerrar sesion", null, (_, __) => BtnCerrarSesion_Click(_, __));
+            _menuUsuario.Items.Add("Mi cuenta", null, (_, __) => MostrarMiCuenta());          // [0]
+            _menuUsuario.Items.Add("Empresa", null, (_, __) => BtnEmpresa_Click(_, __));       // [1]
+            _menuUsuario.Items.Add("Usuarios y roles", null, (_, __) => BtnUsuarios_Click(_, __)); // [2]
+            _menuUsuario.Items.Add("Reportes", null, (_, __) => BtnReportes_Click(_, __));     // [3]
+            _menuUsuario.Items.Add("Cierre de Período", null, (_, __) => AbrirCierrePeriodo()); // [4]
+            _menuUsuario.Items.Add(new ToolStripSeparator());                                   // [5]
+            _menuUsuario.Items.Add("Cerrar sesion", null, (_, __) => BtnCerrarSesion_Click(_, __)); // [6]
+        }
+
+        private void AbrirCierrePeriodo()
+        {
+            if (!TienePermiso(u => u.PermisoConfiguracion, "Cierre de Período")) return;
+            AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormPeriodosContables());
         }
 
         private void ConfigurarMenuUsuarioConfig()
@@ -143,11 +150,12 @@ namespace SistemaPOS.Forms.Principal
             bool permisoConfig = usuario != null && (usuario.RolID == 1 || usuario.PermisoConfiguracion);
             bool permisoReportes = usuario != null && (usuario.RolID == 1 || usuario.PermisoReportes);
 
-            // 0: Mi cuenta | 1: Empresa | 2: Usuarios y roles | 3: Reportes
+            // 0: Mi cuenta | 1: Empresa | 2: Usuarios y roles | 3: Reportes | 4: Cierre de Período
             _menuUsuario.Items[0].Enabled = true;
             _menuUsuario.Items[1].Enabled = permisoConfig;
             _menuUsuario.Items[2].Enabled = permisoConfig;
             _menuUsuario.Items[3].Enabled = permisoReportes;
+            _menuUsuario.Items[4].Enabled = permisoConfig;
 
             mnuEmpresa.Visible        = permisoConfig;
             mnuUsuarios.Visible       = permisoConfig;
@@ -157,6 +165,7 @@ namespace SistemaPOS.Forms.Principal
             mnuImpresoras.Visible     = permisoConfig;
             mnuRespaldo.Visible       = permisoConfig;
             mnuGeneral.Visible        = permisoConfig;
+            mnuPapelera.Visible       = permisoConfig;
             mnuLicencia.Visible       = permisoConfig;
             mnuSep.Visible            = permisoConfig && permisoReportes;
             mnuReportes.Visible       = permisoReportes;
@@ -206,6 +215,12 @@ namespace SistemaPOS.Forms.Principal
         {
             if (!TienePermiso(u => u.PermisoConfiguracion, "General")) return;
             AbrirFormEnPanel(new Configuracion.FormGeneral());
+        }
+
+        private void MnuPapelera_Click(object sender, EventArgs e)
+        {
+            if (!TienePermiso(u => u.PermisoConfiguracion, "Papelera")) return;
+            AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormPapeleraGlobal());
         }
 
         private void MnuLicencia_Click(object sender, EventArgs e)

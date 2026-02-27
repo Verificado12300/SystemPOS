@@ -957,11 +957,54 @@ namespace SistemaPOS.Data
                         }
                     }
                     catch (Exception ex) { throw new Exception("Migración PagosProveedores falló: " + ex.Message, ex); }
+
+                    // Migración: columnas Soft-Delete en Gastos, Ventas, Compras + tabla PapeleraLog.
+                    MigrarColumnasSoftDelete("Gastos",  connection);
+                    MigrarColumnasSoftDelete("Ventas",  connection);
+                    MigrarColumnasSoftDelete("Compras", connection);
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+                            CREATE TABLE IF NOT EXISTS PapeleraLog (
+                                LogId        INTEGER PRIMARY KEY AUTOINCREMENT,
+                                Entidad      TEXT    NOT NULL,
+                                EntidadId    INTEGER NOT NULL,
+                                Accion       TEXT    NOT NULL,
+                                Fecha        TEXT    NOT NULL,
+                                Usuario      TEXT    NOT NULL,
+                                DatosResumen TEXT    NOT NULL DEFAULT ''
+                            )";
+                        cmd.ExecuteNonQuery();
+                    }
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception($"Error al ejecutar migraciones: {ex.Message}", ex);
+            }
+        }
+
+        private static void MigrarColumnasSoftDelete(string tabla, SQLiteConnection conn)
+        {
+            var cols = new[]
+            {
+                "Eliminado INTEGER NOT NULL DEFAULT 0",
+                "EliminadoFecha TEXT NULL",
+                "EliminadoPor TEXT NULL",
+                "RestauradoFecha TEXT NULL",
+                "RestauradoPor TEXT NULL"
+            };
+            foreach (var col in cols)
+            {
+                string nombre = col.Split(' ')[0];
+                bool existe;
+                using (var chk = new SQLiteCommand(
+                    $"SELECT COUNT(*) FROM pragma_table_info('{tabla}') WHERE name='{nombre}'", conn))
+                    existe = Convert.ToInt32(chk.ExecuteScalar()) > 0;
+                if (!existe)
+                    using (var alt = new SQLiteCommand(
+                        $"ALTER TABLE {tabla} ADD COLUMN {col}", conn))
+                        alt.ExecuteNonQuery();
             }
         }
 

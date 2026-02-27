@@ -51,11 +51,13 @@ namespace SistemaPOS.Data
                             string queryVenta = @"
                                 INSERT INTO Ventas (
                                 NumeroVenta, Fecha, Hora, ClienteID, TipoComprobante, Serie, Numero,
-                                SubTotal, IGV, Total, MetodoPago, MontoEfectivo, MontoYape, MontoTarjeta,
+                                SubTotal, IGV, TipoIGV, BaseImponible, Total,
+                                MetodoPago, MontoEfectivo, MontoYape, MontoTarjeta,
                                 MontoTransferencia, Estado, CajaID, UsuarioID
                             ) VALUES (
                                 @NumeroVenta, @Fecha, @Hora, @ClienteID, @TipoComprobante, @Serie, @Numero,
-                                @SubTotal, @IGV, @Total, @MetodoPago, @MontoEfectivo, @MontoYape, @MontoTarjeta,
+                                @SubTotal, @IGV, @TipoIGV, @BaseImponible, @Total,
+                                @MetodoPago, @MontoEfectivo, @MontoYape, @MontoTarjeta,
                                 @MontoTransferencia, @Estado, @CajaID, @UsuarioID
                             )";
 
@@ -68,9 +70,11 @@ namespace SistemaPOS.Data
                                 cmd.Parameters.AddWithValue("@TipoComprobante", venta.TipoComprobante);
                                 cmd.Parameters.AddWithValue("@Serie", venta.Serie);
                                 cmd.Parameters.AddWithValue("@Numero", venta.Numero);
-                                cmd.Parameters.AddWithValue("@SubTotal", venta.SubTotal);
-                                cmd.Parameters.AddWithValue("@IGV", venta.IGV);
-                                cmd.Parameters.AddWithValue("@Total", venta.Total);
+                                cmd.Parameters.AddWithValue("@SubTotal",      venta.SubTotal);
+                                cmd.Parameters.AddWithValue("@IGV",           venta.IGV);
+                                cmd.Parameters.AddWithValue("@TipoIGV",       venta.TipoIGV);
+                                cmd.Parameters.AddWithValue("@BaseImponible", venta.BaseImponible);
+                                cmd.Parameters.AddWithValue("@Total",         venta.Total);
                                 cmd.Parameters.AddWithValue("@MetodoPago", venta.MetodoPago);
                                 cmd.Parameters.AddWithValue("@MontoEfectivo", venta.MontoEfectivo);
                                 cmd.Parameters.AddWithValue("@MontoYape", venta.MontoYape);
@@ -153,6 +157,7 @@ namespace SistemaPOS.Data
                                 venta.Total, venta.MetodoPago,
                                 venta.MontoEfectivo, venta.MontoYape,
                                 venta.MontoTarjeta, venta.MontoTransferencia,
+                                venta.IGV,
                                 venta.UsuarioID, connection, transaction);
 
                             // Asiento contable: costo de ventas (Dr 500 / Cr 140)
@@ -213,7 +218,7 @@ namespace SistemaPOS.Data
                     v.MontoTransferencia
                 FROM Ventas v
                 LEFT JOIN Clientes c ON v.ClienteID = c.ClienteID
-                WHERE 1=1";
+                WHERE (v.Eliminado IS NULL OR v.Eliminado = 0)";
 
                     if (cajaID.HasValue && cajaID.Value > 0)
                         query += " AND v.CajaID = @CajaID";

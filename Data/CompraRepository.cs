@@ -210,7 +210,7 @@ namespace SistemaPOS.Data
                             (SELECT COUNT(*) FROM CompraDetalles cd WHERE cd.CompraID = c.CompraID) as CantidadItems
                         FROM Compras c
                         LEFT JOIN Proveedores p ON c.ProveedorID = p.ProveedorID
-                        WHERE 1=1";
+                        WHERE (c.Eliminado IS NULL OR c.Eliminado = 0)";
 
                     if (proveedorID.HasValue && proveedorID.Value > 0)
                         query += " AND c.ProveedorID = @ProveedorID";
