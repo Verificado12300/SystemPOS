@@ -51,11 +51,70 @@ namespace SistemaPOS.Data
         }
 
         // ----------------------------------------------------------------
+        // Validación: bloquear soft-delete si el registro ya tiene impacto contable
+        // ----------------------------------------------------------------
+        private static void ValidarSinImpactoContable(
+            string entidad, int id, SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            // 1. ¿Existe asiento contable para este registro?
+            //    TipoOperacion = "GASTO" | "VENTA" | "COMPRA" coincide con el entidad
+            int nAsientos;
+            using (var cmd = new SQLiteCommand(
+                "SELECT COUNT(*) FROM Asientos WHERE TipoOperacion=@tipo AND ReferenciaID=@id",
+                conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@tipo", entidad);
+                cmd.Parameters.AddWithValue("@id",   id);
+                nAsientos = Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            if (nAsientos > 0)
+                throw new InvalidOperationException(
+                    "No se puede eliminar este registro porque ya tiene impacto contable registrado.\n" +
+                    "Use la opción 'Anular' para revertir sus efectos en la contabilidad.");
+
+            // 2. Verificaciones adicionales por entidad
+            if (entidad == "VENTA")
+            {
+                int nCxC;
+                using (var cmd = new SQLiteCommand(
+                    "SELECT COUNT(*) FROM CuentasPorCobrar WHERE VentaID=@id AND Estado != 'PAGADO'",
+                    conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@id", id);
+                    nCxC = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+                if (nCxC > 0)
+                    throw new InvalidOperationException(
+                        "No se puede eliminar esta venta porque tiene cobros pendientes.\n" +
+                        "Use la opción 'Anular' para revertir sus efectos.");
+            }
+            else if (entidad == "COMPRA")
+            {
+                int nCxP;
+                using (var cmd = new SQLiteCommand(
+                    "SELECT COUNT(*) FROM CuentasPorPagar WHERE CompraID=@id",
+                    conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@id", id);
+                    nCxP = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+                if (nCxP > 0)
+                    throw new InvalidOperationException(
+                        "No se puede eliminar esta compra porque tiene cuentas por pagar vinculadas.\n" +
+                        "Use la opción 'Anular' para revertir sus efectos.");
+            }
+            // GASTO: el guard de pagos activos ya existe en GastoRepository.Eliminar()
+            // antes de llegar aquí. No se duplica.
+        }
+
+        // ----------------------------------------------------------------
         // SoftDelete — ejecuta dentro de la conn+tx del llamador
         // ----------------------------------------------------------------
         public static void SoftDelete(string entidad, int id, string resumen,
             string usuario, SQLiteConnection conn, SQLiteTransaction tx)
         {
+            ValidarSinImpactoContable(entidad, id, conn, tx);
+
             string tabla = GetTabla(entidad);
             string pk    = GetPK(entidad);
             string now   = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
