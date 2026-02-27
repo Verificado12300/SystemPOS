@@ -36,12 +36,22 @@ namespace SistemaPOS.Forms.Finanzas
             this.numMonto = new System.Windows.Forms.NumericUpDown();
             this.lblCategoria = new System.Windows.Forms.Label();
             this.cmbCategoria = new System.Windows.Forms.ComboBox();
+            this.lblTipoIGV = new System.Windows.Forms.Label();
+            this.cboIGV = new System.Windows.Forms.ComboBox();
+            this.lblBaseImpHeader = new System.Windows.Forms.Label();
+            this.lblIGVHeader = new System.Windows.Forms.Label();
+            this.lblTotalHeader = new System.Windows.Forms.Label();
+            this.txtBaseImponible = new System.Windows.Forms.TextBox();
+            this.txtIGVGasto = new System.Windows.Forms.TextBox();
+            this.txtGastoTotal = new System.Windows.Forms.TextBox();
             this.pnlCardMetodo = new System.Windows.Forms.Panel();
             this.lblCardMetodoTitulo = new System.Windows.Forms.Label();
             this.lblMetodoPago = new System.Windows.Forms.Label();
             this.cmbMetodoPago = new System.Windows.Forms.ComboBox();
             this.lblComprobante = new System.Windows.Forms.Label();
             this.txtComprobante = new System.Windows.Forms.TextBox();
+            this.lblProveedor = new System.Windows.Forms.Label();
+            this.cmbProveedor = new System.Windows.Forms.ComboBox();
             this.pnlCardObs = new System.Windows.Forms.Panel();
             this.lblObservaciones = new System.Windows.Forms.Label();
             this.txtObservaciones = new System.Windows.Forms.TextBox();
@@ -113,6 +123,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.btnGuardar.TabIndex = 0;
             this.btnGuardar.Text = "Guardar";
             this.btnGuardar.UseVisualStyleBackColor = false;
+            this.btnGuardar.Click += new System.EventHandler(this.BtnGuardar_Click);
             //
             // btnCancelar
             //
@@ -255,9 +266,17 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlCardMontoCategoria.Controls.Add(this.numMonto);
             this.pnlCardMontoCategoria.Controls.Add(this.lblCategoria);
             this.pnlCardMontoCategoria.Controls.Add(this.cmbCategoria);
+            this.pnlCardMontoCategoria.Controls.Add(this.lblTipoIGV);
+            this.pnlCardMontoCategoria.Controls.Add(this.cboIGV);
+            this.pnlCardMontoCategoria.Controls.Add(this.lblBaseImpHeader);
+            this.pnlCardMontoCategoria.Controls.Add(this.lblIGVHeader);
+            this.pnlCardMontoCategoria.Controls.Add(this.lblTotalHeader);
+            this.pnlCardMontoCategoria.Controls.Add(this.txtBaseImponible);
+            this.pnlCardMontoCategoria.Controls.Add(this.txtIGVGasto);
+            this.pnlCardMontoCategoria.Controls.Add(this.txtGastoTotal);
             this.pnlCardMontoCategoria.Location = new System.Drawing.Point(10, 184);
             this.pnlCardMontoCategoria.Name = "pnlCardMontoCategoria";
-            this.pnlCardMontoCategoria.Size = new System.Drawing.Size(578, 98);
+            this.pnlCardMontoCategoria.Size = new System.Drawing.Size(578, 190);
             this.pnlCardMontoCategoria.TabIndex = 2;
             //
             // lblCardMCTitulo
@@ -312,6 +331,102 @@ namespace SistemaPOS.Forms.Finanzas
             this.cmbCategoria.Size = new System.Drawing.Size(264, 26);
             this.cmbCategoria.TabIndex = 4;
             //
+            // lblTipoIGV
+            //
+            this.lblTipoIGV.AutoSize = true;
+            this.lblTipoIGV.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblTipoIGV.Location = new System.Drawing.Point(14, 92);
+            this.lblTipoIGV.Name = "lblTipoIGV";
+            this.lblTipoIGV.Size = new System.Drawing.Size(65, 15);
+            this.lblTipoIGV.TabIndex = 5;
+            this.lblTipoIGV.Text = "Tipo IGV:";
+            //
+            // cboIGV
+            //
+            this.cboIGV.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboIGV.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.cboIGV.FormattingEnabled = true;
+            this.cboIGV.Items.AddRange(new object[] {
+            "Sin IGV",
+            "IGV Incluido (18%)",
+            "IGV Adicional (18%)"});
+            this.cboIGV.Location = new System.Drawing.Point(90, 88);
+            this.cboIGV.Name = "cboIGV";
+            this.cboIGV.Size = new System.Drawing.Size(190, 26);
+            this.cboIGV.TabIndex = 6;
+            //
+            // lblBaseImpHeader
+            //
+            this.lblBaseImpHeader.AutoSize = true;
+            this.lblBaseImpHeader.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblBaseImpHeader.ForeColor = System.Drawing.Color.FromArgb(99, 110, 114);
+            this.lblBaseImpHeader.Location = new System.Drawing.Point(14, 122);
+            this.lblBaseImpHeader.Name = "lblBaseImpHeader";
+            this.lblBaseImpHeader.Size = new System.Drawing.Size(90, 13);
+            this.lblBaseImpHeader.TabIndex = 7;
+            this.lblBaseImpHeader.Text = "Base Imp. (S/):";
+            //
+            // lblIGVHeader
+            //
+            this.lblIGVHeader.AutoSize = true;
+            this.lblIGVHeader.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblIGVHeader.ForeColor = System.Drawing.Color.FromArgb(99, 110, 114);
+            this.lblIGVHeader.Location = new System.Drawing.Point(200, 122);
+            this.lblIGVHeader.Name = "lblIGVHeader";
+            this.lblIGVHeader.Size = new System.Drawing.Size(55, 13);
+            this.lblIGVHeader.TabIndex = 8;
+            this.lblIGVHeader.Text = "IGV (S/):";
+            //
+            // lblTotalHeader
+            //
+            this.lblTotalHeader.AutoSize = true;
+            this.lblTotalHeader.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
+            this.lblTotalHeader.ForeColor = System.Drawing.Color.FromArgb(45, 52, 54);
+            this.lblTotalHeader.Location = new System.Drawing.Point(390, 122);
+            this.lblTotalHeader.Name = "lblTotalHeader";
+            this.lblTotalHeader.Size = new System.Drawing.Size(60, 13);
+            this.lblTotalHeader.TabIndex = 9;
+            this.lblTotalHeader.Text = "Total (S/):";
+            //
+            // txtBaseImponible
+            //
+            this.txtBaseImponible.BackColor = System.Drawing.Color.FromArgb(236, 240, 241);
+            this.txtBaseImponible.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtBaseImponible.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.txtBaseImponible.Location = new System.Drawing.Point(14, 138);
+            this.txtBaseImponible.Name = "txtBaseImponible";
+            this.txtBaseImponible.ReadOnly = true;
+            this.txtBaseImponible.Size = new System.Drawing.Size(168, 24);
+            this.txtBaseImponible.TabIndex = 10;
+            this.txtBaseImponible.Text = "0.00";
+            this.txtBaseImponible.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            //
+            // txtIGVGasto
+            //
+            this.txtIGVGasto.BackColor = System.Drawing.Color.FromArgb(236, 240, 241);
+            this.txtIGVGasto.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtIGVGasto.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.txtIGVGasto.Location = new System.Drawing.Point(196, 138);
+            this.txtIGVGasto.Name = "txtIGVGasto";
+            this.txtIGVGasto.ReadOnly = true;
+            this.txtIGVGasto.Size = new System.Drawing.Size(168, 24);
+            this.txtIGVGasto.TabIndex = 11;
+            this.txtIGVGasto.Text = "0.00";
+            this.txtIGVGasto.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            //
+            // txtGastoTotal
+            //
+            this.txtGastoTotal.BackColor = System.Drawing.Color.FromArgb(220, 237, 222);
+            this.txtGastoTotal.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtGastoTotal.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
+            this.txtGastoTotal.Location = new System.Drawing.Point(378, 138);
+            this.txtGastoTotal.Name = "txtGastoTotal";
+            this.txtGastoTotal.ReadOnly = true;
+            this.txtGastoTotal.Size = new System.Drawing.Size(186, 24);
+            this.txtGastoTotal.TabIndex = 12;
+            this.txtGastoTotal.Text = "0.00";
+            this.txtGastoTotal.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            //
             // pnlCardMetodo
             //
             this.pnlCardMetodo.BackColor = System.Drawing.Color.White;
@@ -320,9 +435,11 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlCardMetodo.Controls.Add(this.cmbMetodoPago);
             this.pnlCardMetodo.Controls.Add(this.lblComprobante);
             this.pnlCardMetodo.Controls.Add(this.txtComprobante);
-            this.pnlCardMetodo.Location = new System.Drawing.Point(10, 290);
+            this.pnlCardMetodo.Controls.Add(this.lblProveedor);
+            this.pnlCardMetodo.Controls.Add(this.cmbProveedor);
+            this.pnlCardMetodo.Location = new System.Drawing.Point(10, 382);
             this.pnlCardMetodo.Name = "pnlCardMetodo";
-            this.pnlCardMetodo.Size = new System.Drawing.Size(578, 72);
+            this.pnlCardMetodo.Size = new System.Drawing.Size(578, 106);
             this.pnlCardMetodo.TabIndex = 3;
             //
             // lblCardMetodoTitulo
@@ -355,7 +472,8 @@ namespace SistemaPOS.Forms.Finanzas
             "EFECTIVO",
             "YAPE",
             "TRANSFERENCIA",
-            "TARJETA"});
+            "TARJETA",
+            "CREDITO"});
             this.cmbMetodoPago.Location = new System.Drawing.Point(130, 34);
             this.cmbMetodoPago.Name = "cmbMetodoPago";
             this.cmbMetodoPago.Size = new System.Drawing.Size(190, 26);
@@ -380,12 +498,34 @@ namespace SistemaPOS.Forms.Finanzas
             this.txtComprobante.Size = new System.Drawing.Size(144, 26);
             this.txtComprobante.TabIndex = 4;
             //
+            // lblProveedor (dentro de pnlCardMetodo)
+            //
+            this.lblProveedor.AutoSize = true;
+            this.lblProveedor.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblProveedor.Location = new System.Drawing.Point(14, 76);
+            this.lblProveedor.Name = "lblProveedor";
+            this.lblProveedor.Size = new System.Drawing.Size(72, 15);
+            this.lblProveedor.TabIndex = 5;
+            this.lblProveedor.Text = "Proveedor:";
+            this.lblProveedor.Visible = false;
+            //
+            // cmbProveedor (dentro de pnlCardMetodo)
+            //
+            this.cmbProveedor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbProveedor.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.cmbProveedor.FormattingEnabled = true;
+            this.cmbProveedor.Location = new System.Drawing.Point(96, 72);
+            this.cmbProveedor.Name = "cmbProveedor";
+            this.cmbProveedor.Size = new System.Drawing.Size(468, 26);
+            this.cmbProveedor.TabIndex = 6;
+            this.cmbProveedor.Visible = false;
+            //
             // pnlCardObs
             //
             this.pnlCardObs.BackColor = System.Drawing.Color.White;
             this.pnlCardObs.Controls.Add(this.lblObservaciones);
             this.pnlCardObs.Controls.Add(this.txtObservaciones);
-            this.pnlCardObs.Location = new System.Drawing.Point(10, 370);
+            this.pnlCardObs.Location = new System.Drawing.Point(10, 496);
             this.pnlCardObs.Name = "pnlCardObs";
             this.pnlCardObs.Size = new System.Drawing.Size(578, 72);
             this.pnlCardObs.TabIndex = 4;
@@ -416,7 +556,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(244, 244, 250);
-            this.ClientSize = new System.Drawing.Size(600, 590);
+            this.ClientSize = new System.Drawing.Size(600, 716);
             this.Controls.Add(this.pnlBody);
             this.Controls.Add(this.pnlFooter);
             this.Controls.Add(this.pnlHeader);
@@ -477,5 +617,15 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.Panel pnlCardObs;
         private System.Windows.Forms.Label lblObservaciones;
         private System.Windows.Forms.TextBox txtObservaciones;
+        private System.Windows.Forms.Label lblTipoIGV;
+        private System.Windows.Forms.ComboBox cboIGV;
+        private System.Windows.Forms.Label lblBaseImpHeader;
+        private System.Windows.Forms.Label lblIGVHeader;
+        private System.Windows.Forms.Label lblTotalHeader;
+        private System.Windows.Forms.TextBox txtBaseImponible;
+        private System.Windows.Forms.TextBox txtIGVGasto;
+        private System.Windows.Forms.TextBox txtGastoTotal;
+        private System.Windows.Forms.Label lblProveedor;
+        private System.Windows.Forms.ComboBox cmbProveedor;
     }
 }

@@ -16,8 +16,8 @@ namespace SistemaPOS.Data
                     try
                     {
                         string query = @"
-                            INSERT INTO Gastos (Fecha, Hora, Concepto, Monto, Categoria, MetodoPago, Comprobante, Observaciones, CajaID, UsuarioID)
-                            VALUES (@Fecha, @Hora, @Concepto, @Monto, @Categoria, @MetodoPago, @Comprobante, @Observaciones, @CajaID, @UsuarioID)";
+                            INSERT INTO Gastos (Fecha, Hora, Concepto, Monto, Categoria, MetodoPago, Comprobante, Observaciones, CajaID, UsuarioID, TipoIGV, BaseImponible)
+                            VALUES (@Fecha, @Hora, @Concepto, @Monto, @Categoria, @MetodoPago, @Comprobante, @Observaciones, @CajaID, @UsuarioID, @TipoIGV, @BaseImponible)";
 
                         using (var cmd = new SQLiteCommand(query, connection, transaction))
                         {
@@ -31,16 +31,26 @@ namespace SistemaPOS.Data
                             cmd.Parameters.AddWithValue("@Observaciones", (object)gasto.Observaciones ?? DBNull.Value);
                             cmd.Parameters.AddWithValue("@CajaID", gasto.CajaID.HasValue ? (object)gasto.CajaID.Value : DBNull.Value);
                             cmd.Parameters.AddWithValue("@UsuarioID", gasto.UsuarioID);
+                            cmd.Parameters.AddWithValue("@TipoIGV", gasto.TipoIGV);
+                            cmd.Parameters.AddWithValue("@BaseImponible", gasto.BaseImponible);
                             cmd.ExecuteNonQuery();
                         }
 
                         long gastoID = connection.LastInsertRowId;
 
-                        // Asiento contable: Dr 600 Gastos / Cr 101/102/200
+                        // Asiento contable: Dr 600=base + Dr 4012=igv (si aplica) / Cr 101/102/200=total
+                        decimal igvGasto = gasto.Monto - gasto.BaseImponible;
                         ContabilidadService.RegistrarGasto(
                             gastoID, gasto.Concepto, gasto.Fecha, gasto.Hora,
-                            gasto.Monto, gasto.MetodoPago, gasto.UsuarioID,
+                            gasto.Monto, igvGasto, gasto.MetodoPago, gasto.UsuarioID,
                             connection, transaction);
+
+                        // Si es al crédito, crear Cuenta por Pagar
+                        if (gasto.MetodoPago?.ToUpper() == "CREDITO")
+                        {
+                            CuentaPorPagarRepository.CrearDesdeGasto(gasto, gastoID,
+                                connection, transaction);
+                        }
 
                         transaction.Commit();
                         return true;
@@ -123,6 +133,31 @@ namespace SistemaPOS.Data
                 {
                     try
                     {
+                        // Verificar si hay CxP activa asociada a este gasto
+                        int? cxpId = null;
+                        using (var cmd = new SQLiteCommand(
+                            "SELECT CuentaPorPagarID FROM CuentasPorPagar " +
+                            "WHERE TipoOrigen='GASTO' AND IdOrigen=@GastoID AND Estado!='ANULADO' LIMIT 1",
+                            connection, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@GastoID", gastoID);
+                            var r = cmd.ExecuteScalar();
+                            if (r != null && r != DBNull.Value)
+                                cxpId = Convert.ToInt32(r);
+                        }
+
+                        if (cxpId.HasValue)
+                        {
+                            var info = CuentaPorPagarRepository.ObtenerInfoPagos(
+                                cxpId.Value, connection, transaction);
+                            if (info.Tiene)
+                                throw new Exception(
+                                    $"No se puede eliminar el gasto: tiene {info.Cantidad} pago(s) registrado(s) " +
+                                    $"por S/ {info.Total:N2}. Revierte los pagos antes de anular.");
+
+                            CuentaPorPagarRepository.MarcarAnulada(cxpId.Value, connection, transaction);
+                        }
+
                         // Reversar el asiento ANTES de borrar el registro (necesita leer datos del gasto)
                         ContabilidadService.ReversarGasto(gastoID, connection, transaction);
 

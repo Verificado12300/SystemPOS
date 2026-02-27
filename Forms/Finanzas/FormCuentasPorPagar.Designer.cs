@@ -23,10 +23,13 @@ namespace SistemaPOS.Forms.Finanzas
             this.cmbProveedor = new System.Windows.Forms.ComboBox();
             this.lblEstado = new System.Windows.Forms.Label();
             this.cmbEstado = new System.Windows.Forms.ComboBox();
+            this.lblTipo = new System.Windows.Forms.Label();
+            this.cmbTipo = new System.Windows.Forms.ComboBox();
             this.btnFiltrar = new System.Windows.Forms.Button();
             this.btnExportar = new System.Windows.Forms.Button();
             this.dgvCuentas = new System.Windows.Forms.DataGridView();
             this.colNumero = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTipo = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colProveedor = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colFechaCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -81,6 +84,8 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlFiltros.Controls.Add(this.cmbProveedor);
             this.pnlFiltros.Controls.Add(this.lblEstado);
             this.pnlFiltros.Controls.Add(this.cmbEstado);
+            this.pnlFiltros.Controls.Add(this.lblTipo);
+            this.pnlFiltros.Controls.Add(this.cmbTipo);
             this.pnlFiltros.Controls.Add(this.btnFiltrar);
             this.pnlFiltros.Controls.Add(this.btnExportar);
             this.pnlFiltros.Location = new System.Drawing.Point(0, 68);
@@ -126,6 +131,26 @@ namespace SistemaPOS.Forms.Finanzas
             this.cmbEstado.Size = new System.Drawing.Size(185, 23);
             this.cmbEstado.TabIndex = 1;
             //
+            // lblTipo
+            //
+            this.lblTipo.AutoSize = true;
+            this.lblTipo.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblTipo.ForeColor = System.Drawing.Color.FromArgb(99, 110, 114);
+            this.lblTipo.Location = new System.Drawing.Point(490, 8);
+            this.lblTipo.Name = "lblTipo";
+            this.lblTipo.Text = "Tipo:";
+            //
+            // cmbTipo
+            //
+            this.cmbTipo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbTipo.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.cmbTipo.FormattingEnabled = true;
+            this.cmbTipo.Items.AddRange(new object[] { "TODOS", "COMPRA", "GASTO" });
+            this.cmbTipo.Location = new System.Drawing.Point(490, 28);
+            this.cmbTipo.Name = "cmbTipo";
+            this.cmbTipo.Size = new System.Drawing.Size(140, 23);
+            this.cmbTipo.TabIndex = 4;
+            //
             // btnFiltrar
             //
             this.btnFiltrar.BackColor = System.Drawing.Color.FromArgb(245, 246, 250);
@@ -135,7 +160,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.btnFiltrar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnFiltrar.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnFiltrar.ForeColor = System.Drawing.Color.FromArgb(45, 52, 54);
-            this.btnFiltrar.Location = new System.Drawing.Point(490, 27);
+            this.btnFiltrar.Location = new System.Drawing.Point(645, 27);
             this.btnFiltrar.Name = "btnFiltrar";
             this.btnFiltrar.Size = new System.Drawing.Size(100, 26);
             this.btnFiltrar.TabIndex = 2;
@@ -178,7 +203,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.dgvCuentas.ColumnHeadersDefaultCellStyle = hdrStyle;
             this.dgvCuentas.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvCuentas.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-                this.colNumero, this.colCompra, this.colProveedor, this.colFechaCompra,
+                this.colNumero, this.colTipo, this.colCompra, this.colProveedor, this.colFechaCompra,
                 this.colMontoTotal, this.colMontoPagado, this.colMontoPendiente,
                 this.colVencimiento, this.colEstado, this.colRegistrarPago });
             rowStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
@@ -206,12 +231,19 @@ namespace SistemaPOS.Forms.Finanzas
             this.colNumero.ReadOnly = true;
             this.colNumero.Width = 50;
             //
+            // colTipo
+            //
+            this.colTipo.HeaderText = "Tipo";
+            this.colTipo.Name = "colTipo";
+            this.colTipo.ReadOnly = true;
+            this.colTipo.Width = 70;
+            //
             // colCompra
             //
-            this.colCompra.HeaderText = "Compra";
+            this.colCompra.HeaderText = "Referencia";
             this.colCompra.Name = "colCompra";
             this.colCompra.ReadOnly = true;
-            this.colCompra.Width = 100;
+            this.colCompra.Width = 120;
             //
             // colProveedor
             //
@@ -348,6 +380,8 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.ComboBox cmbProveedor;
         private System.Windows.Forms.Label lblEstado;
         private System.Windows.Forms.ComboBox cmbEstado;
+        private System.Windows.Forms.Label lblTipo;
+        private System.Windows.Forms.ComboBox cmbTipo;
         private System.Windows.Forms.Button btnFiltrar;
         private System.Windows.Forms.Button btnExportar;
         private System.Windows.Forms.DataGridView dgvCuentas;
@@ -356,6 +390,7 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.Label lblTotalPendiente;
         private System.Windows.Forms.TextBox txtTotalPendiente;
         private System.Windows.Forms.DataGridViewTextBoxColumn colNumero;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colTipo;
         private System.Windows.Forms.DataGridViewTextBoxColumn colCompra;
         private System.Windows.Forms.DataGridViewTextBoxColumn colProveedor;
         private System.Windows.Forms.DataGridViewTextBoxColumn colFechaCompra;

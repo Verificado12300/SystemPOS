@@ -13,5 +13,7 @@ namespace SistemaPOS.Models
         public string Comprobante { get; set; }
         public string Observaciones { get; set; }
         public int UsuarioID { get; set; }
+        public string Referencia { get; set; }
+        public int? AsientoId { get; set; }
     }
 }

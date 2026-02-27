@@ -57,7 +57,7 @@ namespace SistemaPOS.Forms.Finanzas
                 }
 
                 lblProveedorValor.Text = cuenta.NombreProveedor;
-                lblNumeroCompraValor.Text = cuenta.NumeroCompra;
+                lblNumeroCompraValor.Text = cuenta.Referencia;
                 lblMontoTotalValor.Text = $"S/ {cuenta.MontoTotal:N2}";
                 lblMontoPagadoValor.Text = $"S/ {cuenta.MontoPagado:N2}";
                 lblMontoPendienteValor.Text = $"S/ {cuenta.MontoPendiente:N2}";

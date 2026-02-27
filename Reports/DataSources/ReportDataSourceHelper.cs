@@ -420,9 +420,9 @@ namespace SistemaPOS.Reports.DataSources
             {
                 dt.Rows.Add(
                     numero++,
-                    c.NumeroCompra,
+                    c.Referencia,
                     c.NombreProveedor,
-                    c.FechaCompra.ToString("dd/MM/yyyy"),
+                    (c.FechaOrigen != DateTime.MinValue ? c.FechaOrigen.ToString("dd/MM/yyyy") : c.FechaEmision),
                     c.FechaVencimiento.HasValue ? c.FechaVencimiento.Value.ToString("dd/MM/yyyy") : "-",
                     c.MontoTotal,
                     c.MontoPagado,

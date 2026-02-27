@@ -159,6 +159,7 @@ CREATE TABLE IF NOT EXISTS ProductoPresentaciones (
     PrecioVenta REAL NOT NULL CHECK(PrecioVenta >= 0),
     Ganancia REAL,
     Activo INTEGER DEFAULT 1 CHECK(Activo IN (0,1)),
+    PrecioIncluyeIGV INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (ProductoID) REFERENCES Productos(ProductoID) ON DELETE CASCADE,
     FOREIGN KEY (PresentacionID) REFERENCES Presentaciones(PresentacionID),
     UNIQUE(ProductoID, PresentacionID)
@@ -239,9 +240,11 @@ CREATE TABLE IF NOT EXISTS Ventas (
     TipoComprobante TEXT(20) NOT NULL CHECK(TipoComprobante IN ('BOLETA','FACTURA','NOTA_VENTA')),
     Serie TEXT(10),
     Numero TEXT(20),
-    SubTotal REAL NOT NULL CHECK(SubTotal >= 0),
-    IGV REAL NOT NULL CHECK(IGV >= 0),
-    Total REAL NOT NULL CHECK(Total >= 0),
+    SubTotal      REAL    NOT NULL CHECK(SubTotal >= 0),
+    IGV           REAL    NOT NULL CHECK(IGV >= 0),
+    TipoIGV       INTEGER NOT NULL DEFAULT 0,
+    BaseImponible REAL    NOT NULL DEFAULT 0,
+    Total         REAL    NOT NULL CHECK(Total >= 0),
     MetodoPago TEXT(20) NOT NULL CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA','MIXTO','CREDITO')),
     MontoEfectivo REAL DEFAULT 0 CHECK(MontoEfectivo >= 0),
     MontoYape REAL DEFAULT 0 CHECK(MontoYape >= 0),
@@ -324,6 +327,8 @@ CREATE TABLE IF NOT EXISTS Compras (
     Serie TEXT(10),
     Numero TEXT(20),
     IncluyeIGV INTEGER NOT NULL CHECK(IncluyeIGV IN (0,1)),
+    TipoIGV INTEGER NOT NULL DEFAULT 0,
+    BaseImponible REAL NOT NULL DEFAULT 0,
     SubTotal REAL NOT NULL CHECK(SubTotal >= 0),
     IGV REAL NOT NULL CHECK(IGV >= 0),
     Total REAL NOT NULL CHECK(Total >= 0),
@@ -372,18 +377,22 @@ CREATE TABLE IF NOT EXISTS CreditosCompras (
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS Gastos (
-    GastoID INTEGER PRIMARY KEY AUTOINCREMENT,
-    Fecha TEXT NOT NULL,
-    Hora TEXT NOT NULL,
-    Concepto TEXT(300) NOT NULL,
-    Monto REAL NOT NULL CHECK(Monto > 0),
-    Categoria TEXT(50) NOT NULL,
-    MetodoPago TEXT(20) NOT NULL CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA')),
-    Comprobante TEXT(100),
+    GastoID       INTEGER PRIMARY KEY AUTOINCREMENT,
+    Fecha         TEXT NOT NULL,
+    Hora          TEXT NOT NULL,
+    Concepto      TEXT(300) NOT NULL,
+    Monto         REAL NOT NULL CHECK(Monto > 0),
+    Categoria     TEXT(50) NOT NULL,
+    MetodoPago    TEXT(20) NOT NULL
+        CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA','CREDITO')),
+    Comprobante   TEXT(100),
     Observaciones TEXT(500),
-    CajaID INTEGER,
-    UsuarioID INTEGER NOT NULL,
-    FOREIGN KEY (CajaID) REFERENCES Cajas(CajaID),
+    TipoIGV       INTEGER NOT NULL DEFAULT 0,
+    BaseImponible REAL    NOT NULL DEFAULT 0,
+    ProveedorID   INTEGER NULL,
+    CajaID        INTEGER,
+    UsuarioID     INTEGER NOT NULL,
+    FOREIGN KEY (CajaID)    REFERENCES Cajas(CajaID),
     FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
 );
 
@@ -393,29 +402,39 @@ CREATE TABLE IF NOT EXISTS Gastos (
 
 CREATE TABLE IF NOT EXISTS CuentasPorPagar (
     CuentaPorPagarID INTEGER PRIMARY KEY AUTOINCREMENT,
-    CompraID INTEGER NOT NULL,
-    ProveedorID INTEGER NOT NULL,
-    MontoTotal REAL NOT NULL CHECK(MontoTotal >= 0),
-    MontoPagado REAL DEFAULT 0 CHECK(MontoPagado >= 0),
-    MontoPendiente REAL NOT NULL CHECK(MontoPendiente >= 0),
-    FechaVencimiento TEXT,
-    Estado TEXT(20) NOT NULL DEFAULT 'PENDIENTE' CHECK(Estado IN ('PENDIENTE','PARCIAL','PAGADO')),
-    FOREIGN KEY (CompraID) REFERENCES Compras(CompraID),
+    TipoOrigen       TEXT    NOT NULL DEFAULT 'COMPRA',
+    IdOrigen         INTEGER NOT NULL DEFAULT 0,
+    CompraID         INTEGER NULL,
+    ProveedorID      INTEGER NULL,
+    ProveedorNombre  TEXT    NULL,
+    MontoTotal       REAL    NOT NULL CHECK(MontoTotal >= 0),
+    MontoPagado      REAL    DEFAULT 0 CHECK(MontoPagado >= 0),
+    MontoPendiente   REAL    NOT NULL CHECK(MontoPendiente >= 0),
+    FechaEmision     TEXT    NOT NULL DEFAULT '',
+    FechaVencimiento TEXT    NULL,
+    Estado           TEXT(20) NOT NULL DEFAULT 'PENDIENTE'
+        CHECK(Estado IN ('PENDIENTE','PARCIAL','PAGADO','ANULADO')),
+    Observacion      TEXT    NULL,
+    CreatedAt        TEXT    NOT NULL DEFAULT '',
+    UpdatedAt        TEXT    NOT NULL DEFAULT '',
     FOREIGN KEY (ProveedorID) REFERENCES Proveedores(ProveedorID)
 );
 
 CREATE TABLE IF NOT EXISTS PagosProveedores (
-    PagoProveedorID INTEGER PRIMARY KEY AUTOINCREMENT,
+    PagoProveedorID  INTEGER PRIMARY KEY AUTOINCREMENT,
     CuentaPorPagarID INTEGER NOT NULL,
-    Fecha TEXT NOT NULL,
-    Hora TEXT NOT NULL,
-    Monto REAL NOT NULL CHECK(Monto > 0),
-    MetodoPago TEXT(20) NOT NULL CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA')),
-    Comprobante TEXT(100),
-    Observaciones TEXT(500),
-    UsuarioID INTEGER NOT NULL,
+    Fecha            TEXT NOT NULL,
+    Hora             TEXT NOT NULL,
+    Monto            REAL NOT NULL CHECK(Monto > 0),
+    MetodoPago       TEXT(20) NOT NULL
+        CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA')),
+    Comprobante      TEXT(100),
+    Observaciones    TEXT(500),
+    Referencia       TEXT NULL,
+    AsientoId        INTEGER NULL,
+    UsuarioID        INTEGER NOT NULL,
     FOREIGN KEY (CuentaPorPagarID) REFERENCES CuentasPorPagar(CuentaPorPagarID),
-    FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
+    FOREIGN KEY (UsuarioID)        REFERENCES Usuarios(UsuarioID)
 );
 
 -- ============================================================
@@ -441,6 +460,8 @@ CREATE TABLE IF NOT EXISTS Asientos (
     Glosa         TEXT(500),
     TotalDebe     REAL NOT NULL DEFAULT 0,
     TotalHaber    REAL NOT NULL DEFAULT 0,
+    ModuloOrigen  TEXT NOT NULL DEFAULT 'SISTEMA',
+    OrigenId      INTEGER NULL,
     FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
 );
 
@@ -605,6 +626,7 @@ INSERT OR IGNORE INTO CuentasContables (Codigo, Nombre, Tipo, Activa) VALUES
 ('140', 'Mercaderías / Inventario','ACTIVO',     1),
 ('200', 'Cuentas por Pagar',       'PASIVO',     1),
 ('210', 'Tributos por Pagar',      'PASIVO',     1),
+('4012','IGV Crédito Fiscal',      'ACTIVO',     1),
 ('300', 'Capital',                 'PATRIMONIO', 1),
 ('400', 'Ventas',                  'INGRESO',    1),
 ('500', 'Costo de Ventas',         'GASTO',      1),

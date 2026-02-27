@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\AjusteRepository.cs" />
+    <Compile Include="Data\PeriodosContablesRepository.cs" />
     <Compile Include="Data\ContabilidadRepository.cs" />
     <Compile Include="Data\ContabilidadService.cs" />
     <Compile Include="Data\CajaRepository.cs" />
@@ -389,11 +390,19 @@
     <Compile Include="Forms\Finanzas\FormContabilidad.Designer.cs">
       <DependentUpon>FormContabilidad.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\Finanzas\FormPeriodosContables.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Finanzas\FormPeriodosContables.Designer.cs">
+      <DependentUpon>FormPeriodosContables.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Tests\TestGuardrailRunner.cs" />
     <Compile Include="Models\BalanceComprobacionItemDTO.cs" />
     <Compile Include="Models\BalanceGeneralDTO.cs" />
     <Compile Include="Models\EstadoResultadosDTO.cs" />
     <Compile Include="Models\FlujoCajaDTO.cs" />
     <Compile Include="Models\AsientoContable.cs" />
+    <Compile Include="Models\PeriodoContable.cs" />
     <Compile Include="Models\AsientoDetalleContable.cs" />
     <Compile Include="Models\CuentaContable.cs" />
     <Compile Include="Models\Ajuste.cs" />
@@ -495,6 +504,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Finanzas\FormContabilidad.resx">
       <DependentUpon>FormContabilidad.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Finanzas\FormPeriodosContables.resx">
+      <DependentUpon>FormPeriodosContables.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Reportes\FormReportes.resx">
       <DependentUpon>FormReportes.cs</DependentUpon>

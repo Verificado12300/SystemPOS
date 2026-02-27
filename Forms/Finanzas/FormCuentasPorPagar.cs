@@ -39,6 +39,7 @@ namespace SistemaPOS.Forms.Finanzas
         private void ConfigurarControles()
         {
             cmbEstado.SelectedIndex = 0;
+            cmbTipo.SelectedIndex = 0;
             cmbProveedor.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             cmbProveedor.AutoCompleteSource = AutoCompleteSource.ListItems;
 
@@ -48,7 +49,8 @@ namespace SistemaPOS.Forms.Finanzas
             dgvCuentas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
             colNumero.Width = 50;
-            colCompra.Width = 100;
+            colTipo.Width = 70;
+            colCompra.Width = 120;
             colProveedor.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
             colFechaCompra.Width = 100;
             colMontoTotal.Width = 100;
@@ -90,9 +92,10 @@ namespace SistemaPOS.Forms.Finanzas
                 dgvCuentas.Rows.Clear();
 
                 int? proveedorID = cmbProveedor.SelectedIndex > 0 ? GetProveedorID() : null;
-                string estado = cmbEstado.SelectedIndex > 0 ? cmbEstado.Text : null;
+                string estado     = cmbEstado.SelectedIndex > 0 ? cmbEstado.Text : null;
+                string tipoOrigen = cmbTipo.SelectedIndex  > 0 ? cmbTipo.Text  : null;
 
-                var cuentas = CuentaPorPagarRepository.Listar(proveedorID, estado);
+                var cuentas = CuentaPorPagarRepository.Listar(proveedorID, estado, null, tipoOrigen);
 
                 int numero = 1;
                 decimal totalPendiente = 0;
@@ -102,15 +105,18 @@ namespace SistemaPOS.Forms.Finanzas
                     int index = dgvCuentas.Rows.Add();
                     DataGridViewRow row = dgvCuentas.Rows[index];
 
-                    row.Cells["colNumero"].Value = numero++;
-                    row.Cells["colCompra"].Value = cuenta.NumeroCompra;
+                    row.Cells["colNumero"].Value    = numero++;
+                    row.Cells["colTipo"].Value      = cuenta.TipoOrigen;
+                    row.Cells["colCompra"].Value    = cuenta.Referencia;
                     row.Cells["colProveedor"].Value = cuenta.NombreProveedor;
-                    row.Cells["colFechaCompra"].Value = cuenta.FechaCompra.ToString("dd/MM/yyyy");
-                    row.Cells["colMontoTotal"].Value = $"S/ {cuenta.MontoTotal:N2}";
-                    row.Cells["colMontoPagado"].Value = $"S/ {cuenta.MontoPagado:N2}";
+                    row.Cells["colFechaCompra"].Value = cuenta.FechaOrigen != DateTime.MinValue
+                        ? cuenta.FechaOrigen.ToString("dd/MM/yyyy")
+                        : cuenta.FechaEmision;
+                    row.Cells["colMontoTotal"].Value    = $"S/ {cuenta.MontoTotal:N2}";
+                    row.Cells["colMontoPagado"].Value   = $"S/ {cuenta.MontoPagado:N2}";
                     row.Cells["colMontoPendiente"].Value = $"S/ {cuenta.MontoPendiente:N2}";
-                    row.Cells["colVencimiento"].Value = cuenta.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-";
-                    row.Cells["colEstado"].Value = cuenta.Estado;
+                    row.Cells["colVencimiento"].Value   = cuenta.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-";
+                    row.Cells["colEstado"].Value        = cuenta.Estado;
 
                     row.Tag = cuenta.CuentaPorPagarID;
                     totalPendiente += cuenta.MontoPendiente;
@@ -119,18 +125,16 @@ namespace SistemaPOS.Forms.Finanzas
                     Color estadoColor = Color.Black;
                     switch (cuenta.Estado)
                     {
-                        case "PENDIENTE":
-                            estadoColor = Color.FromArgb(243, 156, 18); // Naranja
-                            break;
-                        case "PARCIAL":
-                            estadoColor = Color.FromArgb(241, 196, 15); // Amarillo
-                            break;
-                        case "PAGADO":
-                            estadoColor = Color.FromArgb(39, 174, 96); // Verde
-                            break;
+                        case "PENDIENTE": estadoColor = Color.FromArgb(243, 156, 18); break; // Naranja
+                        case "PARCIAL":   estadoColor = Color.FromArgb(241, 196, 15); break; // Amarillo
+                        case "PAGADO":    estadoColor = Color.FromArgb(39, 174, 96);  break; // Verde
+                        case "ANULADO":   estadoColor = Color.FromArgb(149, 165, 166); break; // Gris
                     }
                     row.Cells["colEstado"].Style.ForeColor = estadoColor;
                     row.Cells["colEstado"].Style.Font = new Font(dgvCuentas.Font, FontStyle.Bold);
+
+                    if (cuenta.Estado == "ANULADO")
+                        row.DefaultCellStyle.ForeColor = Color.FromArgb(149, 165, 166);
                 }
 
                 lblTotalRegistros.Text = $"Total: {cuentas.Count} registros";

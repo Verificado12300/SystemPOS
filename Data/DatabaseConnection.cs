@@ -360,6 +360,8 @@ namespace SistemaPOS.Data
                                     Glosa         TEXT(500),
                                     TotalDebe     REAL NOT NULL DEFAULT 0,
                                     TotalHaber    REAL NOT NULL DEFAULT 0,
+                                    ModuloOrigen  TEXT NOT NULL DEFAULT 'SISTEMA',
+                                    OrigenId      INTEGER NULL,
                                     FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
                                 )";
                             cmd.ExecuteNonQuery();
@@ -410,7 +412,9 @@ namespace SistemaPOS.Data
                                 ('140', 'Mercaderías / Inventario', 'ACTIVO',     1),
                                 ('200', 'Cuentas por Pagar',        'PASIVO',     1),
                                 ('210', 'Tributos por Pagar',       'PASIVO',     1),
+                                ('4012','IGV Crédito Fiscal',       'ACTIVO',     1),
                                 ('300', 'Capital',                  'PATRIMONIO', 1),
+                                ('390', 'Utilidad del Ejercicio',   'PATRIMONIO', 1),
                                 ('400', 'Ventas',                   'INGRESO',    1),
                                 ('500', 'Costo de Ventas',          'GASTO',      1),
                                 ('503', 'Ajuste de Inventario',      'GASTO',      1),
@@ -467,6 +471,480 @@ namespace SistemaPOS.Data
                                         ELSE CostoUnitario
                                     END
                                     WHERE CostoPresentacion = 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    catch { }
+
+                    // Migración: TipoIGV y BaseImponible en Ventas.
+                    // Fallo aquí es crítico: propagamos con mensaje claro.
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Ventas') WHERE name='TipoIGV'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Ventas ADD COLUMN TipoIGV INTEGER NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Ventas.TipoIGV falló: " + ex.Message, ex);
+                            }
+                        }
+
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Ventas') WHERE name='BaseImponible'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Ventas ADD COLUMN BaseImponible REAL NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Ventas.BaseImponible falló: " + ex.Message, ex);
+                            }
+                        }
+                    }
+
+                    // Migración: PrecioIncluyeIGV en ProductoPresentaciones.
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('ProductoPresentaciones') WHERE name='PrecioIncluyeIGV'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE ProductoPresentaciones ADD COLUMN PrecioIncluyeIGV INTEGER NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración ProductoPresentaciones.PrecioIncluyeIGV falló: " + ex.Message, ex);
+                            }
+                        }
+                    }
+
+                    // Migración: TipoIGV y BaseImponible en Compras.
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Compras') WHERE name='TipoIGV'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Compras ADD COLUMN TipoIGV INTEGER NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Compras.TipoIGV falló: " + ex.Message, ex);
+                            }
+                        }
+
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Compras') WHERE name='BaseImponible'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Compras ADD COLUMN BaseImponible REAL NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Compras.BaseImponible falló: " + ex.Message, ex);
+                            }
+                        }
+                    }
+
+                    // Migración: TipoIGV y BaseImponible en Gastos.
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='TipoIGV'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Gastos ADD COLUMN TipoIGV INTEGER NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Gastos.TipoIGV falló: " + ex.Message, ex);
+                            }
+                        }
+
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='BaseImponible'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Gastos ADD COLUMN BaseImponible REAL NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                                // Backfill: registros históricos → BaseImponible = Monto (sin IGV)
+                                cmd.CommandText = "UPDATE Gastos SET BaseImponible = Monto WHERE BaseImponible = 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Gastos.BaseImponible falló: " + ex.Message, ex);
+                            }
+                        }
+                    }
+
+                    // Migración: columnas de auditoría en Asientos — ModuloOrigen y OrigenId.
+                    // UsuarioID INTEGER ya existe en la tabla original; no se toca.
+                    // Fallo aquí es crítico: propagamos con mensaje claro.
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Asientos') WHERE name='ModuloOrigen'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Asientos ADD COLUMN ModuloOrigen TEXT NOT NULL DEFAULT 'SISTEMA'";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Asientos.ModuloOrigen falló: " + ex.Message, ex);
+                            }
+                        }
+
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Asientos') WHERE name='OrigenId'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Asientos ADD COLUMN OrigenId INTEGER NULL";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Asientos.OrigenId falló: " + ex.Message, ex);
+                            }
+                        }
+                    }
+
+                    // Migración: PeriodosContables — cierre de período contable
+                    // CREATE TABLE IF NOT EXISTS → seguro para BD existentes.
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                CREATE TABLE IF NOT EXISTS PeriodosContables (
+                                    PeriodoId   INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    FechaInicio TEXT    NOT NULL,
+                                    FechaFin    TEXT    NOT NULL,
+                                    Cerrado     INTEGER NOT NULL DEFAULT 0,
+                                    CerradoEn   TEXT    NULL,
+                                    CerradoPor  TEXT    NULL
+                                )";
+                            cmd.ExecuteNonQuery();
+                            cmd.CommandText = @"
+                                CREATE INDEX IF NOT EXISTS idx_periodos_rango
+                                ON PeriodosContables(FechaInicio, FechaFin, Cerrado)";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch { }
+
+                    // Migración: Gastos — agregar CREDITO a MetodoPago CHECK y columna ProveedorID.
+                    // SQLite no permite ALTER CONSTRAINT; se usa recreación de tabla.
+                    // Debe ejecutarse DESPUÉS de las migraciones TipoIGV/BaseImponible.
+                    try
+                    {
+                        string gastosTableSql;
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT sql FROM sqlite_master WHERE type='table' AND name='Gastos'";
+                            gastosTableSql = cmd.ExecuteScalar()?.ToString() ?? "";
+                        }
+
+                        if (!gastosTableSql.Contains("CREDITO"))
+                        {
+                            // Detectar columnas opcionales que quizás ya existen
+                            bool hasTipoIGV, hasBaseImponible;
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='TipoIGV'";
+                                hasTipoIGV = (long)cmd.ExecuteScalar() > 0;
+                                cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='BaseImponible'";
+                                hasBaseImponible = (long)cmd.ExecuteScalar() > 0;
+                            }
+
+                            string selTipoIGV      = hasTipoIGV      ? "TipoIGV"      : "0";
+                            string selBaseImponible = hasBaseImponible ? "BaseImponible" : "Monto";
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "PRAGMA foreign_keys = OFF";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = @"
+                                    CREATE TABLE Gastos_Mig (
+                                        GastoID       INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        Fecha         TEXT NOT NULL,
+                                        Hora          TEXT NOT NULL,
+                                        Concepto      TEXT(300) NOT NULL,
+                                        Monto         REAL NOT NULL CHECK(Monto > 0),
+                                        Categoria     TEXT(50) NOT NULL,
+                                        MetodoPago    TEXT(20) NOT NULL
+                                            CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA','CREDITO')),
+                                        Comprobante   TEXT(100),
+                                        Observaciones TEXT(500),
+                                        TipoIGV       INTEGER NOT NULL DEFAULT 0,
+                                        BaseImponible REAL    NOT NULL DEFAULT 0,
+                                        ProveedorID   INTEGER NULL,
+                                        CajaID        INTEGER,
+                                        UsuarioID     INTEGER NOT NULL,
+                                        FOREIGN KEY (CajaID)    REFERENCES Cajas(CajaID),
+                                        FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
+                                    )";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = $@"
+                                    INSERT INTO Gastos_Mig
+                                        (GastoID, Fecha, Hora, Concepto, Monto, Categoria, MetodoPago,
+                                         Comprobante, Observaciones, TipoIGV, BaseImponible,
+                                         ProveedorID, CajaID, UsuarioID)
+                                    SELECT
+                                        GastoID, Fecha, Hora, Concepto, Monto, Categoria, MetodoPago,
+                                        Comprobante, Observaciones, {selTipoIGV}, {selBaseImponible},
+                                        NULL, CajaID, UsuarioID
+                                    FROM Gastos";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "DROP TABLE Gastos";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "ALTER TABLE Gastos_Mig RENAME TO Gastos";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "PRAGMA foreign_keys = ON";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Recrear índices (se pierden con la tabla)
+                            string[] idxGastos = new[]
+                            {
+                                "CREATE INDEX IF NOT EXISTS idx_gastos_fecha     ON Gastos(Fecha);",
+                                "CREATE INDEX IF NOT EXISTS idx_gastos_categoria ON Gastos(Categoria);",
+                                "CREATE INDEX IF NOT EXISTS idx_gastos_caja      ON Gastos(CajaID);"
+                            };
+                            foreach (var idx in idxGastos)
+                            {
+                                using (var cmd = connection.CreateCommand())
+                                {
+                                    cmd.CommandText = idx;
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Ya tiene CREDITO; solo verificar si falta ProveedorID
+                            bool hasProveedorID;
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='ProveedorID'";
+                                hasProveedorID = (long)cmd.ExecuteScalar() > 0;
+                            }
+
+                            if (!hasProveedorID)
+                            {
+                                using (var cmd = connection.CreateCommand())
+                                {
+                                    cmd.CommandText = "ALTER TABLE Gastos ADD COLUMN ProveedorID INTEGER NULL";
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    // Migración: CuentasPorPagar — agregar ANULADO a Estado CHECK y nuevas columnas.
+                    // SQLite no permite ALTER CONSTRAINT; se usa recreación de tabla.
+                    try
+                    {
+                        string cxpTableSql;
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT sql FROM sqlite_master WHERE type='table' AND name='CuentasPorPagar'";
+                            cxpTableSql = cmd.ExecuteScalar()?.ToString() ?? "";
+                        }
+
+                        if (!cxpTableSql.Contains("ANULADO"))
+                        {
+                            bool oldHasFechaVenc;
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('CuentasPorPagar') WHERE name='FechaVencimiento'";
+                                oldHasFechaVenc = (long)cmd.ExecuteScalar() > 0;
+                            }
+
+                            string selFechaVenc = oldHasFechaVenc ? "cp.FechaVencimiento" : "NULL";
+                            string now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "PRAGMA foreign_keys = OFF";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = @"
+                                    CREATE TABLE CuentasPorPagar_Mig (
+                                        CuentaPorPagarID INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        TipoOrigen       TEXT    NOT NULL DEFAULT 'COMPRA',
+                                        IdOrigen         INTEGER NOT NULL DEFAULT 0,
+                                        CompraID         INTEGER NULL,
+                                        ProveedorID      INTEGER NULL,
+                                        ProveedorNombre  TEXT    NULL,
+                                        MontoTotal       REAL    NOT NULL CHECK(MontoTotal >= 0),
+                                        MontoPagado      REAL    DEFAULT 0 CHECK(MontoPagado >= 0),
+                                        MontoPendiente   REAL    NOT NULL CHECK(MontoPendiente >= 0),
+                                        FechaEmision     TEXT    NOT NULL DEFAULT '',
+                                        FechaVencimiento TEXT    NULL,
+                                        Estado           TEXT(20) NOT NULL DEFAULT 'PENDIENTE'
+                                            CHECK(Estado IN ('PENDIENTE','PARCIAL','PAGADO','ANULADO')),
+                                        Observacion      TEXT    NULL,
+                                        CreatedAt        TEXT    NOT NULL DEFAULT '',
+                                        UpdatedAt        TEXT    NOT NULL DEFAULT '',
+                                        FOREIGN KEY (ProveedorID) REFERENCES Proveedores(ProveedorID)
+                                    )";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = $@"
+                                    INSERT INTO CuentasPorPagar_Mig
+                                        (CuentaPorPagarID, TipoOrigen, IdOrigen, CompraID, ProveedorID, ProveedorNombre,
+                                         MontoTotal, MontoPagado, MontoPendiente,
+                                         FechaEmision, FechaVencimiento, Estado, CreatedAt, UpdatedAt)
+                                    SELECT
+                                        cp.CuentaPorPagarID, 'COMPRA', cp.CompraID, cp.CompraID, cp.ProveedorID, p.RazonSocial,
+                                        cp.MontoTotal, cp.MontoPagado, cp.MontoPendiente,
+                                        COALESCE(co.Fecha, '{now}'), {selFechaVenc}, cp.Estado,
+                                        '{now}', '{now}'
+                                    FROM CuentasPorPagar cp
+                                    LEFT JOIN Compras     co ON cp.CompraID    = co.CompraID
+                                    LEFT JOIN Proveedores p  ON cp.ProveedorID = p.ProveedorID";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "DROP TABLE CuentasPorPagar";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "ALTER TABLE CuentasPorPagar_Mig RENAME TO CuentasPorPagar";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = "PRAGMA foreign_keys = ON";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Recrear índices
+                            string[] idxCxp = new[]
+                            {
+                                "CREATE INDEX IF NOT EXISTS idx_cuentasporpagar_proveedor ON CuentasPorPagar(ProveedorID);",
+                                "CREATE INDEX IF NOT EXISTS idx_cuentasporpagar_estado    ON CuentasPorPagar(Estado);",
+                                "CREATE INDEX IF NOT EXISTS idx_cuentasporpagar_tipo      ON CuentasPorPagar(TipoOrigen);"
+                            };
+                            foreach (var idx in idxCxp)
+                            {
+                                using (var cmd = connection.CreateCommand())
+                                {
+                                    cmd.CommandText = idx;
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Ya tiene ANULADO; verificar columnas nuevas faltantes
+                            string[] newColDefs = new[]
+                            {
+                                "TipoOrigen TEXT NOT NULL DEFAULT 'COMPRA'",
+                                "IdOrigen INTEGER NOT NULL DEFAULT 0",
+                                "ProveedorNombre TEXT NULL",
+                                "FechaEmision TEXT NOT NULL DEFAULT ''",
+                                "Observacion TEXT NULL",
+                                "CreatedAt TEXT NOT NULL DEFAULT ''",
+                                "UpdatedAt TEXT NOT NULL DEFAULT ''"
+                            };
+                            string[] newColNames = new[]
+                            {
+                                "TipoOrigen", "IdOrigen", "ProveedorNombre",
+                                "FechaEmision", "Observacion", "CreatedAt", "UpdatedAt"
+                            };
+
+                            for (int i = 0; i < newColNames.Length; i++)
+                            {
+                                bool hasCol;
+                                using (var cmd = connection.CreateCommand())
+                                {
+                                    cmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('CuentasPorPagar') WHERE name='{newColNames[i]}'";
+                                    hasCol = (long)cmd.ExecuteScalar() > 0;
+                                }
+
+                                if (!hasCol)
+                                {
+                                    using (var cmd = connection.CreateCommand())
+                                    {
+                                        cmd.CommandText = $"ALTER TABLE CuentasPorPagar ADD COLUMN {newColDefs[i]}";
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    // Migración: PagosProveedores — agregar columnas Referencia y AsientoId.
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('PagosProveedores') WHERE name='Referencia'";
+                            if ((long)cmd.ExecuteScalar() == 0)
+                            {
+                                cmd.CommandText = "ALTER TABLE PagosProveedores ADD COLUMN Referencia TEXT NULL";
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('PagosProveedores') WHERE name='AsientoId'";
+                            if ((long)cmd.ExecuteScalar() == 0)
+                            {
+                                cmd.CommandText = "ALTER TABLE PagosProveedores ADD COLUMN AsientoId INTEGER NULL";
                                 cmd.ExecuteNonQuery();
                             }
                         }

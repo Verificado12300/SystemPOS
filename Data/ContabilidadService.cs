@@ -34,20 +34,34 @@ namespace SistemaPOS.Data
             decimal total, string metodoPago,
             decimal montoEfectivo, decimal montoYape,
             decimal montoTarjeta, decimal montoTransferencia,
+            decimal igv,
             int usuarioID,
             SQLiteConnection conn, SQLiteTransaction tx)
         {
             if (total <= 0m) return;
 
             var asiento = BuildAsiento("VENTA", numeroVenta, ventaID, usuarioID,
-                fecha, hora, $"Venta {numeroVenta}");
+                fecha, hora, $"Venta {numeroVenta}", "VENTA");
 
+            // Dr Caja / Bancos / CxC = total cobrado
             BuildDebitLinesVenta(asiento, total, metodoPago,
                 montoEfectivo, montoYape, montoTarjeta, montoTransferencia,
                 false, conn, tx);
 
-            var cuentaVentas = GetCuenta("400", conn, tx);
-            AddLine(asiento, cuentaVentas.CuentaID, 0m, total, "Ingresos por ventas");
+            if (igv > 0m)
+            {
+                // Cr 400 Ventas = base imponible; Cr 210 IGV por pagar = igv
+                decimal base400 = total - igv;
+                var c400 = GetCuenta("400", conn, tx);
+                var c210 = GetCuenta("210", conn, tx);
+                AddLine(asiento, c400.CuentaID, 0m, base400, "Ingresos por ventas (base imponible)");
+                AddLine(asiento, c210.CuentaID, 0m, igv,     "IGV por pagar");
+            }
+            else
+            {
+                var c400 = GetCuenta("400", conn, tx);
+                AddLine(asiento, c400.CuentaID, 0m, total, "Ingresos por ventas");
+            }
 
             ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
@@ -64,7 +78,7 @@ namespace SistemaPOS.Data
             // Leer datos de la venta desde la misma tx (ya está marcada ANULADA en este punto)
             string sql = @"SELECT NumeroVenta, Fecha, Hora, Total, MetodoPago,
                                   MontoEfectivo, MontoYape, MontoTarjeta, MontoTransferencia,
-                                  UsuarioID
+                                  UsuarioID, IGV
                            FROM Ventas WHERE VentaID = @ID";
             using (var cmd = new SQLiteCommand(sql, conn, tx))
             {
@@ -82,17 +96,32 @@ namespace SistemaPOS.Data
                     decimal montoYape        = r.IsDBNull(6) ? 0m : r.GetDecimal(6);
                     decimal montoTarjeta     = r.IsDBNull(7) ? 0m : r.GetDecimal(7);
                     decimal montoTransf      = r.IsDBNull(8) ? 0m : r.GetDecimal(8);
-                    int usuarioID            = r.IsDBNull(9) ? 1  : r.GetInt32(9);
+                    int usuarioID            = r.IsDBNull(9)  ? 1  : r.GetInt32(9);
+                    decimal igvOrig          = r.IsDBNull(10) ? 0m : r.GetDecimal(10);
 
                     if (total <= 0m) return;
 
+                    // Guard: bloquear anulación si la venta original es de período cerrado
+                    PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
+
                     var asiento = BuildAsiento("ANULACION", numeroVenta, ventaID, usuarioID,
                         DateTime.Now.Date, DateTime.Now.TimeOfDay,
-                        $"Anulación venta {numeroVenta}");
+                        $"Anulación venta {numeroVenta}", "VENTA");
 
-                    // Dr 400 Ventas
-                    var cuentaVentas = GetCuenta("400", conn, tx);
-                    AddLine(asiento, cuentaVentas.CuentaID, total, 0m, "Anulación ingresos por ventas");
+                    // Dr 400 Ventas (base) + Dr 210 IGV (si aplica)
+                    if (igvOrig > 0m)
+                    {
+                        decimal base400 = total - igvOrig;
+                        var c400 = GetCuenta("400", conn, tx);
+                        var c210 = GetCuenta("210", conn, tx);
+                        AddLine(asiento, c400.CuentaID, base400,  0m, "Anulación ingresos (base imponible)");
+                        AddLine(asiento, c210.CuentaID, igvOrig,  0m, "Anulación IGV por pagar");
+                    }
+                    else
+                    {
+                        var c400 = GetCuenta("400", conn, tx);
+                        AddLine(asiento, c400.CuentaID, total, 0m, "Anulación ingresos por ventas");
+                    }
 
                     // Cr Caja/Bancos/CxC (lado opuesto)
                     BuildDebitLinesVenta(asiento, total, metodoPago,
@@ -138,7 +167,7 @@ namespace SistemaPOS.Data
             if (totalCOGS <= 0m) return;
 
             var asiento = BuildAsiento("VENTA", numeroVenta, ventaID, usuarioID,
-                fecha, hora, $"Costo de venta {numeroVenta}");
+                fecha, hora, $"Costo de venta {numeroVenta}", "VENTA");
 
             var cuentaCOGS = GetCuenta("500", conn, tx);
             var cuentaInv  = GetCuenta("140", conn, tx);
@@ -194,9 +223,12 @@ namespace SistemaPOS.Data
                     TimeSpan hora   = TimeSpan.Parse(r.GetString(2));
                     int usuarioID   = r.IsDBNull(3) ? 1 : r.GetInt32(3);
 
+                    // Guard: bloquear reversión COGS si la venta original es de período cerrado
+                    PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
+
                     var asiento = BuildAsiento("ANULACION", numVenta, ventaID, usuarioID,
                         DateTime.Now.Date, DateTime.Now.TimeOfDay,
-                        $"Reversión costo venta {numVenta}");
+                        $"Reversión costo venta {numVenta}", "VENTA");
 
                     var cuentaInv  = GetCuenta("140", conn, tx);
                     var cuentaCOGS = GetCuenta("500", conn, tx);
@@ -213,26 +245,36 @@ namespace SistemaPOS.Data
         // ==================================================================
 
         /// <summary>
-        ///   Dr 140 Inventario = Total
-        ///   Cr 101 Caja / 102 Bancos / 200 CxP  (según MetodoPago)
+        ///   Dr 140 Inventario        = base (total − igv)
+        ///   Dr 4012 IGV Cred.Fiscal  = igv  (solo si igv > 0)
+        ///   Cr 101 Caja / 102 Bancos / 200 CxP  = total (según MetodoPago)
         /// </summary>
         public static void RegistrarCompra(
             long compraID, string numeroCompra, DateTime fecha, TimeSpan hora,
-            decimal total, string metodoPago, int usuarioID,
+            decimal total, decimal igv, string metodoPago, int usuarioID,
             SQLiteConnection conn, SQLiteTransaction tx)
         {
             if (total <= 0m) return;
+            decimal baseImp = total - igv;
 
             var asiento = BuildAsiento("COMPRA", numeroCompra, compraID, usuarioID,
-                fecha, hora, $"Compra {numeroCompra}");
+                fecha, hora, $"Compra {numeroCompra}", "COMPRA");
 
+            // Dr 140 Inventario = base imponible (sin IGV)
             var cuentaInv = GetCuenta("140", conn, tx);
-            AddLine(asiento, cuentaInv.CuentaID, total, 0m, "Ingreso de mercadería");
+            AddLine(asiento, cuentaInv.CuentaID, baseImp, 0m, "Ingreso de mercadería");
 
+            // Dr 4012 IGV Crédito Fiscal = igv (solo si aplica)
+            if (igv > 0m)
+            {
+                var c4012 = GetCuenta("4012", conn, tx);
+                AddLine(asiento, c4012.CuentaID, igv, 0m, "IGV Crédito Fiscal");
+            }
+
+            // Cr Caja/Bancos/CxP = total
             string codigoCr = MetodoPagoCompraACuenta(metodoPago);
             var cuentaCr = GetCuenta(codigoCr, conn, tx);
-            AddLine(asiento, cuentaCr.CuentaID, 0m, total,
-                $"Pago compra ({metodoPago})");
+            AddLine(asiento, cuentaCr.CuentaID, 0m, total, $"Pago compra ({metodoPago})");
 
             ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
@@ -243,7 +285,7 @@ namespace SistemaPOS.Data
         public static void ReversarCompra(int compraID,
             SQLiteConnection conn, SQLiteTransaction tx)
         {
-            string sql = @"SELECT NumeroCompra, Fecha, Hora, Total, MetodoPago, UsuarioID
+            string sql = @"SELECT NumeroCompra, Fecha, Hora, Total, MetodoPago, UsuarioID, IGV
                            FROM Compras WHERE CompraID = @ID";
             using (var cmd = new SQLiteCommand(sql, conn, tx))
             {
@@ -257,24 +299,37 @@ namespace SistemaPOS.Data
                     TimeSpan hora       = TimeSpan.Parse(r.GetString(2));
                     decimal total       = r.GetDecimal(3);
                     string metodoPago   = r.GetString(4);
-                    int usuarioID       = r.IsDBNull(5) ? 1 : r.GetInt32(5);
+                    int usuarioID       = r.IsDBNull(5) ? 1  : r.GetInt32(5);
+                    decimal igvOrig     = r.IsDBNull(6) ? 0m : r.GetDecimal(6);
+                    decimal baseOrig    = total - igvOrig;
 
                     if (total <= 0m) return;
 
+                    // Guard: bloquear anulación si la compra original es de período cerrado
+                    PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
+
                     var asiento = BuildAsiento("ANULACION", numeroCompra, compraID, usuarioID,
                         DateTime.Now.Date, DateTime.Now.TimeOfDay,
-                        $"Anulación compra {numeroCompra}");
+                        $"Anulación compra {numeroCompra}", "COMPRA");
 
-                    // Dr Caja/Bancos/CxP (reverso del crédito original)
+                    // Dr Caja/Bancos/CxP = total (reverso del crédito original)
                     string codigoDr = MetodoPagoCompraACuenta(metodoPago);
                     var cuentaDr = GetCuenta(codigoDr, conn, tx);
                     AddLine(asiento, cuentaDr.CuentaID, total, 0m,
                         $"Anulación pago compra ({metodoPago})");
 
-                    // Cr 140 Inventario
+                    // Cr 140 Inventario = base imponible
                     var cuentaInv = GetCuenta("140", conn, tx);
-                    AddLine(asiento, cuentaInv.CuentaID, 0m, total,
+                    AddLine(asiento, cuentaInv.CuentaID, 0m, baseOrig,
                         "Anulación ingreso de mercadería");
+
+                    // Cr 4012 IGV Crédito Fiscal = igv (si aplica)
+                    if (igvOrig > 0m)
+                    {
+                        var c4012 = GetCuenta("4012", conn, tx);
+                        AddLine(asiento, c4012.CuentaID, 0m, igvOrig,
+                            "Anulación IGV Crédito Fiscal");
+                    }
 
                     ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
                 }
@@ -300,7 +355,7 @@ namespace SistemaPOS.Data
 
             var asiento = BuildAsiento("APERTURA", $"PROD-{productoID}", productoID, usuarioID,
                 DateTime.Now.Date, DateTime.Now.TimeOfDay,
-                $"Stock inicial: {nombreProducto}");
+                $"Stock inicial: {nombreProducto}", "INVENTARIO");
 
             var cuentaInv = GetCuenta("140", conn, tx);
             AddLine(asiento, cuentaInv.CuentaID, monto, 0m,
@@ -355,7 +410,7 @@ namespace SistemaPOS.Data
             string glosaDir = esEntrada ? "Entrada" : "Salida";
             var asiento = BuildAsiento("AJUSTE", docRef, ajusteID, usuarioID,
                 fecha.Date, fecha.TimeOfDay,
-                $"Ajuste inventario ({glosaDir}): {motivo}");
+                $"Ajuste inventario ({glosaDir}): {motivo}", "INVENTARIO");
 
             if (esEntrada)
             {
@@ -395,20 +450,30 @@ namespace SistemaPOS.Data
         /// </summary>
         public static void RegistrarGasto(
             long gastoID, string concepto, DateTime fecha, TimeSpan hora,
-            decimal monto, string metodoPago, int usuarioID,
+            decimal total, decimal igv, string metodoPago, int usuarioID,
             SQLiteConnection conn, SQLiteTransaction tx)
         {
-            if (monto <= 0m) return;
+            if (total <= 0m) return;
+            decimal baseImp = total - igv;
 
             var asiento = BuildAsiento("GASTO", $"GASTO-{gastoID}", gastoID, usuarioID,
-                fecha, hora, $"Gasto: {concepto}");
+                fecha, hora, $"Gasto: {concepto}", "GASTO");
 
+            // Dr 600 Gastos Operativos = base imponible (sin IGV)
             var cuentaGastos = GetCuenta("600", conn, tx);
-            AddLine(asiento, cuentaGastos.CuentaID, monto, 0m, $"Gasto operativo: {concepto}");
+            AddLine(asiento, cuentaGastos.CuentaID, baseImp, 0m, $"Gasto operativo: {concepto}");
 
-            string codigoCr = MetodoPagoCompraACuenta(metodoPago); // reutiliza mapping existente
+            // Dr 4012 IGV Crédito Fiscal = igv (solo si aplica)
+            if (igv > 0m)
+            {
+                var c4012 = GetCuenta("4012", conn, tx);
+                AddLine(asiento, c4012.CuentaID, igv, 0m, "IGV Crédito Fiscal gasto");
+            }
+
+            // Cr 101/102/200 = total
+            string codigoCr = MetodoPagoCompraACuenta(metodoPago);
             var cuentaCr = GetCuenta(codigoCr, conn, tx);
-            AddLine(asiento, cuentaCr.CuentaID, 0m, monto, $"Pago gasto ({metodoPago})");
+            AddLine(asiento, cuentaCr.CuentaID, 0m, total, $"Pago gasto ({metodoPago})");
 
             ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
@@ -425,7 +490,8 @@ namespace SistemaPOS.Data
             SQLiteConnection conn, SQLiteTransaction tx)
         {
             const string sql = @"
-                SELECT Concepto, Fecha, Hora, Monto, MetodoPago, UsuarioID
+                SELECT Concepto, Fecha, Hora, Monto, MetodoPago, UsuarioID,
+                       COALESCE(BaseImponible, Monto) as BaseImponible
                 FROM   Gastos WHERE GastoID = @ID";
 
             using (var cmd = new SQLiteCommand(sql, conn, tx))
@@ -435,31 +501,221 @@ namespace SistemaPOS.Data
                 {
                     if (!r.Read()) return;
 
-                    string concepto = r.GetString(0);
-                    DateTime fecha  = DateTime.Parse(r.GetString(1));
-                    TimeSpan hora   = TimeSpan.Parse(r.GetString(2));
-                    decimal monto   = r.GetDecimal(3);
-                    string metodo   = r.GetString(4);
-                    int usuarioID   = r.IsDBNull(5) ? 1 : r.GetInt32(5);
+                    string concepto  = r.GetString(0);
+                    DateTime fecha   = DateTime.Parse(r.GetString(1));
+                    TimeSpan hora    = TimeSpan.Parse(r.GetString(2));
+                    decimal monto    = r.GetDecimal(3);
+                    string metodo    = r.GetString(4);
+                    int usuarioID    = r.IsDBNull(5) ? 1 : r.GetInt32(5);
+                    decimal baseOrig = r.GetDecimal(6);
+                    decimal igvOrig  = monto - baseOrig;
 
                     if (monto <= 0m) return;
 
+                    // Guard: bloquear anulación si el gasto original es de período cerrado
+                    PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
+
                     var asiento = BuildAsiento("ANULACION", $"GASTO-{gastoID}", gastoID, usuarioID,
                         DateTime.Now.Date, DateTime.Now.TimeOfDay,
-                        $"Anulación gasto: {concepto}");
+                        $"Anulación gasto: {concepto}", "GASTO");
 
-                    // Cr Caja/Bancos/CxP → lado opuesto, ahora es Debe
+                    // Dr 101/102/200 = total (reversa del Cr original)
                     string codigoDr = MetodoPagoCompraACuenta(metodo);
                     var cuentaDr = GetCuenta(codigoDr, conn, tx);
                     AddLine(asiento, cuentaDr.CuentaID, monto, 0m, $"Anulación pago gasto ({metodo})");
 
-                    // Dr 600 → lado opuesto, ahora es Haber
+                    // Cr 600 = base imponible (reversa del Dr 600 original)
                     var cuentaGastos = GetCuenta("600", conn, tx);
-                    AddLine(asiento, cuentaGastos.CuentaID, 0m, monto, $"Anulación gasto: {concepto}");
+                    AddLine(asiento, cuentaGastos.CuentaID, 0m, baseOrig, $"Anulación gasto: {concepto}");
+
+                    // Cr 4012 = igv (reversa del Dr 4012 original, si aplica)
+                    if (igvOrig > 0m)
+                    {
+                        var c4012 = GetCuenta("4012", conn, tx);
+                        AddLine(asiento, c4012.CuentaID, 0m, igvOrig, "Anulación IGV Crédito Fiscal gasto");
+                    }
 
                     ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
                 }
             }
+        }
+
+        // ==================================================================
+        // CIERRE MENSUAL
+        // ==================================================================
+
+        /// <summary>
+        /// Genera el asiento de cierre mensual (TipoOperacion='CIERRE_MES').
+        ///
+        /// Regla contable:
+        ///   • Cuentas INGRESO (saldo natural Cr = Haber-Debe):
+        ///       → Dr por su saldo neto para dejarlas en 0.
+        ///   • Cuentas GASTO (saldo natural Dr = Debe-Haber):
+        ///       → Cr por su saldo neto para dejarlas en 0.
+        ///   • Contrapartida → 390 Utilidad del Ejercicio:
+        ///       Cr si utilidad (ingresos > gastos)
+        ///       Dr si pérdida  (gastos > ingresos)
+        ///
+        /// Seguridad:
+        ///   - Lanza InvalidOperationException si ya existe CIERRE_MES con mismo Documento.
+        ///   - El guard de período (en CrearAsientoCompleto) bloquea si el período está cerrado
+        ///     (Fecha=FechaFin del mes). Generar ANTES de cerrar.
+        ///   - ModuloOrigen='CIERRE', OrigenId=PeriodoId (si existe registro).
+        ///   - Si no hay movimientos de resultado: retorna silenciosamente.
+        /// </summary>
+        public static void GenerarAsientoCierreMensual(
+            int year, int month, int usuarioID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            int      diasMes       = DateTime.DaysInMonth(year, month);
+            DateTime fechaAsiento  = new DateTime(year, month, diasMes);
+            string   fechaIniStr   = new DateTime(year, month, 1).ToString("yyyy-MM-dd");
+            string   fechaFinStr   = fechaAsiento.ToString("yyyy-MM-dd");
+            string   documento     = $"CIERRE {year:D4}-{month:D2}";
+
+            // --- Guard duplicado ---
+            const string sqlDup =
+                "SELECT COUNT(*) FROM Asientos " +
+                "WHERE TipoOperacion = 'CIERRE_MES' AND Documento = @Doc";
+            using (var cmd = new SQLiteCommand(sqlDup, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@Doc", documento);
+                if ((long)cmd.ExecuteScalar() > 0)
+                    throw new InvalidOperationException(
+                        $"Ya existe un asiento de cierre para {documento}. " +
+                        "Solo se permite uno por período.");
+            }
+
+            // --- Garantizar que exista registro de período (crea ABIERTO si no existe) ---
+            // OrigenId nunca queda NULL → trazabilidad garantizada.
+            using (var cmdChk = new SQLiteCommand(
+                "SELECT COUNT(*) FROM PeriodosContables WHERE FechaInicio=@FI AND FechaFin=@FF",
+                conn, tx))
+            {
+                cmdChk.Parameters.AddWithValue("@FI", fechaIniStr);
+                cmdChk.Parameters.AddWithValue("@FF", fechaFinStr);
+                if ((long)cmdChk.ExecuteScalar() == 0)
+                {
+                    using (var ins = new SQLiteCommand(
+                        "INSERT INTO PeriodosContables (FechaInicio, FechaFin, Cerrado) VALUES (@FI, @FF, 0)",
+                        conn, tx))
+                    {
+                        ins.Parameters.AddWithValue("@FI", fechaIniStr);
+                        ins.Parameters.AddWithValue("@FF", fechaFinStr);
+                        ins.ExecuteNonQuery();
+                    }
+                }
+            }
+            int periodoId;
+            using (var cmdPer = new SQLiteCommand(
+                "SELECT PeriodoId FROM PeriodosContables WHERE FechaInicio=@FI AND FechaFin=@FF LIMIT 1",
+                conn, tx))
+            {
+                cmdPer.Parameters.AddWithValue("@FI", fechaIniStr);
+                cmdPer.Parameters.AddWithValue("@FF", fechaFinStr);
+                periodoId = Convert.ToInt32(cmdPer.ExecuteScalar());
+            }
+
+            // --- Saldos por cuenta de resultado (excluye CIERRE_MES previos) ---
+            // Misma convención que Estado de Resultados:
+            //   INGRESO: saldo neto = Haber - Debe
+            //   GASTO:   saldo neto = Debe  - Haber
+            const string sqlSaldos = @"
+                SELECT cc.CuentaID, cc.Nombre, cc.Tipo,
+                       COALESCE(SUM(ad.Debe),  0) AS TotalDebe,
+                       COALESCE(SUM(ad.Haber), 0) AS TotalHaber
+                FROM   CuentasContables cc
+                JOIN   AsientosDetalle ad ON ad.CuentaID  = cc.CuentaID
+                JOIN   Asientos a         ON a.AsientoID  = ad.AsientoID
+                WHERE  cc.Tipo IN ('INGRESO', 'GASTO')
+                  AND  a.Fecha  >= @FI AND a.Fecha <= @FF
+                  AND  a.TipoOperacion != 'CIERRE_MES'
+                GROUP  BY cc.CuentaID, cc.Nombre, cc.Tipo
+                HAVING SUM(ad.Debe) != 0 OR SUM(ad.Haber) != 0";
+
+            var filas = new List<(int CuentaID, string Nombre, string Tipo, decimal Debe, decimal Haber)>();
+            using (var cmd = new SQLiteCommand(sqlSaldos, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@FI", fechaIniStr);
+                cmd.Parameters.AddWithValue("@FF", fechaFinStr);
+                using (var r = cmd.ExecuteReader())
+                    while (r.Read())
+                        filas.Add((
+                            r.GetInt32(0),
+                            r.GetString(1),
+                            r.GetString(2),
+                            r.GetDecimal(3),
+                            r.GetDecimal(4)));
+            }
+
+            if (filas.Count == 0) return;   // Sin movimientos de resultado — nada que cerrar
+
+            // --- Calcular neto del período ---
+            decimal sumaIngresos = 0m;   // Haber - Debe (saldo crédito)
+            decimal sumaGastos   = 0m;   // Debe  - Haber (saldo débito)
+            foreach (var f in filas)
+            {
+                if      (f.Tipo == "INGRESO") sumaIngresos += f.Haber - f.Debe;
+                else if (f.Tipo == "GASTO")   sumaGastos   += f.Debe  - f.Haber;
+            }
+
+            if (sumaIngresos == 0m && sumaGastos == 0m) return;   // Saldos netos = 0
+
+            decimal neto = sumaIngresos - sumaGastos;   // >0 utilidad; <0 pérdida
+
+            // --- Construir asiento ---
+            var asiento = new AsientoContable
+            {
+                Fecha         = fechaAsiento,
+                Hora          = new TimeSpan(23, 59, 59),
+                TipoOperacion = "CIERRE_MES",
+                Documento     = documento,
+                ReferenciaID  = null,
+                UsuarioID     = usuarioID,
+                Glosa         = $"Cierre mensual {documento}",
+                ModuloOrigen  = "CIERRE",
+                OrigenId      = periodoId,
+                Detalles      = new List<AsientoDetalleContable>()
+            };
+
+            // Cuentas INGRESO → Dr para cerrarlas
+            foreach (var f in filas)
+            {
+                if (f.Tipo != "INGRESO") continue;
+                decimal saldo = f.Haber - f.Debe;
+                if (saldo == 0m) continue;
+                AddLine(asiento, f.CuentaID,
+                    saldo > 0 ?  saldo : 0m,    // Dr (saldo crédito normal → cerrar con Dr)
+                    saldo < 0 ? -saldo : 0m,    // Cr (saldo débito atípico → cerrar con Cr)
+                    $"Cierre {f.Nombre}");
+            }
+
+            // Cuentas GASTO → Cr para cerrarlas
+            foreach (var f in filas)
+            {
+                if (f.Tipo != "GASTO") continue;
+                decimal saldo = f.Debe - f.Haber;
+                if (saldo == 0m) continue;
+                AddLine(asiento, f.CuentaID,
+                    saldo < 0 ? -saldo : 0m,    // Dr (saldo crédito atípico → cerrar con Dr)
+                    saldo > 0 ?  saldo : 0m,    // Cr (saldo débito normal → cerrar con Cr)
+                    $"Cierre {f.Nombre}");
+            }
+
+            // Contrapartida → 390 Utilidad del Ejercicio
+            if (neto != 0m)
+            {
+                var cuentaUtil = GetCuenta("390", conn, tx);
+                AddLine(asiento, cuentaUtil.CuentaID,
+                    neto < 0 ? -neto : 0m,    // Dr 390 si pérdida
+                    neto > 0 ?  neto : 0m,    // Cr 390 si utilidad
+                    neto > 0
+                        ? $"Utilidad período {documento}"
+                        : $"Pérdida período {documento}");
+            }
+            // Si neto == 0: sumaIngresos == sumaGastos → las líneas ya cuadran sin 390
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
 
         // ==================================================================
@@ -536,7 +792,8 @@ namespace SistemaPOS.Data
 
         private static AsientoContable BuildAsiento(
             string tipo, string documento, long referenciaID,
-            int usuarioID, DateTime fecha, TimeSpan hora, string glosa)
+            int usuarioID, DateTime fecha, TimeSpan hora, string glosa,
+            string moduloOrigen = "SISTEMA")
         {
             return new AsientoContable
             {
@@ -547,7 +804,9 @@ namespace SistemaPOS.Data
                 ReferenciaID  = (int)referenciaID,
                 UsuarioID     = usuarioID,
                 Glosa         = glosa,
-                Detalles      = new List<AsientoDetalleContable>()
+                Detalles      = new List<AsientoDetalleContable>(),
+                ModuloOrigen = moduloOrigen,
+                OrigenId     = (int)referenciaID
             };
         }
 
@@ -854,20 +1113,22 @@ namespace SistemaPOS.Data
         {
             const string sql = @"
                 SELECT
-                    COALESCE(SUM(CASE WHEN cc.Codigo='101' THEN ad.Debe-ad.Haber ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN cc.Codigo='102' THEN ad.Debe-ad.Haber ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN cc.Codigo='120' THEN ad.Debe-ad.Haber ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN cc.Codigo='140' THEN ad.Debe-ad.Haber ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN cc.Codigo='200' THEN ad.Haber-ad.Debe ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN cc.Codigo='300' THEN ad.Haber-ad.Debe ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN cc.Codigo='400' THEN ad.Haber-ad.Debe ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN cc.Codigo='500' THEN ad.Debe-ad.Haber ELSE 0 END),0),
-                    COALESCE(SUM(CASE WHEN cc.Codigo='600' THEN ad.Debe-ad.Haber ELSE 0 END),0)
+                    COALESCE(SUM(CASE WHEN cc.Codigo='101'  THEN ad.Debe-ad.Haber ELSE 0 END),0),  -- 0 Caja
+                    COALESCE(SUM(CASE WHEN cc.Codigo='102'  THEN ad.Debe-ad.Haber ELSE 0 END),0),  -- 1 Bancos
+                    COALESCE(SUM(CASE WHEN cc.Codigo='120'  THEN ad.Debe-ad.Haber ELSE 0 END),0),  -- 2 CxC
+                    COALESCE(SUM(CASE WHEN cc.Codigo='140'  THEN ad.Debe-ad.Haber ELSE 0 END),0),  -- 3 Inventario
+                    COALESCE(SUM(CASE WHEN cc.Codigo='4012' THEN ad.Debe-ad.Haber ELSE 0 END),0),  -- 4 IGV Crédito Fiscal
+                    COALESCE(SUM(CASE WHEN cc.Codigo='200'  THEN ad.Haber-ad.Debe ELSE 0 END),0),  -- 5 CxP
+                    COALESCE(SUM(CASE WHEN cc.Codigo='210'  THEN ad.Haber-ad.Debe ELSE 0 END),0),  -- 6 Tributos
+                    COALESCE(SUM(CASE WHEN cc.Codigo='300'  THEN ad.Haber-ad.Debe ELSE 0 END),0),  -- 7 Capital
+                    COALESCE(SUM(CASE WHEN cc.Codigo='400'  THEN ad.Haber-ad.Debe ELSE 0 END),0),  -- 8 Ventas
+                    COALESCE(SUM(CASE WHEN cc.Codigo='500'  THEN ad.Debe-ad.Haber ELSE 0 END),0),  -- 9 COGS
+                    COALESCE(SUM(CASE WHEN cc.Codigo='600'  THEN ad.Debe-ad.Haber ELSE 0 END),0)   -- 10 Gastos
                 FROM   AsientosDetalle ad
                 JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
                 JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
                 WHERE  a.Fecha <= @FechaCorte
-                  AND  cc.Codigo IN ('101','102','120','140','200','300','400','500','600')";
+                  AND  cc.Codigo IN ('101','102','120','140','4012','200','210','300','400','500','600')";
 
             using (var conn = DatabaseConnection.GetConnection())
             using (var cmd  = new SQLiteCommand(sql, conn))
@@ -879,20 +1140,110 @@ namespace SistemaPOS.Data
                     var dto = new BalanceGeneralDTO();
                     if (r.Read())
                     {
-                        dto.Caja       = r.IsDBNull(0) ? 0m : r.GetDecimal(0);
-                        dto.Bancos     = r.IsDBNull(1) ? 0m : r.GetDecimal(1);
-                        dto.CxC        = r.IsDBNull(2) ? 0m : r.GetDecimal(2);
-                        dto.Inventario = r.IsDBNull(3) ? 0m : r.GetDecimal(3);
-                        dto.CxP        = r.IsDBNull(4) ? 0m : r.GetDecimal(4);
-                        dto.Capital    = r.IsDBNull(5) ? 0m : r.GetDecimal(5);
-                        decimal ventas = r.IsDBNull(6) ? 0m : r.GetDecimal(6);
-                        decimal costo  = r.IsDBNull(7) ? 0m : r.GetDecimal(7);
-                        decimal gastos = r.IsDBNull(8) ? 0m : r.GetDecimal(8);
-                        dto.Utilidad   = ventas - costo - gastos;
+                        dto.Caja              = r.IsDBNull(0)  ? 0m : r.GetDecimal(0);
+                        dto.Bancos            = r.IsDBNull(1)  ? 0m : r.GetDecimal(1);
+                        dto.CxC               = r.IsDBNull(2)  ? 0m : r.GetDecimal(2);
+                        dto.Inventario        = r.IsDBNull(3)  ? 0m : r.GetDecimal(3);
+                        dto.IGVCreditoFiscal  = r.IsDBNull(4)  ? 0m : r.GetDecimal(4);
+                        dto.CxP               = r.IsDBNull(5)  ? 0m : r.GetDecimal(5);
+                        dto.Tributos          = r.IsDBNull(6)  ? 0m : r.GetDecimal(6);
+                        dto.Capital           = r.IsDBNull(7)  ? 0m : r.GetDecimal(7);
+                        decimal ventas        = r.IsDBNull(8)  ? 0m : r.GetDecimal(8);
+                        decimal costo         = r.IsDBNull(9)  ? 0m : r.GetDecimal(9);
+                        decimal gastos        = r.IsDBNull(10) ? 0m : r.GetDecimal(10);
+                        dto.Utilidad          = ventas - costo - gastos;
                     }
                     return dto;
                 }
             }
+        }
+
+        // ==================================================================
+        // CAPITAL INICIAL
+        // ==================================================================
+
+        /// <summary>
+        /// Genera asiento Dr 101 Caja / Cr 300 Capital para el monto inicial
+        /// de apertura de caja marcado como "capital inicial".
+        /// Bloquea duplicados por OrigenId y respeta el guardrail de período.
+        /// </summary>
+        public static void RegistrarCapitalInicial(
+            DateTime fecha, TimeSpan hora, decimal monto, int usuarioID,
+            int origenId, SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            if (monto <= 0) return;
+
+            // Guard duplicado
+            using (var cmd = new SQLiteCommand(
+                "SELECT COUNT(*) FROM Asientos WHERE TipoOperacion='CAPITAL_INICIAL' AND OrigenId=@OId",
+                conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@OId", origenId);
+                if ((long)cmd.ExecuteScalar() > 0)
+                    throw new InvalidOperationException(
+                        $"Ya existe un asiento de capital inicial para la caja #{origenId}. " +
+                        "No se permite duplicar.");
+            }
+
+            var c101 = GetCuenta("101", conn, tx);
+            var c300 = GetCuenta("300", conn, tx);
+
+            var asiento = new AsientoContable
+            {
+                Fecha         = fecha,
+                Hora          = hora,
+                TipoOperacion = "CAPITAL_INICIAL",
+                Documento     = $"CAPITAL-{origenId}",
+                ReferenciaID  = null,
+                UsuarioID     = usuarioID,
+                Glosa         = $"Capital inicial caja #{origenId}",
+                ModuloOrigen  = "CAPITAL",
+                OrigenId      = origenId,
+                Detalles      = new List<AsientoDetalleContable>
+                {
+                    new AsientoDetalleContable { CuentaID = c101.CuentaID, Debe = monto, Haber = 0m,
+                        Descripcion = "Capital inicial — Caja" },
+                    new AsientoDetalleContable { CuentaID = c300.CuentaID, Debe = 0m, Haber = monto,
+                        Descripcion = "Capital inicial — Capital" },
+                }
+            };
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
+
+        // ==================================================================
+        // CUENTAS POR PAGAR — PAGOS
+        // ==================================================================
+
+        /// <summary>
+        /// Asiento cuando se paga una Cuenta por Pagar (compra o gasto al crédito).
+        ///   Dr 200 Cuentas por Pagar = monto
+        ///   Cr 101 Caja    = monto  (EFECTIVO/YAPE)
+        ///   Cr 102 Bancos  = monto  (TARJETA/TRANSFERENCIA)
+        /// </summary>
+        public static void PagarCuentaPorPagar(
+            long pagoID, long cxpId, string referencia,
+            DateTime fecha, TimeSpan hora,
+            decimal monto, string metodoPago, int usuarioID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            if (monto <= 0m) return;
+
+            var asiento = BuildAsiento("PAGO_CXP", $"PAGO-CXP-{cxpId}", pagoID, usuarioID,
+                fecha, hora, $"Pago CxP #{cxpId}: {referencia}", "CXP");
+
+            // Dr 200 Cuentas por Pagar
+            var c200 = GetCuenta("200", conn, tx);
+            AddLine(asiento, c200.CuentaID, monto, 0m, "Cancelación deuda proveedor");
+
+            // Cr 101 Caja o 102 Bancos según método
+            string codigoCr = (metodoPago?.ToUpper() == "TRANSFERENCIA" ||
+                               metodoPago?.ToUpper() == "TARJETA") ? "102" : "101";
+            var cuentaCr = GetCuenta(codigoCr, conn, tx);
+            AddLine(asiento, cuentaCr.CuentaID, 0m, monto,
+                $"Pago a proveedor ({metodoPago})");
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
     }
 }

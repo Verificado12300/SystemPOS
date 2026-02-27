@@ -47,10 +47,12 @@ namespace SistemaPOS.Data
                             string queryCompra = @"
                                 INSERT INTO Compras (
                                     NumeroCompra, Fecha, Hora, ProveedorID, TipoComprobante, Serie, Numero,
-                                    IncluyeIGV, SubTotal, IGV, Total, MetodoPago, Estado, UsuarioID, Observaciones
+                                    IncluyeIGV, TipoIGV, BaseImponible, SubTotal, IGV, Total,
+                                    MetodoPago, Estado, UsuarioID, Observaciones
                                 ) VALUES (
                                     @NumeroCompra, @Fecha, @Hora, @ProveedorID, @TipoComprobante, @Serie, @Numero,
-                                    @IncluyeIGV, @SubTotal, @IGV, @Total, @MetodoPago, @Estado, @UsuarioID, @Observaciones
+                                    @IncluyeIGV, @TipoIGV, @BaseImponible, @SubTotal, @IGV, @Total,
+                                    @MetodoPago, @Estado, @UsuarioID, @Observaciones
                                 )";
 
                             using (var cmd = new SQLiteCommand(queryCompra, connection, transaction))
@@ -63,6 +65,8 @@ namespace SistemaPOS.Data
                                 cmd.Parameters.AddWithValue("@Serie", (object)compra.Serie ?? DBNull.Value);
                                 cmd.Parameters.AddWithValue("@Numero", (object)compra.Numero ?? DBNull.Value);
                                 cmd.Parameters.AddWithValue("@IncluyeIGV", compra.IncluyeIGV ? 1 : 0);
+                                cmd.Parameters.AddWithValue("@TipoIGV", compra.TipoIGV);
+                                cmd.Parameters.AddWithValue("@BaseImponible", compra.BaseImponible);
                                 cmd.Parameters.AddWithValue("@SubTotal", compra.SubTotal);
                                 cmd.Parameters.AddWithValue("@IGV", compra.IGV);
                                 cmd.Parameters.AddWithValue("@Total", compra.Total);
@@ -75,8 +79,17 @@ namespace SistemaPOS.Data
 
                             long compraID = connection.LastInsertRowId;
 
+                            // Factor para escalar costos a base imponible (sin IGV) cuando IGV está incluido en el precio
+                            decimal factorBase = (compra.TipoIGV == 1 && compra.Total > 0m)
+                                ? compra.BaseImponible / compra.Total
+                                : 1m;
+
                             foreach (var detalle in detalles)
                             {
+                                decimal costoUnitBase = detalle.CostoUnitario * factorBase;
+                                decimal costoPres     = detalle.CostoPresentacion * factorBase;
+                                decimal subtotalBase  = detalle.CantidadUnidadesBase * costoUnitBase;
+
                                 string queryDetalle = @"
                                     INSERT INTO CompraDetalles (
                                         CompraID, ProductoID, ProductoPresentacionID, Cantidad,
@@ -92,9 +105,9 @@ namespace SistemaPOS.Data
                                     cmd.Parameters.AddWithValue("@ProductoID", detalle.ProductoID);
                                     cmd.Parameters.AddWithValue("@ProductoPresentacionID", detalle.ProductoPresentacionID);
                                     cmd.Parameters.AddWithValue("@Cantidad", detalle.Cantidad);
-                                    cmd.Parameters.AddWithValue("@CostoUnitario", detalle.CostoUnitario);
-                                    cmd.Parameters.AddWithValue("@CostoPresentacion", detalle.CostoPresentacion);
-                                    cmd.Parameters.AddWithValue("@Subtotal", detalle.Subtotal);
+                                    cmd.Parameters.AddWithValue("@CostoUnitario", costoUnitBase);
+                                    cmd.Parameters.AddWithValue("@CostoPresentacion", costoPres);
+                                    cmd.Parameters.AddWithValue("@Subtotal", subtotalBase);
                                     cmd.Parameters.AddWithValue("@CantidadUnidadesBase", detalle.CantidadUnidadesBase);
                                     cmd.ExecuteNonQuery();
                                 }
@@ -130,13 +143,36 @@ namespace SistemaPOS.Data
                                     cmd.Parameters.AddWithValue("@FechaVencimiento", vencimiento.ToString("yyyy-MM-dd"));
                                     cmd.ExecuteNonQuery();
                                 }
+
+                                // Crear/actualizar CuentasPorPagar con TipoOrigen y IdOrigen
+                                string queryCxP = @"
+                                    INSERT OR IGNORE INTO CuentasPorPagar
+                                        (TipoOrigen, IdOrigen, CompraID, ProveedorID, ProveedorNombre,
+                                         MontoTotal, MontoPagado, MontoPendiente,
+                                         FechaEmision, FechaVencimiento, Estado, CreatedAt, UpdatedAt)
+                                    SELECT 'COMPRA', @CompraID, @CompraID, p.ProveedorID, p.RazonSocial,
+                                           @MontoTotal, 0, @MontoTotal,
+                                           @Fecha, @FechaVenc, 'PENDIENTE', @Now, @Now
+                                    FROM Proveedores p WHERE p.ProveedorID = @ProveedorID";
+
+                                using (var cmd = new SQLiteCommand(queryCxP, connection, transaction))
+                                {
+                                    string now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                                    cmd.Parameters.AddWithValue("@CompraID",    compraID);
+                                    cmd.Parameters.AddWithValue("@ProveedorID", compra.ProveedorID);
+                                    cmd.Parameters.AddWithValue("@MontoTotal",  compra.Total);
+                                    cmd.Parameters.AddWithValue("@Fecha",       compra.Fecha.ToString("yyyy-MM-dd"));
+                                    cmd.Parameters.AddWithValue("@FechaVenc",   vencimiento.ToString("yyyy-MM-dd"));
+                                    cmd.Parameters.AddWithValue("@Now",         now);
+                                    cmd.ExecuteNonQuery();
+                                }
                             }
 
-                            // Asiento contable: Inventario vs Caja/Bancos/CxP
+                            // Asiento contable: Dr Inventario(base)+4012(igv) / Cr Caja/Bancos/CxP(total)
                             compra.CompraID = (int)compraID;
                             ContabilidadService.RegistrarCompra(
                                 compraID, compra.NumeroCompra, compra.Fecha, compra.Hora,
-                                compra.Total, compra.MetodoPago,
+                                compra.Total, compra.IGV, compra.MetodoPago,
                                 compra.UsuarioID, connection, transaction);
 
                             transaction.Commit();
@@ -430,30 +466,29 @@ namespace SistemaPOS.Data
                             }
                         }
 
-                        // Si ya existen pagos de proveedor registrados, no permitir anular.
-                        string queryPagosRegistrados = @"
-                            SELECT COUNT(1)
-                            FROM PagosProveedores pp
-                            INNER JOIN CuentasPorPagar cp ON cp.CuentaPorPagarID = pp.CuentaPorPagarID
-                            WHERE cp.CompraID = @CompraID";
-
-                        using (var cmd = new SQLiteCommand(queryPagosRegistrados, connection, transaction))
+                        // Verificar si hay CxP activa para esta compra y bloquear si tiene pagos.
+                        int? cxpId = null;
+                        using (var cmd = new SQLiteCommand(
+                            "SELECT CuentaPorPagarID FROM CuentasPorPagar " +
+                            "WHERE TipoOrigen='COMPRA' AND IdOrigen=@CompraID AND Estado!='ANULADO' LIMIT 1",
+                            connection, transaction))
                         {
                             cmd.Parameters.AddWithValue("@CompraID", compraID);
                             var _r = cmd.ExecuteScalar();
-                            var cantidadPagos = (_r != null && _r != DBNull.Value) ? Convert.ToInt32(_r) : 0;
-                            if (cantidadPagos > 0)
-                            {
-                                throw new Exception("No se puede anular la compra porque ya tiene pagos de proveedor registrados.");
-                            }
+                            if (_r != null && _r != DBNull.Value)
+                                cxpId = Convert.ToInt32(_r);
                         }
 
-                        // Retirar deuda asociada por anulacion (evitar marcar como PAGADO).
-                        string queryEliminarCuentasPorPagar = "DELETE FROM CuentasPorPagar WHERE CompraID = @CompraID";
-                        using (var cmd = new SQLiteCommand(queryEliminarCuentasPorPagar, connection, transaction))
+                        if (cxpId.HasValue)
                         {
-                            cmd.Parameters.AddWithValue("@CompraID", compraID);
-                            cmd.ExecuteNonQuery();
+                            var info = CuentaPorPagarRepository.ObtenerInfoPagos(
+                                cxpId.Value, connection, transaction);
+                            if (info.Tiene)
+                                throw new Exception(
+                                    $"No se puede anular la compra: tiene {info.Cantidad} pago(s) registrado(s) " +
+                                    $"por S/ {info.Total:N2}. Revierte los pagos antes de anular.");
+
+                            CuentaPorPagarRepository.MarcarAnulada(cxpId.Value, connection, transaction);
                         }
 
                         string queryEliminarCredito = "DELETE FROM CreditosCompras WHERE CompraID = @CompraID";

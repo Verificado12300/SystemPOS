@@ -7,9 +7,9 @@ namespace SistemaPOS.Data
 {
     public class CuentaPorPagarConDetalle : CuentaPorPagar
     {
-        public string NumeroCompra { get; set; }
+        public string Referencia { get; set; }     // NumeroCompra o Concepto del gasto
         public string NombreProveedor { get; set; }
-        public DateTime FechaCompra { get; set; }
+        public DateTime FechaOrigen { get; set; }  // Fecha de la compra o del gasto
     }
 
     public class PagoProveedorConDetalle : PagoProveedor
@@ -19,27 +19,50 @@ namespace SistemaPOS.Data
 
     public class CuentaPorPagarRepository
     {
-        public static List<CuentaPorPagarConDetalle> Listar(int? proveedorID = null, string estado = null, string busqueda = null)
+        // ---------------------------------------------------------------
+        // LISTAR
+        // ---------------------------------------------------------------
+
+        public static List<CuentaPorPagarConDetalle> Listar(
+            int? proveedorID = null,
+            string estado = null,
+            string busqueda = null,
+            string tipoOrigen = null)
         {
             var cuentas = new List<CuentaPorPagarConDetalle>();
 
             using (var connection = DatabaseConnection.GetConnection())
             {
                 string query = @"
-                    SELECT cp.CuentaPorPagarID, cp.CompraID, cp.ProveedorID, cp.MontoTotal,
-                           cp.MontoPagado, cp.MontoPendiente, cp.FechaVencimiento, cp.Estado,
-                           co.NumeroCompra, p.RazonSocial as NombreProveedor, co.Fecha as FechaCompra
+                    SELECT cp.CuentaPorPagarID, cp.TipoOrigen, cp.IdOrigen,
+                           cp.CompraID, cp.ProveedorID,
+                           COALESCE(p.RazonSocial, cp.ProveedorNombre, 'Sin proveedor') AS NombreProveedor,
+                           cp.MontoTotal, cp.MontoPagado, cp.MontoPendiente,
+                           cp.FechaEmision, cp.FechaVencimiento, cp.Estado,
+                           CASE WHEN cp.TipoOrigen = 'COMPRA'
+                                THEN COALESCE(c.NumeroCompra, CAST(cp.IdOrigen AS TEXT))
+                                ELSE COALESCE(g.Concepto, CAST(cp.IdOrigen AS TEXT))
+                           END AS Referencia,
+                           CASE WHEN cp.TipoOrigen = 'COMPRA'
+                                THEN COALESCE(c.Fecha, cp.FechaEmision)
+                                ELSE COALESCE(g.Fecha, cp.FechaEmision)
+                           END AS FechaOrigen
                     FROM CuentasPorPagar cp
-                    INNER JOIN Compras co ON cp.CompraID = co.CompraID
-                    INNER JOIN Proveedores p ON cp.ProveedorID = p.ProveedorID
-                    WHERE 1=1";
+                    LEFT JOIN Compras     c ON cp.TipoOrigen = 'COMPRA' AND cp.IdOrigen = c.CompraID
+                    LEFT JOIN Gastos      g ON cp.TipoOrigen = 'GASTO'  AND cp.IdOrigen = g.GastoID
+                    LEFT JOIN Proveedores p ON cp.ProveedorID = p.ProveedorID
+                    WHERE cp.Estado != 'ANULADO'";
 
                 if (proveedorID.HasValue && proveedorID.Value > 0)
                     query += " AND cp.ProveedorID = @ProveedorID";
                 if (!string.IsNullOrEmpty(estado) && estado != "TODOS")
                     query += " AND cp.Estado = @Estado";
+                if (!string.IsNullOrEmpty(tipoOrigen) && tipoOrigen != "TODOS")
+                    query += " AND cp.TipoOrigen = @TipoOrigen";
                 if (!string.IsNullOrEmpty(busqueda))
-                    query += " AND (co.NumeroCompra LIKE @Busqueda OR p.RazonSocial LIKE @Busqueda)";
+                    query += @" AND (COALESCE(c.NumeroCompra,'') LIKE @Busqueda
+                                  OR COALESCE(g.Concepto,'') LIKE @Busqueda
+                                  OR COALESCE(p.RazonSocial, cp.ProveedorNombre, '') LIKE @Busqueda)";
 
                 query += " ORDER BY cp.Estado ASC, cp.FechaVencimiento ASC";
 
@@ -49,6 +72,8 @@ namespace SistemaPOS.Data
                         cmd.Parameters.AddWithValue("@ProveedorID", proveedorID.Value);
                     if (!string.IsNullOrEmpty(estado) && estado != "TODOS")
                         cmd.Parameters.AddWithValue("@Estado", estado);
+                    if (!string.IsNullOrEmpty(tipoOrigen) && tipoOrigen != "TODOS")
+                        cmd.Parameters.AddWithValue("@TipoOrigen", tipoOrigen);
                     if (!string.IsNullOrEmpty(busqueda))
                         cmd.Parameters.AddWithValue("@Busqueda", $"%{busqueda}%");
 
@@ -56,20 +81,7 @@ namespace SistemaPOS.Data
                     {
                         while (reader.Read())
                         {
-                            cuentas.Add(new CuentaPorPagarConDetalle
-                            {
-                                CuentaPorPagarID = reader.GetInt32(0),
-                                CompraID = reader.GetInt32(1),
-                                ProveedorID = reader.GetInt32(2),
-                                MontoTotal = reader.GetDecimal(3),
-                                MontoPagado = reader.GetDecimal(4),
-                                MontoPendiente = reader.GetDecimal(5),
-                                FechaVencimiento = reader.IsDBNull(6) ? (DateTime?)null : DateTime.Parse(reader.GetString(6)),
-                                Estado = reader.GetString(7),
-                                NumeroCompra = reader.GetString(8),
-                                NombreProveedor = reader.GetString(9),
-                                FechaCompra = DateTime.Parse(reader.GetString(10))
-                            });
+                            cuentas.Add(MapRow(reader));
                         }
                     }
                 }
@@ -78,17 +90,32 @@ namespace SistemaPOS.Data
             return cuentas;
         }
 
+        // ---------------------------------------------------------------
+        // OBTENER POR ID
+        // ---------------------------------------------------------------
+
         public static CuentaPorPagarConDetalle ObtenerPorID(int cuentaPorPagarID)
         {
             using (var connection = DatabaseConnection.GetConnection())
             {
                 string query = @"
-                    SELECT cp.CuentaPorPagarID, cp.CompraID, cp.ProveedorID, cp.MontoTotal,
-                           cp.MontoPagado, cp.MontoPendiente, cp.FechaVencimiento, cp.Estado,
-                           co.NumeroCompra, p.RazonSocial as NombreProveedor, co.Fecha as FechaCompra
+                    SELECT cp.CuentaPorPagarID, cp.TipoOrigen, cp.IdOrigen,
+                           cp.CompraID, cp.ProveedorID,
+                           COALESCE(p.RazonSocial, cp.ProveedorNombre, 'Sin proveedor') AS NombreProveedor,
+                           cp.MontoTotal, cp.MontoPagado, cp.MontoPendiente,
+                           cp.FechaEmision, cp.FechaVencimiento, cp.Estado,
+                           CASE WHEN cp.TipoOrigen = 'COMPRA'
+                                THEN COALESCE(c.NumeroCompra, CAST(cp.IdOrigen AS TEXT))
+                                ELSE COALESCE(g.Concepto, CAST(cp.IdOrigen AS TEXT))
+                           END AS Referencia,
+                           CASE WHEN cp.TipoOrigen = 'COMPRA'
+                                THEN COALESCE(c.Fecha, cp.FechaEmision)
+                                ELSE COALESCE(g.Fecha, cp.FechaEmision)
+                           END AS FechaOrigen
                     FROM CuentasPorPagar cp
-                    INNER JOIN Compras co ON cp.CompraID = co.CompraID
-                    INNER JOIN Proveedores p ON cp.ProveedorID = p.ProveedorID
+                    LEFT JOIN Compras     c ON cp.TipoOrigen = 'COMPRA' AND cp.IdOrigen = c.CompraID
+                    LEFT JOIN Gastos      g ON cp.TipoOrigen = 'GASTO'  AND cp.IdOrigen = g.GastoID
+                    LEFT JOIN Proveedores p ON cp.ProveedorID = p.ProveedorID
                     WHERE cp.CuentaPorPagarID = @CuentaPorPagarID";
 
                 using (var cmd = new SQLiteCommand(query, connection))
@@ -98,28 +125,17 @@ namespace SistemaPOS.Data
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
-                        {
-                            return new CuentaPorPagarConDetalle
-                            {
-                                CuentaPorPagarID = reader.GetInt32(0),
-                                CompraID = reader.GetInt32(1),
-                                ProveedorID = reader.GetInt32(2),
-                                MontoTotal = reader.GetDecimal(3),
-                                MontoPagado = reader.GetDecimal(4),
-                                MontoPendiente = reader.GetDecimal(5),
-                                FechaVencimiento = reader.IsDBNull(6) ? (DateTime?)null : DateTime.Parse(reader.GetString(6)),
-                                Estado = reader.GetString(7),
-                                NumeroCompra = reader.GetString(8),
-                                NombreProveedor = reader.GetString(9),
-                                FechaCompra = DateTime.Parse(reader.GetString(10))
-                            };
-                        }
+                            return MapRow(reader);
                     }
                 }
             }
 
             return null;
         }
+
+        // ---------------------------------------------------------------
+        // REGISTRAR PAGO (con asiento contable)
+        // ---------------------------------------------------------------
 
         public static bool RegistrarPago(PagoProveedor pago)
         {
@@ -132,24 +148,45 @@ namespace SistemaPOS.Data
                         if (pago.Monto <= 0)
                             throw new Exception("El monto del pago debe ser mayor a cero.");
 
+                        // Leer saldo pendiente y referencia para el asiento
                         decimal montoPendienteActual;
+                        string referencia = "";
+                        string tipoOrigen = "COMPRA";
+
                         using (var cmdSaldo = new SQLiteCommand(
-                            "SELECT MontoPendiente FROM CuentasPorPagar WHERE CuentaPorPagarID = @CuentaPorPagarID",
+                            @"SELECT cp.MontoPendiente, cp.TipoOrigen,
+                                     CASE WHEN cp.TipoOrigen='COMPRA'
+                                          THEN COALESCE(c.NumeroCompra, CAST(cp.IdOrigen AS TEXT))
+                                          ELSE COALESCE(g.Concepto, CAST(cp.IdOrigen AS TEXT))
+                                     END AS Ref
+                              FROM CuentasPorPagar cp
+                              LEFT JOIN Compras c ON cp.TipoOrigen='COMPRA' AND cp.IdOrigen=c.CompraID
+                              LEFT JOIN Gastos  g ON cp.TipoOrigen='GASTO'  AND cp.IdOrigen=g.GastoID
+                              WHERE cp.CuentaPorPagarID = @CuentaPorPagarID",
                             connection, transaction))
                         {
                             cmdSaldo.Parameters.AddWithValue("@CuentaPorPagarID", pago.CuentaPorPagarID);
-                            var saldoObj = cmdSaldo.ExecuteScalar();
-                            if (saldoObj == null || saldoObj == DBNull.Value)
-                                throw new Exception("La cuenta por pagar no existe.");
-                            montoPendienteActual = Convert.ToDecimal(saldoObj);
+                            using (var r = cmdSaldo.ExecuteReader())
+                            {
+                                if (!r.Read())
+                                    throw new Exception("La cuenta por pagar no existe.");
+                                montoPendienteActual = r.GetDecimal(0);
+                                tipoOrigen = r.IsDBNull(1) ? "COMPRA" : r.GetString(1);
+                                referencia = r.IsDBNull(2) ? "" : r.GetString(2);
+                            }
                         }
 
                         if (pago.Monto > montoPendienteActual)
                             throw new Exception("El monto del pago excede el saldo pendiente actual.");
 
+                        // INSERT PagosProveedores
                         string queryPago = @"
-                            INSERT INTO PagosProveedores (CuentaPorPagarID, Fecha, Hora, Monto, MetodoPago, Comprobante, Observaciones, UsuarioID)
-                            VALUES (@CuentaPorPagarID, @Fecha, @Hora, @Monto, @MetodoPago, @Comprobante, @Observaciones, @UsuarioID)";
+                            INSERT INTO PagosProveedores
+                                (CuentaPorPagarID, Fecha, Hora, Monto, MetodoPago,
+                                 Comprobante, Observaciones, Referencia, UsuarioID)
+                            VALUES
+                                (@CuentaPorPagarID, @Fecha, @Hora, @Monto, @MetodoPago,
+                                 @Comprobante, @Observaciones, @Referencia, @UsuarioID)";
 
                         using (var cmd = new SQLiteCommand(queryPago, connection, transaction))
                         {
@@ -158,50 +195,54 @@ namespace SistemaPOS.Data
                             cmd.Parameters.AddWithValue("@Hora", $"{pago.Hora.Hours:D2}:{pago.Hora.Minutes:D2}:{pago.Hora.Seconds:D2}");
                             cmd.Parameters.AddWithValue("@Monto", pago.Monto);
                             cmd.Parameters.AddWithValue("@MetodoPago", pago.MetodoPago);
-                            cmd.Parameters.AddWithValue("@Comprobante", (object)pago.Comprobante ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Comprobante",   (object)pago.Comprobante   ?? DBNull.Value);
                             cmd.Parameters.AddWithValue("@Observaciones", (object)pago.Observaciones ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Referencia",    (object)pago.Referencia    ?? (object)referencia);
                             cmd.Parameters.AddWithValue("@UsuarioID", pago.UsuarioID);
                             cmd.ExecuteNonQuery();
                         }
 
+                        long pagoID = connection.LastInsertRowId;
+
+                        // UPDATE CuentasPorPagar
                         string queryUpdate = @"
                             UPDATE CuentasPorPagar
-                            SET MontoPagado = MontoPagado + @Monto,
+                            SET MontoPagado    = MontoPagado + @Monto,
                                 MontoPendiente = MontoPendiente - @Monto,
                                 Estado = CASE
                                     WHEN MontoPendiente - @Monto <= 0 THEN 'PAGADO'
                                     ELSE 'PARCIAL'
-                                END
+                                END,
+                                UpdatedAt = @Now
                             WHERE CuentaPorPagarID = @CuentaPorPagarID
-                              AND Estado != 'PAGADO'
+                              AND Estado NOT IN ('PAGADO','ANULADO')
                               AND MontoPendiente >= @Monto";
 
                         using (var cmd = new SQLiteCommand(queryUpdate, connection, transaction))
                         {
                             cmd.Parameters.AddWithValue("@Monto", pago.Monto);
                             cmd.Parameters.AddWithValue("@CuentaPorPagarID", pago.CuentaPorPagarID);
+                            cmd.Parameters.AddWithValue("@Now", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
                             int filas = cmd.ExecuteNonQuery();
                             if (filas == 0)
-                                throw new Exception("No se pudo aplicar el pago porque la cuenta cambió o ya está pagada.");
+                                throw new Exception("No se pudo aplicar el pago porque la cuenta cambió, ya está pagada o anulada.");
                         }
 
-                        // Sincronizar con CreditosCompras
-                        string querySync = @"
-                            UPDATE CreditosCompras
-                            SET MontoPagado = MontoPagado + @Monto,
-                                Saldo = Saldo - @Monto,
-                                Estado = CASE
-                                    WHEN Saldo - @Monto <= 0 THEN 'PAGADO'
-                                    ELSE 'PENDIENTE'
-                                END,
-                                FechaPago = CASE WHEN Saldo - @Monto <= 0 THEN @FechaPago ELSE FechaPago END
-                            WHERE CompraID = (SELECT CompraID FROM CuentasPorPagar WHERE CuentaPorPagarID = @CuentaPorPagarID)";
+                        // Asiento contable: Dr 200 / Cr 101|102
+                        ContabilidadService.PagarCuentaPorPagar(
+                            pagoID, pago.CuentaPorPagarID, referencia,
+                            pago.Fecha, pago.Hora,
+                            pago.Monto, pago.MetodoPago, pago.UsuarioID,
+                            connection, transaction);
 
-                        using (var cmd = new SQLiteCommand(querySync, connection, transaction))
+                        // Guardar AsientoId en PagosProveedores
+                        long asientoId = connection.LastInsertRowId;
+                        using (var cmd = new SQLiteCommand(
+                            "UPDATE PagosProveedores SET AsientoId = @AsientoId WHERE PagoProveedorID = @PagoID",
+                            connection, transaction))
                         {
-                            cmd.Parameters.AddWithValue("@Monto", pago.Monto);
-                            cmd.Parameters.AddWithValue("@CuentaPorPagarID", pago.CuentaPorPagarID);
-                            cmd.Parameters.AddWithValue("@FechaPago", pago.Fecha.ToString("yyyy-MM-dd"));
+                            cmd.Parameters.AddWithValue("@AsientoId", asientoId);
+                            cmd.Parameters.AddWithValue("@PagoID", pagoID);
                             cmd.ExecuteNonQuery();
                         }
 
@@ -217,6 +258,106 @@ namespace SistemaPOS.Data
             }
         }
 
+        // ---------------------------------------------------------------
+        // CREAR DESDE GASTO (al crédito)
+        // ---------------------------------------------------------------
+
+        public static void CrearDesdeGasto(Gasto gasto, long gastoID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            string now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string fechaStr = gasto.Fecha.ToString("yyyy-MM-dd");
+
+            // Obtener nombre del proveedor si aplica
+            string proveedorNombre = "Sin proveedor";
+            if (gasto.ProveedorID.HasValue)
+            {
+                using (var cmd = new SQLiteCommand(
+                    "SELECT RazonSocial FROM Proveedores WHERE ProveedorID = @ID",
+                    conn, tx))
+                {
+                    cmd.Parameters.AddWithValue("@ID", gasto.ProveedorID.Value);
+                    var r = cmd.ExecuteScalar();
+                    if (r != null && r != DBNull.Value)
+                        proveedorNombre = r.ToString();
+                }
+            }
+
+            using (var cmd = new SQLiteCommand(@"
+                INSERT INTO CuentasPorPagar
+                    (TipoOrigen, IdOrigen, ProveedorID, ProveedorNombre,
+                     MontoTotal, MontoPagado, MontoPendiente,
+                     FechaEmision, FechaVencimiento, Estado,
+                     CreatedAt, UpdatedAt)
+                VALUES
+                    ('GASTO', @GastoID, @ProveedorID, @ProveedorNombre,
+                     @Monto, 0, @Monto,
+                     @Fecha, NULL, 'PENDIENTE',
+                     @Now, @Now)",
+                conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@GastoID",          gastoID);
+                cmd.Parameters.AddWithValue("@ProveedorID",      (object)gasto.ProveedorID ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@ProveedorNombre",  proveedorNombre);
+                cmd.Parameters.AddWithValue("@Monto",            gasto.Monto);
+                cmd.Parameters.AddWithValue("@Fecha",            fechaStr);
+                cmd.Parameters.AddWithValue("@Now",              now);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // MARCAR ANULADA (para uso al anular Compra o Gasto)
+        // ---------------------------------------------------------------
+
+        public static void MarcarAnulada(int cxpId, SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            using (var cmd = new SQLiteCommand(@"
+                UPDATE CuentasPorPagar
+                SET Estado = 'ANULADO', UpdatedAt = @Now
+                WHERE CuentaPorPagarID = @CxpId",
+                conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@CxpId", cxpId);
+                cmd.Parameters.AddWithValue("@Now", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // OBTENER INFO PAGOS (para mensajes de bloqueo de anulación)
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// Retorna (tienePagos, cantidadPagos, totalPagado) para el mensaje de bloqueo.
+        /// </summary>
+        public static (bool Tiene, int Cantidad, decimal Total) ObtenerInfoPagos(
+            int cxpId, SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            using (var cmd = new SQLiteCommand(@"
+                SELECT COUNT(*), COALESCE(SUM(Monto), 0)
+                FROM PagosProveedores
+                WHERE CuentaPorPagarID = @CxpId",
+                conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@CxpId", cxpId);
+                using (var r = cmd.ExecuteReader())
+                {
+                    if (r.Read())
+                    {
+                        int cantidad = r.GetInt32(0);
+                        decimal total = r.GetDecimal(1);
+                        return (cantidad > 0, cantidad, total);
+                    }
+                }
+            }
+            return (false, 0, 0m);
+        }
+
+        // ---------------------------------------------------------------
+        // OBTENER PAGOS DE UNA CXP
+        // ---------------------------------------------------------------
+
         public static List<PagoProveedorConDetalle> ObtenerPagos(int cuentaPorPagarID)
         {
             var pagos = new List<PagoProveedorConDetalle>();
@@ -226,7 +367,8 @@ namespace SistemaPOS.Data
                 string query = @"
                     SELECT pp.PagoProveedorID, pp.CuentaPorPagarID, pp.Fecha, pp.Hora,
                            pp.Monto, pp.MetodoPago, pp.Comprobante, pp.Observaciones,
-                           pp.UsuarioID, u.NombreCompleto as NombreUsuario
+                           pp.UsuarioID, u.NombreCompleto as NombreUsuario,
+                           pp.Referencia, pp.AsientoId
                     FROM PagosProveedores pp
                     INNER JOIN Usuarios u ON pp.UsuarioID = u.UsuarioID
                     WHERE pp.CuentaPorPagarID = @CuentaPorPagarID
@@ -242,16 +384,18 @@ namespace SistemaPOS.Data
                         {
                             pagos.Add(new PagoProveedorConDetalle
                             {
-                                PagoProveedorID = reader.GetInt32(0),
+                                PagoProveedorID  = reader.GetInt32(0),
                                 CuentaPorPagarID = reader.GetInt32(1),
-                                Fecha = DateTime.Parse(reader.GetString(2)),
-                                Hora = TimeSpan.Parse(reader.GetString(3)),
-                                Monto = reader.GetDecimal(4),
-                                MetodoPago = reader.GetString(5),
-                                Comprobante = reader.IsDBNull(6) ? "" : reader.GetString(6),
-                                Observaciones = reader.IsDBNull(7) ? "" : reader.GetString(7),
-                                UsuarioID = reader.GetInt32(8),
-                                NombreUsuario = reader.GetString(9)
+                                Fecha            = DateTime.Parse(reader.GetString(2)),
+                                Hora             = TimeSpan.Parse(reader.GetString(3)),
+                                Monto            = reader.GetDecimal(4),
+                                MetodoPago       = reader.GetString(5),
+                                Comprobante      = reader.IsDBNull(6)  ? "" : reader.GetString(6),
+                                Observaciones    = reader.IsDBNull(7)  ? "" : reader.GetString(7),
+                                UsuarioID        = reader.GetInt32(8),
+                                NombreUsuario    = reader.GetString(9),
+                                Referencia       = reader.IsDBNull(10) ? "" : reader.GetString(10),
+                                AsientoId        = reader.IsDBNull(11) ? (int?)null : reader.GetInt32(11)
                             });
                         }
                     }
@@ -261,6 +405,10 @@ namespace SistemaPOS.Data
             return pagos;
         }
 
+        // ---------------------------------------------------------------
+        // RESUMEN TOTAL
+        // ---------------------------------------------------------------
+
         public static (decimal TotalDeuda, decimal TotalPagado, int CuentasPendientes) ObtenerResumen()
         {
             using (var connection = DatabaseConnection.GetConnection())
@@ -269,22 +417,47 @@ namespace SistemaPOS.Data
                     SELECT
                         COALESCE(SUM(MontoTotal), 0),
                         COALESCE(SUM(MontoPagado), 0),
-                        COUNT(CASE WHEN Estado != 'PAGADO' THEN 1 END)
-                    FROM CuentasPorPagar";
+                        COUNT(CASE WHEN Estado NOT IN ('PAGADO','ANULADO') THEN 1 END)
+                    FROM CuentasPorPagar
+                    WHERE Estado != 'ANULADO'";
 
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
-                        {
                             return (reader.GetDecimal(0), reader.GetDecimal(1), reader.GetInt32(2));
-                        }
                     }
                 }
             }
 
             return (0, 0, 0);
+        }
+
+        // ---------------------------------------------------------------
+        // HELPER: mapear row del reader
+        // ---------------------------------------------------------------
+
+        private static CuentaPorPagarConDetalle MapRow(SQLiteDataReader r)
+        {
+            return new CuentaPorPagarConDetalle
+            {
+                CuentaPorPagarID = r.GetInt32(0),
+                TipoOrigen       = r.IsDBNull(1) ? "COMPRA" : r.GetString(1),
+                IdOrigen         = r.IsDBNull(2) ? 0 : r.GetInt32(2),
+                CompraID         = r.IsDBNull(3) ? (int?)null : r.GetInt32(3),
+                ProveedorID      = r.IsDBNull(4) ? (int?)null : r.GetInt32(4),
+                NombreProveedor  = r.IsDBNull(5) ? "Sin proveedor" : r.GetString(5),
+                MontoTotal       = r.GetDecimal(6),
+                MontoPagado      = r.GetDecimal(7),
+                MontoPendiente   = r.GetDecimal(8),
+                FechaEmision     = r.IsDBNull(9)  ? "" : r.GetString(9),
+                FechaVencimiento = r.IsDBNull(10) ? (DateTime?)null : DateTime.Parse(r.GetString(10)),
+                Estado           = r.GetString(11),
+                Referencia       = r.IsDBNull(12) ? "" : r.GetString(12),
+                FechaOrigen      = r.IsDBNull(13) ? DateTime.MinValue
+                                    : (DateTime.TryParse(r.GetString(13), out var dt) ? dt : DateTime.MinValue)
+            };
         }
     }
 }
