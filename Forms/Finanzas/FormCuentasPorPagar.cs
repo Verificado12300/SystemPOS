@@ -58,6 +58,7 @@ namespace SistemaPOS.Forms.Finanzas
             colMontoPendiente.Width = 100;
             colVencimiento.Width = 100;
             colEstado.Width = 90;
+            colVerPagos.Width = 80;
             colRegistrarPago.Width = 80;
 
             colMontoTotal.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
@@ -203,7 +204,14 @@ namespace SistemaPOS.Forms.Finanzas
             {
                 if (e.RowIndex < 0) return;
 
-                if (dgvCuentas.Columns[e.ColumnIndex].Name == "colRegistrarPago")
+                if (dgvCuentas.Columns[e.ColumnIndex].Name == "colVerPagos")
+                {
+                    int cuentaID = Convert.ToInt32(dgvCuentas.Rows[e.RowIndex].Tag);
+                    var form = new FormHistorialPagosCxP(cuentaID);
+                    if (form.ShowDialog() == DialogResult.OK)
+                        CargarCuentas();
+                }
+                else if (dgvCuentas.Columns[e.ColumnIndex].Name == "colRegistrarPago")
                 {
                     int cuentaID = Convert.ToInt32(dgvCuentas.Rows[e.RowIndex].Tag);
                     FormRegistrarPagoProveedor form = new FormRegistrarPagoProveedor(cuentaID);

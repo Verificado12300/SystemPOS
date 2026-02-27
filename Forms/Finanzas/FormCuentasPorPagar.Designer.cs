@@ -38,6 +38,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.colMontoPendiente = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colVencimiento = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colEstado = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colVerPagos = new System.Windows.Forms.DataGridViewButtonColumn();
             this.colRegistrarPago = new System.Windows.Forms.DataGridViewButtonColumn();
             this.pnlResumen = new System.Windows.Forms.Panel();
             this.lblTotalRegistros = new System.Windows.Forms.Label();
@@ -205,7 +206,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.dgvCuentas.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
                 this.colNumero, this.colTipo, this.colCompra, this.colProveedor, this.colFechaCompra,
                 this.colMontoTotal, this.colMontoPagado, this.colMontoPendiente,
-                this.colVencimiento, this.colEstado, this.colRegistrarPago });
+                this.colVencimiento, this.colEstado, this.colVerPagos, this.colRegistrarPago });
             rowStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             rowStyle.BackColor = System.Drawing.Color.White;
             rowStyle.Font = new System.Drawing.Font("Segoe UI", 9.5F);
@@ -293,6 +294,16 @@ namespace SistemaPOS.Forms.Finanzas
             this.colEstado.Name = "colEstado";
             this.colEstado.ReadOnly = true;
             this.colEstado.Width = 90;
+            //
+            // colVerPagos
+            //
+            this.colVerPagos.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.colVerPagos.HeaderText = "";
+            this.colVerPagos.Name = "colVerPagos";
+            this.colVerPagos.ReadOnly = false;
+            this.colVerPagos.Text = "Ver Pagos";
+            this.colVerPagos.UseColumnTextForButtonValue = true;
+            this.colVerPagos.Width = 80;
             //
             // colRegistrarPago
             //
@@ -399,6 +410,7 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.DataGridViewTextBoxColumn colMontoPendiente;
         private System.Windows.Forms.DataGridViewTextBoxColumn colVencimiento;
         private System.Windows.Forms.DataGridViewTextBoxColumn colEstado;
+        private System.Windows.Forms.DataGridViewButtonColumn colVerPagos;
         private System.Windows.Forms.DataGridViewButtonColumn colRegistrarPago;
     }
 }

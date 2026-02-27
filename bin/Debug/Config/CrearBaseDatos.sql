@@ -432,6 +432,7 @@ CREATE TABLE IF NOT EXISTS PagosProveedores (
     Observaciones    TEXT(500),
     Referencia       TEXT NULL,
     AsientoId        INTEGER NULL,
+    Anulado          INTEGER NOT NULL DEFAULT 0,
     UsuarioID        INTEGER NOT NULL,
     FOREIGN KEY (CuentaPorPagarID) REFERENCES CuentasPorPagar(CuentaPorPagarID),
     FOREIGN KEY (UsuarioID)        REFERENCES Usuarios(UsuarioID)

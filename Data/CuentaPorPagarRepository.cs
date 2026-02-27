@@ -15,6 +15,8 @@ namespace SistemaPOS.Data
     public class PagoProveedorConDetalle : PagoProveedor
     {
         public string NombreUsuario { get; set; }
+        // Anulado ya heredado de PagoProveedor; aquí por claridad en el DGV:
+        // Estado = Anulado ? "ANULADO" : "ACTIVO"
     }
 
     public class CuentaPorPagarRepository
@@ -337,7 +339,7 @@ namespace SistemaPOS.Data
             using (var cmd = new SQLiteCommand(@"
                 SELECT COUNT(*), COALESCE(SUM(Monto), 0)
                 FROM PagosProveedores
-                WHERE CuentaPorPagarID = @CxpId",
+                WHERE CuentaPorPagarID = @CxpId AND Anulado = 0",
                 conn, tx))
             {
                 cmd.Parameters.AddWithValue("@CxpId", cxpId);
@@ -368,7 +370,7 @@ namespace SistemaPOS.Data
                     SELECT pp.PagoProveedorID, pp.CuentaPorPagarID, pp.Fecha, pp.Hora,
                            pp.Monto, pp.MetodoPago, pp.Comprobante, pp.Observaciones,
                            pp.UsuarioID, u.NombreCompleto as NombreUsuario,
-                           pp.Referencia, pp.AsientoId
+                           pp.Referencia, pp.AsientoId, pp.Anulado
                     FROM PagosProveedores pp
                     INNER JOIN Usuarios u ON pp.UsuarioID = u.UsuarioID
                     WHERE pp.CuentaPorPagarID = @CuentaPorPagarID
@@ -395,7 +397,8 @@ namespace SistemaPOS.Data
                                 UsuarioID        = reader.GetInt32(8),
                                 NombreUsuario    = reader.GetString(9),
                                 Referencia       = reader.IsDBNull(10) ? "" : reader.GetString(10),
-                                AsientoId        = reader.IsDBNull(11) ? (int?)null : reader.GetInt32(11)
+                                AsientoId        = reader.IsDBNull(11) ? (int?)null : reader.GetInt32(11),
+                                Anulado          = reader.GetInt32(12) == 1
                             });
                         }
                     }
@@ -432,6 +435,113 @@ namespace SistemaPOS.Data
             }
 
             return (0, 0, 0);
+        }
+
+        // ---------------------------------------------------------------
+        // ANULAR PAGO
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// Anula un pago de CxP: genera asiento inverso Dr 101/102 / Cr 200,
+        /// marca el pago como Anulado=1 y recalcula montos y estado de la CxP.
+        /// </summary>
+        public static void AnularPago(int pagoID, int usuarioID)
+        {
+            using (var connection = DatabaseConnection.GetConnection())
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    // 1. Leer datos del pago con referencia de la CxP asociada
+                    int    cxpId;
+                    DateTime fecha;
+                    TimeSpan hora;
+                    decimal monto;
+                    string metodo;
+                    string referencia;
+
+                    using (var cmd = new SQLiteCommand(@"
+                        SELECT pp.PagoProveedorID, pp.CuentaPorPagarID, pp.Fecha, pp.Hora,
+                               pp.Monto, pp.MetodoPago, pp.Anulado,
+                               COALESCE(
+                                   CASE WHEN cp.TipoOrigen='COMPRA' THEN c.NumeroCompra
+                                        ELSE g.Concepto END,
+                                   'CxP-' || pp.CuentaPorPagarID
+                               ) AS Referencia
+                        FROM PagosProveedores pp
+                        INNER JOIN CuentasPorPagar cp ON pp.CuentaPorPagarID = cp.CuentaPorPagarID
+                        LEFT  JOIN Compras  c ON cp.TipoOrigen='COMPRA' AND cp.IdOrigen = c.CompraID
+                        LEFT  JOIN Gastos   g ON cp.TipoOrigen='GASTO'  AND cp.IdOrigen = g.GastoID
+                        WHERE pp.PagoProveedorID = @pagoID",
+                        connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@pagoID", pagoID);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (!reader.Read())
+                                throw new Exception("Pago no encontrado.");
+                            if (reader.GetInt32(6) == 1)
+                                throw new Exception("El pago ya está anulado.");
+
+                            cxpId     = reader.GetInt32(1);
+                            fecha     = DateTime.Parse(reader.GetString(2));
+                            hora      = TimeSpan.Parse(reader.GetString(3));
+                            monto     = reader.GetDecimal(4);
+                            metodo    = reader.GetString(5);
+                            referencia = reader.IsDBNull(7) ? "" : reader.GetString(7);
+                        }
+                    }
+
+                    // 2. Asiento inverso: Dr 101/102 / Cr 200
+                    ContabilidadService.ReversarPagoCxP(
+                        pagoID, cxpId, referencia,
+                        fecha, hora, monto, metodo,
+                        usuarioID, connection, transaction);
+
+                    // 3. Marcar pago como anulado
+                    using (var cmd = new SQLiteCommand(
+                        "UPDATE PagosProveedores SET Anulado=1 WHERE PagoProveedorID=@id",
+                        connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@id", pagoID);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 4. Recalcular montos y estado de la CxP (solo pagos no anulados)
+                    string now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    using (var cmd = new SQLiteCommand(@"
+                        UPDATE CuentasPorPagar SET
+                            MontoPagado    = COALESCE((SELECT SUM(Monto) FROM PagosProveedores
+                                                       WHERE CuentaPorPagarID = @cxpId AND Anulado = 0), 0),
+                            MontoPendiente = MontoTotal
+                                           - COALESCE((SELECT SUM(Monto) FROM PagosProveedores
+                                                       WHERE CuentaPorPagarID = @cxpId AND Anulado = 0), 0),
+                            Estado         = CASE
+                                WHEN MontoTotal - COALESCE((SELECT SUM(Monto) FROM PagosProveedores
+                                                       WHERE CuentaPorPagarID = @cxpId AND Anulado = 0), 0) <= 0
+                                     THEN 'PAGADO'
+                                WHEN COALESCE((SELECT SUM(Monto) FROM PagosProveedores
+                                                       WHERE CuentaPorPagarID = @cxpId AND Anulado = 0), 0) = 0
+                                     THEN 'PENDIENTE'
+                                ELSE 'PARCIAL'
+                            END,
+                            UpdatedAt      = @now
+                        WHERE CuentaPorPagarID = @cxpId",
+                        connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@cxpId", cxpId);
+                        cmd.Parameters.AddWithValue("@now", now);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
         }
 
         // ---------------------------------------------------------------

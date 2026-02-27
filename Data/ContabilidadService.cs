@@ -1245,5 +1245,43 @@ namespace SistemaPOS.Data
 
             ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
+
+        /// <summary>
+        /// Asiento inverso cuando se anula un pago de CxP.
+        ///   Dr 101 Caja   = monto  (EFECTIVO/YAPE)
+        ///   Dr 102 Bancos = monto  (TARJETA/TRANSFERENCIA)
+        ///   Cr 200 Cuentas por Pagar = monto
+        /// </summary>
+        public static void ReversarPagoCxP(
+            long pagoID, long cxpId, string referencia,
+            DateTime fecha, TimeSpan hora,
+            decimal monto, string metodoPago, int usuarioID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            if (monto <= 0m) return;
+
+            PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
+
+            var asiento = BuildAsiento(
+                "REVERSAR_PAGO_CXP",
+                $"ANUL-PAGO-{pagoID}",
+                pagoID,
+                usuarioID,
+                fecha, hora,
+                $"Anulación pago CxP #{cxpId}: {referencia}",
+                "CXP");
+
+            // Dr 101 Caja o 102 Bancos (inverso del Cr original)
+            string codigoDr = (metodoPago?.ToUpper() == "TRANSFERENCIA" ||
+                               metodoPago?.ToUpper() == "TARJETA") ? "102" : "101";
+            var cuentaDr = GetCuenta(codigoDr, conn, tx);
+            AddLine(asiento, cuentaDr.CuentaID, monto, 0m, $"Devolución pago ({metodoPago})");
+
+            // Cr 200 Cuentas por Pagar (restitución de la deuda)
+            var c200 = GetCuenta("200", conn, tx);
+            AddLine(asiento, c200.CuentaID, 0m, monto, "Restitución deuda proveedor");
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
     }
 }

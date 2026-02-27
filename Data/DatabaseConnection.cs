@@ -947,9 +947,16 @@ namespace SistemaPOS.Data
                                 cmd.CommandText = "ALTER TABLE PagosProveedores ADD COLUMN AsientoId INTEGER NULL";
                                 cmd.ExecuteNonQuery();
                             }
+
+                            cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('PagosProveedores') WHERE name='Anulado'";
+                            if ((long)cmd.ExecuteScalar() == 0)
+                            {
+                                cmd.CommandText = "ALTER TABLE PagosProveedores ADD COLUMN Anulado INTEGER NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
                         }
                     }
-                    catch { }
+                    catch (Exception ex) { throw new Exception("Migración PagosProveedores falló: " + ex.Message, ex); }
                 }
             }
             catch (Exception ex)

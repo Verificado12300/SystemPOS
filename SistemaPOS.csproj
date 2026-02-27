@@ -396,6 +396,12 @@
     <Compile Include="Forms\Finanzas\FormPeriodosContables.Designer.cs">
       <DependentUpon>FormPeriodosContables.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\Finanzas\FormHistorialPagosCxP.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Finanzas\FormHistorialPagosCxP.Designer.cs">
+      <DependentUpon>FormHistorialPagosCxP.cs</DependentUpon>
+    </Compile>
     <Compile Include="Tests\TestGuardrailRunner.cs" />
     <Compile Include="Models\BalanceComprobacionItemDTO.cs" />
     <Compile Include="Models\BalanceGeneralDTO.cs" />
@@ -507,6 +513,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Finanzas\FormPeriodosContables.resx">
       <DependentUpon>FormPeriodosContables.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Finanzas\FormHistorialPagosCxP.resx">
+      <DependentUpon>FormHistorialPagosCxP.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Reportes\FormReportes.resx">
       <DependentUpon>FormReportes.cs</DependentUpon>

@@ -15,5 +15,6 @@ namespace SistemaPOS.Models
         public int UsuarioID { get; set; }
         public string Referencia { get; set; }
         public int? AsientoId { get; set; }
+        public bool Anulado { get; set; }
     }
 }
