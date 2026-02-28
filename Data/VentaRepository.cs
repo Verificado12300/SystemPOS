@@ -371,6 +371,41 @@ namespace SistemaPOS.Data
             }
         }
 
+        /// <summary>
+        /// Eliminación inteligente: si tiene asiento → auto-anula (motivo "Eliminación automática");
+        /// si no tiene asiento → soft-delete a papelera.
+        /// </summary>
+        public static bool EliminarInteligente(int ventaID, string usuario)
+        {
+            if (PapeleraService.TieneImpactoContable("VENTA", ventaID))
+                return Anular(ventaID, "Eliminación automática");
+
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var tx  = conn.BeginTransaction())
+            {
+                try
+                {
+                    string resumen;
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT COALESCE(NumeroVenta,'') || ' — S/ ' || CAST(Total AS TEXT) " +
+                        "FROM Ventas WHERE VentaID=@id", conn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@id", ventaID);
+                        resumen = cmd.ExecuteScalar()?.ToString() ?? "";
+                    }
+
+                    PapeleraService.SoftDelete("VENTA", ventaID, resumen, usuario, conn, tx);
+                    tx.Commit();
+                    return true;
+                }
+                catch
+                {
+                    tx.Rollback();
+                    throw;
+                }
+            }
+        }
+
         public static List<dynamic> ObtenerDetalles(int ventaID)
         {
             var detalles = new List<dynamic>();

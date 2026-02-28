@@ -75,7 +75,8 @@ namespace SistemaPOS.Data
                 string query = @"
                     SELECT GastoID, Fecha, Hora, Concepto, Monto, Categoria, MetodoPago,
                            Comprobante, Observaciones, CajaID, UsuarioID
-                    FROM Gastos WHERE (Eliminado IS NULL OR Eliminado = 0)";
+                    FROM Gastos WHERE (Eliminado IS NULL OR Eliminado = 0)
+                      AND (Anulado IS NULL OR Anulado = 0)";
 
                 if (fechaDesde.HasValue)
                     query += " AND Fecha >= @FechaDesde";
@@ -157,7 +158,7 @@ namespace SistemaPOS.Data
                                     $"por S/ {info.Total:N2}. Revierte los pagos antes de anular.");
                         }
 
-                        // Leer datos del gasto para el resumen en PapeleraLog
+                        // Leer resumen para log
                         string resumen = "";
                         using (var cmd = new SQLiteCommand(
                             "SELECT Fecha, Concepto, Monto FROM Gastos WHERE GastoID=@id",
@@ -171,9 +172,51 @@ namespace SistemaPOS.Data
                             }
                         }
 
-                        string usuarioNombre = SesionActual.Usuario?.NombreUsuario ?? "Sistema";
-                        PapeleraService.SoftDelete("GASTO", gastoID, resumen, usuarioNombre,
-                            connection, transaction);
+                        string now  = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                        string user = SesionActual.Usuario?.NombreUsuario ?? "Sistema";
+
+                        // Routing: con asiento → auto-anulación; sin asiento → soft-delete
+                        bool tieneAsiento = PapeleraService.TieneImpactoContable(
+                            "GASTO", gastoID, connection, transaction);
+
+                        if (tieneAsiento)
+                        {
+                            // Auto-anulación: asiento inverso
+                            ContabilidadService.ReversarGasto(gastoID, connection, transaction);
+
+                            // Marcar CxP asociada como ANULADO (si existe y no tiene pagos)
+                            if (cxpId.HasValue)
+                            {
+                                using (var cmd = new SQLiteCommand(
+                                    "UPDATE CuentasPorPagar SET Estado='ANULADO' " +
+                                    "WHERE CuentaPorPagarID=@id",
+                                    connection, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@id", cxpId.Value);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+
+                            // Marcar gasto como anulado
+                            using (var cmd = new SQLiteCommand(
+                                "UPDATE Gastos SET Anulado=1, AnuladoFecha=@f, AnuladoPor=@u " +
+                                "WHERE GastoID=@id",
+                                connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@f",  now);
+                                cmd.Parameters.AddWithValue("@u",  user);
+                                cmd.Parameters.AddWithValue("@id", gastoID);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                        }
+                        else
+                        {
+                            // Sin asiento → soft-delete a papelera
+                            PapeleraService.SoftDelete("GASTO", gastoID, resumen, user,
+                                connection, transaction);
+                        }
+
                         transaction.Commit();
                         return true;
                     }

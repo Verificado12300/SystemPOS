@@ -9,8 +9,17 @@ namespace SistemaPOS
     static class Program
     {
         [STAThread]
-        static void Main()
+        static void Main(string[] cmdArgs)
         {
+            if (cmdArgs != null && Array.IndexOf(cmdArgs, "--test-guardrail") >= 0)
+            {
+                DatabaseConnection.Initialize();
+                string logPath = System.IO.Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory, "test_guardrail.log");
+                Tests.TestGuardrailRunner.Run(logPath);
+                return;
+            }
+
             string startupLogPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup_error.log");
 
             AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>

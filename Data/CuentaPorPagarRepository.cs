@@ -53,7 +53,8 @@ namespace SistemaPOS.Data
                     LEFT JOIN Compras     c ON cp.TipoOrigen = 'COMPRA' AND cp.IdOrigen = c.CompraID
                     LEFT JOIN Gastos      g ON cp.TipoOrigen = 'GASTO'  AND cp.IdOrigen = g.GastoID
                     LEFT JOIN Proveedores p ON cp.ProveedorID = p.ProveedorID
-                    WHERE cp.Estado != 'ANULADO'";
+                    WHERE cp.Estado != 'ANULADO'
+                      AND (cp.Eliminado IS NULL OR cp.Eliminado = 0)";
 
                 if (proveedorID.HasValue && proveedorID.Value > 0)
                     query += " AND cp.ProveedorID = @ProveedorID";
@@ -546,6 +547,67 @@ namespace SistemaPOS.Data
 
         // ---------------------------------------------------------------
         // HELPER: mapear row del reader
+        // ---------------------------------------------------------------
+
+        // ---------------------------------------------------------------
+        // ELIMINAR (soft-delete)
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// Soft-delete de una cuenta por pagar. Bloquea si tiene pagos activos.
+        /// </summary>
+        public static bool Eliminar(int cuentaPorPagarID)
+        {
+            using (var conn = DatabaseConnection.GetConnection())
+            {
+                // Guard: no eliminar si tiene pagos activos no anulados
+                int nPagos;
+                using (var cmd = new SQLiteCommand(
+                    "SELECT COUNT(*) FROM PagosProveedores " +
+                    "WHERE CuentaPorPagarID=@id AND Anulado=0",
+                    conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", cuentaPorPagarID);
+                    nPagos = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+                if (nPagos > 0)
+                    throw new InvalidOperationException(
+                        "No se puede eliminar esta cuenta porque ya tiene pagos registrados.\n" +
+                        "Anule primero los pagos para poder eliminar la cuenta.");
+
+                string now  = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                string user = SistemaPOS.Utils.SesionActual.Usuario?.NombreUsuario ?? "Sistema";
+
+                using (var tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        using (var cmd = new SQLiteCommand(
+                            "UPDATE CuentasPorPagar SET Eliminado=1, FechaEliminado=@f " +
+                            "WHERE CuentaPorPagarID=@id",
+                            conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@f",  now);
+                            cmd.Parameters.AddWithValue("@id", cuentaPorPagarID);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        PapeleraService.InsertarLog(
+                            "CXP", cuentaPorPagarID, "ELIMINAR", now, user,
+                            $"CxP #{cuentaPorPagarID}", conn, tx);
+
+                        tx.Commit();
+                        return true;
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
         // ---------------------------------------------------------------
 
         private static CuentaPorPagarConDetalle MapRow(SQLiteDataReader r)

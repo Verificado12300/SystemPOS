@@ -14,6 +14,8 @@ namespace SistemaPOS.Models
         public string Numero { get; set; }
         public decimal SubTotal { get; set; }
         public decimal IGV { get; set; }
+        public int TipoIGV { get; set; }       // 0=SIN_IGV  1=IGV_INCLUIDO  2=IGV_ADICIONAL
+        public decimal BaseImponible { get; set; }
         public decimal Total { get; set; }
         public string MetodoPago { get; set; } // EFECTIVO, YAPE, TARJETA, TRANSFERENCIA, MIXTO, CREDITO
         public decimal MontoEfectivo { get; set; }

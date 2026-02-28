@@ -36,7 +36,7 @@
             this.lblBuscar = new System.Windows.Forms.Label();
             this.dgvProductos = new System.Windows.Forms.DataGridView();
             this.pnlDetalleVenta = new System.Windows.Forms.Panel();
-            this.chkIGV = new System.Windows.Forms.CheckBox();
+            this.cboIGV = new System.Windows.Forms.ComboBox();
             this.grpMetodoPago = new System.Windows.Forms.GroupBox();
             this.txtTransferencia = new System.Windows.Forms.TextBox();
             this.txtYape = new System.Windows.Forms.TextBox();
@@ -175,7 +175,7 @@
             this.pnlDetalleVenta.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.pnlDetalleVenta.BackColor = System.Drawing.Color.White;
-            this.pnlDetalleVenta.Controls.Add(this.chkIGV);
+            this.pnlDetalleVenta.Controls.Add(this.cboIGV);
             this.pnlDetalleVenta.Controls.Add(this.grpMetodoPago);
             this.pnlDetalleVenta.Controls.Add(this.btnCancelar);
             this.pnlDetalleVenta.Controls.Add(this.btnCobrar);
@@ -202,20 +202,18 @@
             this.pnlDetalleVenta.Name = "pnlDetalleVenta";
             this.pnlDetalleVenta.Size = new System.Drawing.Size(502, 728);
             this.pnlDetalleVenta.TabIndex = 121;
-            // 
-            // chkIGV
-            // 
-            this.chkIGV.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.chkIGV.AutoSize = true;
-            this.chkIGV.Cursor = System.Windows.Forms.Cursors.Default;
-            this.chkIGV.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.chkIGV.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.chkIGV.Location = new System.Drawing.Point(303, 394);
-            this.chkIGV.Name = "chkIGV";
-            this.chkIGV.Size = new System.Drawing.Size(67, 21);
-            this.chkIGV.TabIndex = 142;
-            this.chkIGV.Text = "Aplicar";
-            this.chkIGV.UseVisualStyleBackColor = true;
+            //
+            // cboIGV
+            //
+            this.cboIGV.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboIGV.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboIGV.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.cboIGV.Items.AddRange(new object[] { "Sin IGV", "IGV Incluido", "IGV Adicional" });
+            this.cboIGV.Location = new System.Drawing.Point(295, 390);
+            this.cboIGV.Name = "cboIGV";
+            this.cboIGV.Size = new System.Drawing.Size(130, 25);
+            this.cboIGV.TabIndex = 142;
+            this.cboIGV.SelectedIndex = 0;
             // 
             // grpMetodoPago
             // 
@@ -564,7 +562,7 @@
             this.lblSubTotal.Name = "lblSubTotal";
             this.lblSubTotal.Size = new System.Drawing.Size(76, 17);
             this.lblSubTotal.TabIndex = 118;
-            this.lblSubTotal.Text = "SUBTOTAL:";
+            this.lblSubTotal.Text = "BASE IMP.:";
             // 
             // dgvCarritoVenta
             // 
@@ -930,7 +928,7 @@
         private System.Windows.Forms.TextBox txtEfectivo;
         private System.Windows.Forms.TextBox txtTransferencia;
         private System.Windows.Forms.TextBox txtYape;
-        private System.Windows.Forms.CheckBox chkIGV;
+        private System.Windows.Forms.ComboBox cboIGV;
         private System.Windows.Forms.Label lblTipoComprobante;
         private System.Windows.Forms.ComboBox cmbTipoComprobante;
         private System.Windows.Forms.ComboBox cmbClientes;

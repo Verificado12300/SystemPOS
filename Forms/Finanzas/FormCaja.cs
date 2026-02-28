@@ -30,6 +30,7 @@ namespace SistemaPOS.Forms.Finanzas
         private void ConfigurarEventos()
         {
             btnCerrarCaja.Click += BtnCerrarCaja_Click;
+            btnCapitalInicial.Click += BtnCapitalInicial_Click;
             btnExportar.Click += BtnExportar_Click;
             numEfectivoReal.ValueChanged += NumEfectivoReal_ValueChanged;
             numEfectivoReal.KeyDown += NumEfectivoReal_KeyDown;
@@ -392,6 +393,91 @@ namespace SistemaPOS.Forms.Finanzas
             {
                 MessageBox.Show($"Error: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnCapitalInicial_Click(object sender, EventArgs e)
+        {
+            if (_cajaActual == null)
+            {
+                MessageBox.Show("No hay caja abierta. Abra una caja antes de registrar capital inicial.",
+                    "Sin caja activa", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Dialog simple para pedir monto
+            decimal monto = 0;
+            using (var dlg = new Form())
+            {
+                dlg.Text = "Capital Inicial";
+                dlg.ClientSize = new System.Drawing.Size(320, 120);
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+
+                var lbl = new Label { Text = "Monto (S/):", Location = new System.Drawing.Point(16, 18), AutoSize = true };
+                var num = new System.Windows.Forms.NumericUpDown
+                {
+                    Location = new System.Drawing.Point(16, 38),
+                    Size = new System.Drawing.Size(180, 26),
+                    DecimalPlaces = 2,
+                    Minimum = 0,
+                    Maximum = 9999999,
+                    Value = 0
+                };
+                var btnOk = new Button
+                {
+                    Text = "Aceptar",
+                    DialogResult = DialogResult.OK,
+                    Location = new System.Drawing.Point(200, 36),
+                    Size = new System.Drawing.Size(100, 28)
+                };
+                dlg.Controls.AddRange(new System.Windows.Forms.Control[] { lbl, num, btnOk });
+                dlg.AcceptButton = btnOk;
+
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                monto = num.Value;
+            }
+
+            if (monto <= 0)
+            {
+                MessageBox.Show("El monto debe ser mayor a cero.", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                using (var conn = DatabaseConnection.GetConnection())
+                using (var tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        ContabilidadService.RegistrarCapitalInicial(
+                            _cajaActual.FechaApertura,
+                            DateTime.Now.TimeOfDay,
+                            monto,
+                            SesionActual.Usuario.UsuarioID,
+                            _cajaActual.CajaID,
+                            conn, tx);
+                        tx.Commit();
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+
+                MessageBox.Show(
+                    $"Asiento de capital inicial registrado.\nDr 101 Caja / Cr 300 Capital — S/ {monto:N2}",
+                    "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al registrar capital inicial:\n\n{ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

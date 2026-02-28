@@ -448,7 +448,7 @@
             this.colAnular.Image = ((System.Drawing.Image)(resources.GetObject("colAnular.Image")));
             this.colAnular.Name = "colAnular";
             this.colAnular.Width = 25;
-            // 
+            //
             // pnlFiltro
             // 
             this.pnlFiltro.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 

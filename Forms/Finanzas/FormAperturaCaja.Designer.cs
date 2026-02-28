@@ -22,6 +22,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlCardMonto = new System.Windows.Forms.Panel();
             this.lblMontoInicial = new System.Windows.Forms.Label();
             this.txtMontoInicial = new System.Windows.Forms.TextBox();
+            this.chkCapitalInicial = new System.Windows.Forms.CheckBox();
             this.pnlCardTurno = new System.Windows.Forms.Panel();
             this.lblCardTurnoTitulo = new System.Windows.Forms.Label();
             this.rbMañana = new System.Windows.Forms.RadioButton();
@@ -255,9 +256,10 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlCardMonto.BackColor = System.Drawing.Color.White;
             this.pnlCardMonto.Controls.Add(this.lblMontoInicial);
             this.pnlCardMonto.Controls.Add(this.txtMontoInicial);
+            this.pnlCardMonto.Controls.Add(this.chkCapitalInicial);
             this.pnlCardMonto.Location = new System.Drawing.Point(10, 204);
             this.pnlCardMonto.Name = "pnlCardMonto";
-            this.pnlCardMonto.Size = new System.Drawing.Size(398, 100);
+            this.pnlCardMonto.Size = new System.Drawing.Size(398, 130);
             this.pnlCardMonto.TabIndex = 2;
             //
             // lblMontoInicial
@@ -282,11 +284,24 @@ namespace SistemaPOS.Forms.Finanzas
             this.txtMontoInicial.TabIndex = 1;
             this.txtMontoInicial.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             //
+            // chkCapitalInicial
+            //
+            this.chkCapitalInicial.AutoSize = true;
+            this.chkCapitalInicial.Checked = false;
+            this.chkCapitalInicial.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.chkCapitalInicial.ForeColor = System.Drawing.Color.FromArgb(99, 110, 114);
+            this.chkCapitalInicial.Location = new System.Drawing.Point(14, 96);
+            this.chkCapitalInicial.Name = "chkCapitalInicial";
+            this.chkCapitalInicial.Size = new System.Drawing.Size(260, 19);
+            this.chkCapitalInicial.TabIndex = 2;
+            this.chkCapitalInicial.Text = "Es capital inicial (genera asiento contable)";
+            this.chkCapitalInicial.UseVisualStyleBackColor = true;
+            //
             // FormAperturaCaja
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(420, 440);
+            this.ClientSize = new System.Drawing.Size(420, 470);
             this.Controls.Add(this.pnlBody);
             this.Controls.Add(this.pnlFooter);
             this.Controls.Add(this.pnlHeader);
@@ -332,5 +347,6 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.Panel pnlCardMonto;
         private System.Windows.Forms.Label lblMontoInicial;
         private System.Windows.Forms.TextBox txtMontoInicial;
+        private System.Windows.Forms.CheckBox chkCapitalInicial;
     }
 }

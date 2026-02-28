@@ -40,10 +40,11 @@ namespace SistemaPOS.Forms.Reportes
                 int idx = dgvBalance.Rows.Add("ACTIVOS", "");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);
 
-                dgvBalance.Rows.Add("  Caja (101)",               $"S/ {bg.Caja:N2}");
-                dgvBalance.Rows.Add("  Bancos (102)",              $"S/ {bg.Bancos:N2}");
-                dgvBalance.Rows.Add("  Cuentas por Cobrar (120)",  $"S/ {bg.CxC:N2}");
-                dgvBalance.Rows.Add("  Inventario (140)",          $"S/ {bg.Inventario:N2}");
+                dgvBalance.Rows.Add("  Caja (101)",                    $"S/ {bg.Caja:N2}");
+                dgvBalance.Rows.Add("  Bancos (102)",                   $"S/ {bg.Bancos:N2}");
+                dgvBalance.Rows.Add("  Cuentas por Cobrar (120)",       $"S/ {bg.CxC:N2}");
+                dgvBalance.Rows.Add("  Inventario (140)",               $"S/ {bg.Inventario:N2}");
+                dgvBalance.Rows.Add("  IGV Crédito Fiscal (4012)",      $"S/ {bg.IGVCreditoFiscal:N2}");
 
                 idx = dgvBalance.Rows.Add("TOTAL ACTIVOS", $"S/ {bg.TotalActivos:N2}");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);
@@ -55,7 +56,8 @@ namespace SistemaPOS.Forms.Reportes
                 idx = dgvBalance.Rows.Add("PASIVOS", "");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);
 
-                dgvBalance.Rows.Add("  Cuentas por Pagar (200)", $"S/ {bg.CxP:N2}");
+                dgvBalance.Rows.Add("  Cuentas por Pagar (200)",   $"S/ {bg.CxP:N2}");
+                dgvBalance.Rows.Add("  Tributos por Pagar (210)", $"S/ {bg.Tributos:N2}");
 
                 idx = dgvBalance.Rows.Add("TOTAL PASIVOS", $"S/ {bg.TotalPasivos:N2}");
                 dgvBalance.Rows[idx].DefaultCellStyle.Font = new Font(dgvBalance.Font, FontStyle.Bold);

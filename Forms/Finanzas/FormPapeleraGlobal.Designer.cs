@@ -30,7 +30,6 @@ namespace SistemaPOS.Forms.Finanzas
             this.colEntidad   = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colId        = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colReferencia = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colMonto     = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colFechaElim = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colUsuarioElim = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colRestaurar = new System.Windows.Forms.DataGridViewButtonColumn();
@@ -108,7 +107,7 @@ namespace SistemaPOS.Forms.Finanzas
             // cmbEntidad
             this.cmbEntidad.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbEntidad.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.cmbEntidad.Items.AddRange(new object[] { "TODOS", "GASTO", "VENTA", "COMPRA" });
+            this.cmbEntidad.Items.AddRange(new object[] { "TODOS", "GASTO", "VENTA", "COMPRA", "CLIENTE", "PROVEEDOR", "PRODUCTO", "CXP" });
             this.cmbEntidad.Location = new System.Drawing.Point(362, 14);
             this.cmbEntidad.Size = new System.Drawing.Size(110, 24);
 
@@ -153,7 +152,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.dgvPapelera.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[]
             {
                 this.colEntidad, this.colId, this.colReferencia,
-                this.colMonto, this.colFechaElim, this.colUsuarioElim,
+                this.colFechaElim, this.colUsuarioElim,
                 this.colRestaurar
             });
             this.dgvPapelera.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.DgvPapelera_CellContentClick);
@@ -175,13 +174,6 @@ namespace SistemaPOS.Forms.Finanzas
             this.colReferencia.HeaderText = "Referencia / Concepto";
             this.colReferencia.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.colReferencia.ReadOnly = true;
-
-            // colMonto
-            this.colMonto.Name = "colMonto";
-            this.colMonto.HeaderText = "Monto";
-            this.colMonto.Width = 100;
-            this.colMonto.ReadOnly = true;
-            this.colMonto.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
 
             // colFechaElim
             this.colFechaElim.Name = "colFechaElim";
@@ -277,7 +269,6 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.DataGridViewTextBoxColumn colEntidad;
         private System.Windows.Forms.DataGridViewTextBoxColumn colId;
         private System.Windows.Forms.DataGridViewTextBoxColumn colReferencia;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colMonto;
         private System.Windows.Forms.DataGridViewTextBoxColumn colFechaElim;
         private System.Windows.Forms.DataGridViewTextBoxColumn colUsuarioElim;
         private System.Windows.Forms.DataGridViewButtonColumn colRestaurar;

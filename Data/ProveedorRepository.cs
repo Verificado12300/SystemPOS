@@ -189,33 +189,26 @@ namespace SistemaPOS.Data
 
         public static bool Eliminar(int proveedorID)
         {
-            using (var connection = DatabaseConnection.GetConnection())
-            {
-                // Verificar si tiene compras asociadas
-                string checkQuery = "SELECT COUNT(*) FROM Compras WHERE ProveedorID = @id";
-                using (var checkCmd = new SQLiteCommand(checkQuery, connection))
-                {
-                    checkCmd.Parameters.AddWithValue("@id", proveedorID);
-                    long count = (long)checkCmd.ExecuteScalar();
-                    if (count > 0)
-                    {
-                        // Tiene compras, solo desactivar
-                        string updateQuery = "UPDATE Proveedores SET Activo = 0 WHERE ProveedorID = @id";
-                        using (var updateCmd = new SQLiteCommand(updateQuery, connection))
-                        {
-                            updateCmd.Parameters.AddWithValue("@id", proveedorID);
-                            return updateCmd.ExecuteNonQuery() > 0;
-                        }
-                    }
-                }
+            string user = SistemaPOS.Utils.SesionActual.Usuario?.NombreUsuario ?? "Sistema";
 
-                // No tiene compras, eliminar físicamente
-                string deleteQuery = "DELETE FROM Proveedores WHERE ProveedorID = @id";
-                using (var deleteCmd = new SQLiteCommand(deleteQuery, connection))
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var tx   = conn.BeginTransaction())
+            {
+                try
                 {
-                    deleteCmd.Parameters.AddWithValue("@id", proveedorID);
-                    return deleteCmd.ExecuteNonQuery() > 0;
+                    string resumen;
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT RazonSocial FROM Proveedores WHERE ProveedorID=@id", conn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@id", proveedorID);
+                        resumen = cmd.ExecuteScalar()?.ToString() ?? $"Proveedor #{proveedorID}";
+                    }
+
+                    PapeleraService.SoftDelete("PROVEEDOR", proveedorID, resumen, user, conn, tx);
+                    tx.Commit();
+                    return true;
                 }
+                catch { tx.Rollback(); throw; }
             }
         }
 

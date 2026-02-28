@@ -126,7 +126,9 @@ CREATE TABLE IF NOT EXISTS Proveedores (
     Contacto TEXT(100),
     TelefonoContacto TEXT(20),
     FechaRegistro TEXT DEFAULT CURRENT_TIMESTAMP,
-    Activo INTEGER DEFAULT 1 CHECK(Activo IN (0,1))
+    Activo INTEGER DEFAULT 1 CHECK(Activo IN (0,1)),
+    Eliminado INTEGER NOT NULL DEFAULT 0,
+    FechaEliminado TEXT NULL
 );
 
 CREATE TABLE IF NOT EXISTS Productos (
@@ -145,6 +147,8 @@ CREATE TABLE IF NOT EXISTS Productos (
     FechaCreacion TEXT DEFAULT CURRENT_TIMESTAMP,
     FechaUltimaModificacion TEXT,
     Activo INTEGER DEFAULT 1 CHECK(Activo IN (0,1)),
+    Eliminado INTEGER NOT NULL DEFAULT 0,
+    FechaEliminado TEXT NULL,
     FOREIGN KEY (CategoriaID) REFERENCES Categorias(CategoriaID),
     FOREIGN KEY (UnidadBaseID) REFERENCES UnidadesBase(UnidadID),
     FOREIGN KEY (ProveedorID) REFERENCES Proveedores(ProveedorID) ON DELETE SET NULL
@@ -196,7 +200,9 @@ CREATE TABLE IF NOT EXISTS Clientes (
     Email TEXT(100),
     LimiteCredito REAL DEFAULT 0 CHECK(LimiteCredito >= 0),
     FechaRegistro TEXT DEFAULT CURRENT_TIMESTAMP,
-    Activo INTEGER DEFAULT 1 CHECK(Activo IN (0,1))
+    Activo INTEGER DEFAULT 1 CHECK(Activo IN (0,1)),
+    Eliminado INTEGER NOT NULL DEFAULT 0,
+    FechaEliminado TEXT NULL
 );
 
 -- ============================================================
@@ -407,6 +413,9 @@ CREATE TABLE IF NOT EXISTS Gastos (
     EliminadoPor TEXT NULL,
     RestauradoFecha TEXT NULL,
     RestauradoPor TEXT NULL,
+    Anulado INTEGER NOT NULL DEFAULT 0,
+    AnuladoFecha TEXT NULL,
+    AnuladoPor TEXT NULL,
     FOREIGN KEY (CajaID)    REFERENCES Cajas(CajaID),
     FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
 );
@@ -432,6 +441,8 @@ CREATE TABLE IF NOT EXISTS CuentasPorPagar (
     Observacion      TEXT    NULL,
     CreatedAt        TEXT    NOT NULL DEFAULT '',
     UpdatedAt        TEXT    NOT NULL DEFAULT '',
+    Eliminado        INTEGER NOT NULL DEFAULT 0,
+    FechaEliminado   TEXT    NULL,
     FOREIGN KEY (ProveedorID) REFERENCES Proveedores(ProveedorID)
 );
 

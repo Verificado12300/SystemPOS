@@ -203,42 +203,37 @@ namespace SistemaPOS.Forms.Compras
             {
                 if (estado == "ANULADA")
                 {
-                    MessageBox.Show("Esta compra ya estÃ¡ anulada", "Aviso");
+                    MessageBox.Show("Esta compra ya está anulada.", "Aviso",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                AnularCompra(compraID);
+                AnularEliminarCompra(compraID);
             }
         }
 
-        private void AnularCompra(int compraID)
+        private void AnularEliminarCompra(int compraID)
         {
-            var resultado = MessageBox.Show(
-                "Â¿EstÃ¡ seguro de anular esta compra?\n\nEsta acciÃ³n revertirÃ¡ el stock y no se puede deshacer.",
-                "Confirmar anulaciÃ³n", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            bool tieneImpacto = PapeleraService.TieneImpactoContable("COMPRA", compraID);
 
-            if (resultado != DialogResult.Yes) return;
+            string mensaje = tieneImpacto
+                ? "Esta compra tiene asiento contable o CxP activa.\n\nSe ANULARÁ (revertirá el stock y la contabilidad).\n\n¿Continuar?"
+                : "Esta compra no tiene asiento contable.\n\nSe enviará a la PAPELERA (podrá recuperarse).\n\n¿Continuar?";
 
-            using (var prompt = new FormMotivoAnulacion(
-                "Motivo de Anulación",
-                "Ingrese el motivo de anulación:"))
+            if (MessageBox.Show(mensaje, "Confirmar acción",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            try
             {
-                if (prompt.ShowDialog() == DialogResult.OK)
-                {
-                    string motivo = prompt.Motivo;
-
-                    try
-                    {
-                        if (CompraRepository.Anular(compraID, motivo))
-                        {
-                            MessageBox.Show("Compra anulada exitosamente", "Ã‰xito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            CargarCompras();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error al anular compra: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
+                string usuario = SesionActual.Usuario?.NombreUsuario ?? "Sistema";
+                CompraRepository.EliminarInteligente(compraID, usuario);
+                string ok = tieneImpacto ? "Compra anulada correctamente." : "Compra enviada a la papelera.";
+                MessageBox.Show(ok, "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CargarCompras();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

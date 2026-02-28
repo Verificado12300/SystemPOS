@@ -10,5 +10,6 @@ namespace SistemaPOS.Models
         public decimal PrecioVenta { get; set; }
         public decimal? Ganancia { get; set; }
         public bool Activo { get; set; }
+        public bool PrecioIncluyeIGV { get; set; }
     }
 }

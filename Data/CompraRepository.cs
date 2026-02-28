@@ -527,6 +527,42 @@ namespace SistemaPOS.Data
                 }
             }
         }
+
+        /// <summary>
+        /// Eliminación inteligente: si tiene asiento → auto-anula (motivo "Eliminación automática");
+        /// si no tiene asiento → soft-delete a papelera.
+        /// </summary>
+        public static bool EliminarInteligente(int compraID, string usuario)
+        {
+            if (PapeleraService.TieneImpactoContable("COMPRA", compraID))
+                return Anular(compraID, "Eliminación automática");
+
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var tx  = conn.BeginTransaction())
+            {
+                try
+                {
+                    string resumen;
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT COALESCE(NumeroCompra,'') || ' — S/ ' || CAST(Total AS TEXT) " +
+                        "FROM Compras WHERE CompraID=@id", conn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@id", compraID);
+                        resumen = cmd.ExecuteScalar()?.ToString() ?? "";
+                    }
+
+                    PapeleraService.SoftDelete("COMPRA", compraID, resumen, usuario, conn, tx);
+                    tx.Commit();
+                    return true;
+                }
+                catch
+                {
+                    tx.Rollback();
+                    throw;
+                }
+            }
+        }
+
         private static bool EsNumeroCompraDuplicado(SQLiteException ex)
         {
             if (ex == null)

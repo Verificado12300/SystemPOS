@@ -64,7 +64,7 @@ namespace SistemaPOS.Forms.Compras
             this.rbContado = new System.Windows.Forms.RadioButton();
             this.txtIGV = new System.Windows.Forms.TextBox();
             this.lblIGV = new System.Windows.Forms.Label();
-            this.chkIncluirIGV = new System.Windows.Forms.CheckBox();
+            this.cboIGV = new System.Windows.Forms.ComboBox();
             this.txtSubtotal = new System.Windows.Forms.TextBox();
             this.lblSubtotal = new System.Windows.Forms.Label();
             this.dgvProductos = new System.Windows.Forms.DataGridView();
@@ -348,7 +348,7 @@ namespace SistemaPOS.Forms.Compras
             this.pnlDetalleProducto.Controls.Add(this.rbContado);
             this.pnlDetalleProducto.Controls.Add(this.txtIGV);
             this.pnlDetalleProducto.Controls.Add(this.lblIGV);
-            this.pnlDetalleProducto.Controls.Add(this.chkIncluirIGV);
+            this.pnlDetalleProducto.Controls.Add(this.cboIGV);
             this.pnlDetalleProducto.Controls.Add(this.txtSubtotal);
             this.pnlDetalleProducto.Controls.Add(this.lblSubtotal);
             this.pnlDetalleProducto.Controls.Add(this.dgvProductos);
@@ -641,17 +641,16 @@ namespace SistemaPOS.Forms.Compras
             this.txtSubtotal.Size = new System.Drawing.Size(76, 20);
             this.txtSubtotal.TabIndex = 130;
             //
-            // chkIncluirIGV
+            // cboIGV
             //
-            this.chkIncluirIGV.AutoSize = true;
-            this.chkIncluirIGV.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-            this.chkIncluirIGV.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.chkIncluirIGV.Location = new System.Drawing.Point(18, 354);
-            this.chkIncluirIGV.Name = "chkIncluirIGV";
-            this.chkIncluirIGV.Size = new System.Drawing.Size(122, 21);
-            this.chkIncluirIGV.TabIndex = 131;
-            this.chkIncluirIGV.Text = "Incluir IGV (18%)";
-            this.chkIncluirIGV.UseVisualStyleBackColor = true;
+            this.cboIGV.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboIGV.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.cboIGV.Items.AddRange(new object[] { "Sin IGV", "IGV Incluido", "IGV Adicional" });
+            this.cboIGV.Location = new System.Drawing.Point(18, 354);
+            this.cboIGV.Name = "cboIGV";
+            this.cboIGV.Size = new System.Drawing.Size(150, 24);
+            this.cboIGV.TabIndex = 131;
+            this.cboIGV.SelectedIndex = 0;
             //
             // lblIGV
             //
@@ -861,7 +860,7 @@ namespace SistemaPOS.Forms.Compras
         private System.Windows.Forms.Label lblSubtotal;
         private System.Windows.Forms.TextBox txtIGV;
         private System.Windows.Forms.Label lblIGV;
-        private System.Windows.Forms.CheckBox chkIncluirIGV;
+        private System.Windows.Forms.ComboBox cboIGV;
         private System.Windows.Forms.TextBox txtObservaciones;
         private System.Windows.Forms.Label lblObservaciones;
         private System.Windows.Forms.TextBox txtTotal;

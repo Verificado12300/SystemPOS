@@ -70,6 +70,8 @@
             this.txtCantidad = new System.Windows.Forms.TextBox();
             this.lblCantidad = new System.Windows.Forms.Label();
             this.btnAgregarPres = new System.Windows.Forms.Button();
+            this.chkPrecioIncluyeIGV = new System.Windows.Forms.CheckBox();
+            this.colIGVPres = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.pbImagenProducto)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPresentaciones)).BeginInit();
             this.SuspendLayout();
@@ -316,8 +318,9 @@
             this.colCosto,
             this.colPrecio,
             this.colGanancia,
+            this.colIGVPres,
             this.colEliminar});
-            this.dgvPresentaciones.Location = new System.Drawing.Point(16, 464);
+            this.dgvPresentaciones.Location = new System.Drawing.Point(16, 494);
             this.dgvPresentaciones.Name = "dgvPresentaciones";
             this.dgvPresentaciones.RowHeadersVisible = false;
             this.dgvPresentaciones.Size = new System.Drawing.Size(654, 123);
@@ -441,7 +444,7 @@
             this.btnGuardar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnGuardar.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnGuardar.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.btnGuardar.Location = new System.Drawing.Point(204, 605);
+            this.btnGuardar.Location = new System.Drawing.Point(204, 635);
             this.btnGuardar.Name = "btnGuardar";
             this.btnGuardar.Size = new System.Drawing.Size(128, 38);
             this.btnGuardar.TabIndex = 38;
@@ -457,7 +460,7 @@
             this.btnCancelar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCancelar.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnCancelar.ForeColor = System.Drawing.Color.White;
-            this.btnCancelar.Location = new System.Drawing.Point(358, 605);
+            this.btnCancelar.Location = new System.Drawing.Point(358, 635);
             this.btnCancelar.Name = "btnCancelar";
             this.btnCancelar.Size = new System.Drawing.Size(128, 38);
             this.btnCancelar.TabIndex = 39;
@@ -519,13 +522,32 @@
             this.btnAgregarPres.TabIndex = 44;
             this.btnAgregarPres.Text = "Agregar";
             this.btnAgregarPres.UseVisualStyleBackColor = false;
-            // 
+            //
+            // chkPrecioIncluyeIGV
+            //
+            this.chkPrecioIncluyeIGV.AutoSize = true;
+            this.chkPrecioIncluyeIGV.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.chkPrecioIncluyeIGV.Location = new System.Drawing.Point(436, 453);
+            this.chkPrecioIncluyeIGV.Name = "chkPrecioIncluyeIGV";
+            this.chkPrecioIncluyeIGV.Size = new System.Drawing.Size(120, 19);
+            this.chkPrecioIncluyeIGV.TabIndex = 45;
+            this.chkPrecioIncluyeIGV.Text = "Precio incluye IGV";
+            //
+            // colIGVPres
+            //
+            this.colIGVPres.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.colIGVPres.HeaderText = "IGV inc.";
+            this.colIGVPres.Name = "colIGVPres";
+            this.colIGVPres.ReadOnly = true;
+            this.colIGVPres.Width = 55;
+            //
             // FormProductoDetalle
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.ClientSize = new System.Drawing.Size(684, 652);
+            this.ClientSize = new System.Drawing.Size(684, 685);
+            this.Controls.Add(this.chkPrecioIncluyeIGV);
             this.Controls.Add(this.btnAgregarPres);
             this.Controls.Add(this.txtCantidad);
             this.Controls.Add(this.lblCantidad);
@@ -614,5 +636,7 @@
         private System.Windows.Forms.TextBox txtCantidad;
         private System.Windows.Forms.Label lblCantidad;
         private System.Windows.Forms.Button btnAgregarPres;
+        private System.Windows.Forms.CheckBox chkPrecioIncluyeIGV;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colIGVPres;
     }
 }

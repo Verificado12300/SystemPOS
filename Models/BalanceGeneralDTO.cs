@@ -4,16 +4,18 @@ namespace SistemaPOS.Models
 {
     public class BalanceGeneralDTO
     {
-        // ACTIVOS (saldo = Debe - Haber, cuentas 101/102/120/140)
-        public decimal Caja       { get; set; }
-        public decimal Bancos     { get; set; }
-        public decimal CxC        { get; set; }
-        public decimal Inventario { get; set; }
-        public decimal TotalActivos => Caja + Bancos + CxC + Inventario;
+        // ACTIVOS (saldo = Debe - Haber, cuentas 101/102/120/140/4012)
+        public decimal Caja             { get; set; }
+        public decimal Bancos           { get; set; }
+        public decimal CxC              { get; set; }
+        public decimal Inventario       { get; set; }
+        public decimal IGVCreditoFiscal { get; set; }  // cuenta 4012: Debe - Haber
+        public decimal TotalActivos => Caja + Bancos + CxC + Inventario + IGVCreditoFiscal;
 
-        // PASIVOS (saldo = Haber - Debe, cuenta 200)
+        // PASIVOS (saldo = Haber - Debe, cuentas 200 y 210)
         public decimal CxP          { get; set; }
-        public decimal TotalPasivos => CxP;
+        public decimal Tributos     { get; set; }  // cuenta 210 Tributos por Pagar (IGV)
+        public decimal TotalPasivos => CxP + Tributos;
 
         // PATRIMONIO (cuenta 300 + utilidad acumulada de cuentas 400-500-600)
         public decimal Capital         { get; set; }  // cuenta 300: Haber - Debe

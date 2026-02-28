@@ -76,7 +76,11 @@ namespace SistemaPOS.Forms.Finanzas
                     Estado = "ABIERTA"
                 };
 
-                if (CajaRepository.AbrirCaja(caja))
+                bool opened = chkCapitalInicial.Checked
+                    ? CajaRepository.AbrirCaja(caja, true, SesionActual.Usuario.UsuarioID)
+                    : CajaRepository.AbrirCaja(caja);
+
+                if (opened)
                 {
                     MessageBox.Show("Caja abierta exitosamente", "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);

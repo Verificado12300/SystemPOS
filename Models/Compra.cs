@@ -13,6 +13,8 @@ namespace SistemaPOS.Models
         public string Serie { get; set; }
         public string Numero { get; set; }
         public bool IncluyeIGV { get; set; }
+        public int TipoIGV { get; set; }         // 0=SinIGV 1=IGVIncluido 2=IGVAdicional
+        public decimal BaseImponible { get; set; }
         public decimal SubTotal { get; set; }
         public decimal IGV { get; set; }
         public decimal Total { get; set; }

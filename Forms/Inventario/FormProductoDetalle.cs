@@ -134,6 +134,7 @@ namespace SistemaPOS.Forms.Inventario
                     row.Cells["colCosto"].Value = pres.CostoBase.ToString("N2");
                     row.Cells["colPrecio"].Value = pres.PrecioVenta.ToString("N2");
                     row.Cells["colGanancia"].Value = (pres.Ganancia ?? 0).ToString("N2") + "%";
+                    row.Cells["colIGVPres"].Value = pres.PrecioIncluyeIGV ? "Sí" : "No";
                 }
             }
             catch (Exception ex)
@@ -197,7 +198,8 @@ namespace SistemaPOS.Forms.Inventario
                 CantidadUnidades = cantidad,
                 CostoBase = costo,
                 PrecioVenta = precio,
-                Ganancia = ganancia
+                Ganancia = ganancia,
+                PrecioIncluyeIGV = chkPrecioIncluyeIGV.Checked
             });
 
             // Agregar a la grilla
@@ -209,12 +211,14 @@ namespace SistemaPOS.Forms.Inventario
             row.Cells["colCosto"].Value = costo.ToString("N2");
             row.Cells["colPrecio"].Value = precio.ToString("N2");
             row.Cells["colGanancia"].Value = ganancia.ToString("N2") + "%";
+            row.Cells["colIGVPres"].Value = chkPrecioIncluyeIGV.Checked ? "Sí" : "No";
 
             // Limpiar campos
             cmbPresentacion.SelectedIndex = -1;
             txtCantidad.Clear();
             txtCostoBase.Clear();
             txtPrecio.Clear();
+            chkPrecioIncluyeIGV.Checked = false;
         }
 
         private void DgvPresentaciones_CellClick(object sender, DataGridViewCellEventArgs e)

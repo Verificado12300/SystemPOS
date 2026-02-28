@@ -217,11 +217,11 @@ namespace SistemaPOS.Forms.Ventas
             {
                 ImprimirVenta(ventaID);
             }
-            // Botón Anular
+            // Botón Anular / Eliminar inteligente (un solo botón, routing automático)
             else if (columnName == "colAnular")
             {
-                var usuario = SesionActual.Usuario;
-                if (usuario == null || (!usuario.PermisoAnularVentas && usuario.RolID != 1))
+                var usuarioObj = SesionActual.Usuario;
+                if (usuarioObj == null || (!usuarioObj.PermisoAnularVentas && usuarioObj.RolID != 1))
                 {
                     MessageBox.Show("No tienes permiso para anular ventas.", "Acceso denegado",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -229,11 +229,36 @@ namespace SistemaPOS.Forms.Ventas
                 }
                 if (estado == "ANULADA")
                 {
-                    MessageBox.Show("Esta venta ya está anulada", "Aviso",
+                    MessageBox.Show("Esta venta ya está anulada.", "Aviso",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                AnularVenta(ventaID);
+                AnularEliminarVenta(ventaID, usuarioObj.NombreUsuario);
+            }
+        }
+
+        private void AnularEliminarVenta(int ventaID, string usuario)
+        {
+            bool tieneImpacto = PapeleraService.TieneImpactoContable("VENTA", ventaID);
+
+            string mensaje = tieneImpacto
+                ? "Esta venta tiene asiento contable.\n\nSe ANULARÁ (revertirá el stock y la contabilidad).\n\n¿Continuar?"
+                : "Esta venta no tiene asiento contable.\n\nSe enviará a la PAPELERA (podrá recuperarse).\n\n¿Continuar?";
+
+            if (MessageBox.Show(mensaje, "Confirmar acción",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            try
+            {
+                VentaRepository.EliminarInteligente(ventaID, usuario);
+                string ok = tieneImpacto ? "Venta anulada correctamente." : "Venta enviada a la papelera.";
+                MessageBox.Show(ok, "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CargarVentas();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -267,43 +292,6 @@ namespace SistemaPOS.Forms.Ventas
             {
                 MessageBox.Show($"Error al imprimir: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void AnularVenta(int ventaID)
-        {
-            var resultado = MessageBox.Show(
-                "¿Está seguro de anular esta venta?\n\nEsta acción devolverá el stock y no se puede deshacer.",
-                "Confirmar anulación",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning);
-
-            if (resultado == DialogResult.Yes)
-            {
-                using (var prompt = new FormMotivoAnulacion(
-                    "Motivo de Anulación",
-                    "Ingrese el motivo de anulación:"))
-                {
-                    if (prompt.ShowDialog() == DialogResult.OK)
-                    {
-                        string motivo = prompt.Motivo;
-
-                        try
-                        {
-                            if (VentaRepository.Anular(ventaID, motivo))
-                            {
-                                MessageBox.Show("Venta anulada exitosamente", "Éxito",
-                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                                CargarVentas();
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Error al anular venta: {ex.Message}", "Error",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                }
             }
         }
 

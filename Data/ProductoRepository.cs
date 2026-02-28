@@ -181,9 +181,10 @@ namespace SistemaPOS.Data
                 using (var connection = DatabaseConnection.GetConnection())
                 {
                     string query = @"
-                        SELECT pp.ProductoPresentacionID, pp.PresentacionID, pp.PrecioVenta, 
+                        SELECT pp.ProductoPresentacionID, pp.PresentacionID, pp.PrecioVenta,
                                pp.CantidadUnidades, pp.CostoBase, pp.Ganancia,
-                               p.Nombre as NombrePresentacion
+                               p.Nombre as NombrePresentacion,
+                               pp.PrecioIncluyeIGV
                         FROM ProductoPresentaciones pp
                         INNER JOIN Presentaciones p ON pp.PresentacionID = p.PresentacionID
                         WHERE pp.ProductoID = @ProductoID AND pp.Activo = 1";
@@ -204,7 +205,8 @@ namespace SistemaPOS.Data
                                     CantidadUnidades = reader.GetDecimal(3),
                                     CostoBase = reader.GetDecimal(4),
                                     Ganancia = reader.IsDBNull(5) ? (decimal?)null : reader.GetDecimal(5),
-                                    ProductoID = productoID
+                                    ProductoID = productoID,
+                                    PrecioIncluyeIGV = !reader.IsDBNull(7) && reader.GetInt32(7) == 1
                                 });
                             }
                         }
@@ -257,10 +259,10 @@ namespace SistemaPOS.Data
 
                         // Insertar presentaciones
                         string queryPresentacion = @"
-                            INSERT INTO ProductoPresentaciones 
-                            (ProductoID, PresentacionID, CantidadUnidades, CostoBase, PrecioVenta, Ganancia, Activo)
-                            VALUES 
-                            (@ProductoID, @PresentacionID, @CantidadUnidades, @CostoBase, @PrecioVenta, @Ganancia, 1)";
+                            INSERT INTO ProductoPresentaciones
+                            (ProductoID, PresentacionID, CantidadUnidades, CostoBase, PrecioVenta, Ganancia, Activo, PrecioIncluyeIGV)
+                            VALUES
+                            (@ProductoID, @PresentacionID, @CantidadUnidades, @CostoBase, @PrecioVenta, @Ganancia, 1, @PrecioIncluyeIGV)";
 
                         foreach (var presentacion in presentaciones)
                         {
@@ -272,6 +274,7 @@ namespace SistemaPOS.Data
                                 cmd.Parameters.AddWithValue("@CostoBase", presentacion.CostoBase);
                                 cmd.Parameters.AddWithValue("@PrecioVenta", presentacion.PrecioVenta);
                                 cmd.Parameters.AddWithValue("@Ganancia", presentacion.Ganancia ?? 0);
+                                cmd.Parameters.AddWithValue("@PrecioIncluyeIGV", presentacion.PrecioIncluyeIGV ? 1 : 0);
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -477,14 +480,15 @@ namespace SistemaPOS.Data
                         CostoBase = @CostoBase,
                         PrecioVenta = @PrecioVenta,
                         Ganancia = @Ganancia,
+                        PrecioIncluyeIGV = @PrecioIncluyeIGV,
                         Activo = 1
                     WHERE ProductoID = @ProductoID AND PresentacionID = @PresentacionID";
 
                         string insertPresQuery = @"
                     INSERT INTO ProductoPresentaciones
-                    (ProductoID, PresentacionID, CantidadUnidades, CostoBase, PrecioVenta, Ganancia, Activo)
+                    (ProductoID, PresentacionID, CantidadUnidades, CostoBase, PrecioVenta, Ganancia, Activo, PrecioIncluyeIGV)
                     VALUES
-                    (@ProductoID, @PresentacionID, @CantidadUnidades, @CostoBase, @PrecioVenta, @Ganancia, 1)";
+                    (@ProductoID, @PresentacionID, @CantidadUnidades, @CostoBase, @PrecioVenta, @Ganancia, 1, @PrecioIncluyeIGV)";
 
                         foreach (var presentacion in presentaciones)
                         {
@@ -498,6 +502,7 @@ namespace SistemaPOS.Data
                                 cmd.Parameters.AddWithValue("@CostoBase", presentacion.CostoBase);
                                 cmd.Parameters.AddWithValue("@PrecioVenta", presentacion.PrecioVenta);
                                 cmd.Parameters.AddWithValue("@Ganancia", presentacion.Ganancia ?? 0);
+                                cmd.Parameters.AddWithValue("@PrecioIncluyeIGV", presentacion.PrecioIncluyeIGV ? 1 : 0);
                                 rowsAffected = cmd.ExecuteNonQuery();
                             }
 
@@ -512,6 +517,7 @@ namespace SistemaPOS.Data
                                     cmd.Parameters.AddWithValue("@CostoBase", presentacion.CostoBase);
                                     cmd.Parameters.AddWithValue("@PrecioVenta", presentacion.PrecioVenta);
                                     cmd.Parameters.AddWithValue("@Ganancia", presentacion.Ganancia ?? 0);
+                                    cmd.Parameters.AddWithValue("@PrecioIncluyeIGV", presentacion.PrecioIncluyeIGV ? 1 : 0);
                                     cmd.ExecuteNonQuery();
                                 }
                             }
@@ -559,84 +565,26 @@ namespace SistemaPOS.Data
         {
             try
             {
-                using (var connection = DatabaseConnection.GetConnection())
+                string user = SesionActual.Usuario?.NombreUsuario ?? "Sistema";
+
+                using (var conn = DatabaseConnection.GetConnection())
+                using (var tx   = conn.BeginTransaction())
                 {
-                    // Verificar si tiene ventas o compras asociadas
-                    string checkVentas = "SELECT COUNT(*) FROM VentaDetalles WHERE ProductoID = @ProductoID";
-                    using (var cmd = new SQLiteCommand(checkVentas, connection))
+                    try
                     {
-                        cmd.Parameters.AddWithValue("@ProductoID", productoID);
-                        long ventasCount = (long)cmd.ExecuteScalar();
-
-                        if (ventasCount > 0)
+                        string resumen;
+                        using (var cmd = new SQLiteCommand(
+                            "SELECT Nombre FROM Productos WHERE ProductoID=@id", conn, tx))
                         {
-                            // Tiene ventas, solo desactivar
-                            string updateQuery = "UPDATE Productos SET Activo = 0 WHERE ProductoID = @ProductoID";
-                            using (var updateCmd = new SQLiteCommand(updateQuery, connection))
-                            {
-                                updateCmd.Parameters.AddWithValue("@ProductoID", productoID);
-                                return updateCmd.ExecuteNonQuery() > 0;
-                            }
+                            cmd.Parameters.AddWithValue("@id", productoID);
+                            resumen = cmd.ExecuteScalar()?.ToString() ?? $"Producto #{productoID}";
                         }
+
+                        PapeleraService.SoftDelete("PRODUCTO", productoID, resumen, user, conn, tx);
+                        tx.Commit();
+                        return true;
                     }
-
-                    // Verificar compras
-                    string checkCompras = "SELECT COUNT(*) FROM CompraDetalles WHERE ProductoID = @ProductoID";
-                    using (var cmd = new SQLiteCommand(checkCompras, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@ProductoID", productoID);
-                        long comprasCount = (long)cmd.ExecuteScalar();
-
-                        if (comprasCount > 0)
-                        {
-                            // Tiene compras, solo desactivar
-                            string updateQuery = "UPDATE Productos SET Activo = 0 WHERE ProductoID = @ProductoID";
-                            using (var updateCmd = new SQLiteCommand(updateQuery, connection))
-                            {
-                                updateCmd.Parameters.AddWithValue("@ProductoID", productoID);
-                                return updateCmd.ExecuteNonQuery() > 0;
-                            }
-                        }
-                    }
-
-                    // Sin ventas ni compras, eliminar completamente
-                    using (var transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Eliminar presentaciones primero
-                            string deletePres = "DELETE FROM ProductoPresentaciones WHERE ProductoID = @ProductoID";
-                            using (var cmd = new SQLiteCommand(deletePres, connection, transaction))
-                            {
-                                cmd.Parameters.AddWithValue("@ProductoID", productoID);
-                                cmd.ExecuteNonQuery();
-                            }
-
-                            // Eliminar ajustes
-                            string deleteAjustes = "DELETE FROM Ajustes WHERE ProductoID = @ProductoID";
-                            using (var cmd = new SQLiteCommand(deleteAjustes, connection, transaction))
-                            {
-                                cmd.Parameters.AddWithValue("@ProductoID", productoID);
-                                cmd.ExecuteNonQuery();
-                            }
-
-                            // Eliminar producto
-                            string deleteProducto = "DELETE FROM Productos WHERE ProductoID = @ProductoID";
-                            using (var cmd = new SQLiteCommand(deleteProducto, connection, transaction))
-                            {
-                                cmd.Parameters.AddWithValue("@ProductoID", productoID);
-                                cmd.ExecuteNonQuery();
-                            }
-
-                            transaction.Commit();
-                            return true;
-                        }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                    }
+                    catch { tx.Rollback(); throw; }
                 }
             }
             catch (Exception ex)

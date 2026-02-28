@@ -220,6 +220,25 @@ namespace SistemaPOS.Forms.Finanzas
                         CargarCuentas();
                     }
                 }
+                else if (dgvCuentas.Columns[e.ColumnIndex].Name == "colEliminar")
+                {
+                    int cuentaID = Convert.ToInt32(dgvCuentas.Rows[e.RowIndex].Tag);
+                    string estado = dgvCuentas.Rows[e.RowIndex].Cells["colEstado"].Value?.ToString() ?? "";
+                    if (estado == "ANULADO" || estado == "PAGADO")
+                    {
+                        MessageBox.Show("No se puede eliminar una cuenta en estado " + estado + ".",
+                            "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    if (MessageBox.Show(
+                        "¿Eliminar esta cuenta por pagar?\n\nPasará a la papelera y podrá recuperarse.",
+                        "Confirmar eliminación",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                    {
+                        CuentaPorPagarRepository.Eliminar(cuentaID);
+                        CargarCuentas();
+                    }
+                }
             }
             catch (Exception ex)
             {

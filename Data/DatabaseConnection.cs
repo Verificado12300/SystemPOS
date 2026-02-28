@@ -976,6 +976,69 @@ namespace SistemaPOS.Data
                             )";
                         cmd.ExecuteNonQuery();
                     }
+
+                    // Migración: Gastos — columnas de anulación (para auto-anulación inteligente)
+                    try
+                    {
+                        string[] anulDefs  = { "Anulado INTEGER NOT NULL DEFAULT 0", "AnuladoFecha TEXT NULL", "AnuladoPor TEXT NULL" };
+                        string[] anulNames = { "Anulado", "AnuladoFecha", "AnuladoPor" };
+                        for (int i = 0; i < anulNames.Length; i++)
+                        {
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='{anulNames[i]}'";
+                                if ((long)cmd.ExecuteScalar() == 0)
+                                {
+                                    cmd.CommandText = $"ALTER TABLE Gastos ADD COLUMN {anulDefs[i]}";
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex) { throw new Exception("Migración Gastos.Anulado falló: " + ex.Message, ex); }
+
+                    // Migración: Clientes, Proveedores, Productos — columnas soft-delete
+                    foreach (string sdTabla in new[] { "Clientes", "Proveedores", "Productos" })
+                    {
+                        try
+                        {
+                            string[] sdDefs  = { "Eliminado INTEGER NOT NULL DEFAULT 0", "FechaEliminado TEXT NULL" };
+                            string[] sdNames = { "Eliminado", "FechaEliminado" };
+                            for (int i = 0; i < sdNames.Length; i++)
+                            {
+                                using (var cmd = connection.CreateCommand())
+                                {
+                                    cmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{sdTabla}') WHERE name='{sdNames[i]}'";
+                                    if ((long)cmd.ExecuteScalar() == 0)
+                                    {
+                                        cmd.CommandText = $"ALTER TABLE {sdTabla} ADD COLUMN {sdDefs[i]}";
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex) { throw new Exception($"Migración {sdTabla}.Eliminado falló: " + ex.Message, ex); }
+                    }
+
+                    // Migración: CuentasPorPagar — columnas soft-delete
+                    try
+                    {
+                        string[] cxpDefs  = { "Eliminado INTEGER NOT NULL DEFAULT 0", "FechaEliminado TEXT NULL" };
+                        string[] cxpNames = { "Eliminado", "FechaEliminado" };
+                        for (int i = 0; i < cxpNames.Length; i++)
+                        {
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('CuentasPorPagar') WHERE name='{cxpNames[i]}'";
+                                if ((long)cmd.ExecuteScalar() == 0)
+                                {
+                                    cmd.CommandText = $"ALTER TABLE CuentasPorPagar ADD COLUMN {cxpDefs[i]}";
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex) { throw new Exception("Migración CuentasPorPagar.Eliminado falló: " + ex.Message, ex); }
                 }
             }
             catch (Exception ex)

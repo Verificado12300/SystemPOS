@@ -20,6 +20,7 @@ namespace SistemaPOS.Forms.Ventas
         private List<dynamic> _todosLosClientes; // Cache de clientes
         private bool _actualizandoDesdeEdicion; // Flag para evitar ciclo al editar cantidad/total
         private decimal _tasaIGV = 0.18m;
+        private decimal _rawCartTotal = 0m; // suma bruta de líneas del carrito sin ajuste por IGV adicional
 
         public FormVentas()
         {
@@ -75,7 +76,7 @@ namespace SistemaPOS.Forms.Ventas
             txtVuelto.ReadOnly = true;
             txtVuelto.BackColor = System.Drawing.SystemColors.Control;
 
-            chkIGV.CheckedChanged += ChkIGV_CheckedChanged;
+            cboIGV.SelectedIndexChanged += (s, e) => CalcularTotales();
 
             rbEfectivo.CheckedChanged += RadioPago_CheckedChanged;
             rbYape.CheckedChanged += RadioPago_CheckedChanged;
@@ -422,7 +423,8 @@ namespace SistemaPOS.Forms.Ventas
                 PresentacionID = presentacion.ProductoPresentacionID,
                 PrecioUnitario = presentacion.PrecioVenta,
                 CantidadUnidades = presentacion.CantidadUnidades,
-                UnidadSimbolo = unidadSimbolo
+                UnidadSimbolo = unidadSimbolo,
+                PrecioIncluyeIGV = presentacion.PrecioIncluyeIGV
             };
 
             CalcularTotales();
@@ -564,30 +566,65 @@ namespace SistemaPOS.Forms.Ventas
 
         private void CalcularTotales()
         {
-            decimal subtotal = 0;
+            // Separar ítems: los que tienen PrecioIncluyeIGV=true siempre se desglosan;
+            // los que tienen false siguen el modo de venta (cboIGV).
+            decimal subtotalConIGV = 0m;
+            decimal subtotalSinIGV = 0m;
 
             foreach (DataGridViewRow row in dgvCarritoVenta.Rows)
             {
+                if (row.Tag == null) continue;
                 string totalStr = row.Cells["colTotalDV"].Value?.ToString() ?? "0";
-                if (TryParseMonto(totalStr, out decimal totalFila))
-                    subtotal += totalFila;
+                if (!TryParseMonto(totalStr, out decimal totalFila)) continue;
+                var item = (dynamic)row.Tag;
+                if ((bool)item.PrecioIncluyeIGV)
+                    subtotalConIGV += totalFila;
+                else
+                    subtotalSinIGV += totalFila;
             }
 
-            decimal igv = chkIGV.Checked ? subtotal * _tasaIGV : 0;
-            decimal descuento = decimal.TryParse(txtDescuento.Text, out decimal desc) ? desc : 0;
-            decimal maxDescuento = subtotal + igv;
-            if (descuento > maxDescuento) descuento = maxDescuento;
-            if (descuento < 0) descuento = 0;
-            decimal total = subtotal + igv - descuento;
+            _rawCartTotal = subtotalConIGV + subtotalSinIGV;
 
-            txtSubtotal.Text = subtotal.ToString("N2");
-            txtIGV.Text = igv.ToString("N2");
+            // Ítems con IGV incluido → desglosar siempre
+            decimal baseConIGV = subtotalConIGV > 0m
+                ? Math.Round(subtotalConIGV / (1m + _tasaIGV), 2) : 0m;
+            decimal igvConIGV = subtotalConIGV - baseConIGV;
+
+            // Ítems sin flag → aplicar modo de venta (cboIGV)
+            int tipoIGV = cboIGV.SelectedIndex; // 0=SIN_IGV  1=IGV_INCLUIDO  2=IGV_ADICIONAL
+            decimal baseSinIGV, igvSinIGV, totalSinIGV;
+
+            if (tipoIGV == 1)           // IGV INCLUIDO
+            {
+                totalSinIGV = subtotalSinIGV;
+                baseSinIGV  = Math.Round(subtotalSinIGV / (1m + _tasaIGV), 2);
+                igvSinIGV   = subtotalSinIGV - baseSinIGV;
+            }
+            else if (tipoIGV == 2)      // IGV ADICIONAL
+            {
+                baseSinIGV  = subtotalSinIGV;
+                igvSinIGV   = Math.Round(subtotalSinIGV * _tasaIGV, 2);
+                totalSinIGV = subtotalSinIGV + igvSinIGV;
+            }
+            else                        // SIN IGV
+            {
+                baseSinIGV  = subtotalSinIGV;
+                igvSinIGV   = 0m;
+                totalSinIGV = subtotalSinIGV;
+            }
+
+            decimal totalBase = baseConIGV + baseSinIGV;
+            decimal totalIGV  = igvConIGV  + igvSinIGV;
+            decimal total     = subtotalConIGV + totalSinIGV;
+
+            decimal descuento = decimal.TryParse(txtDescuento.Text, out decimal desc) ? desc : 0m;
+            if (descuento < 0) descuento = 0m;
+            if (descuento > total) descuento = total;
+            total -= descuento;
+
+            txtSubtotal.Text   = totalBase.ToString("N2"); // base imponible
+            txtIGV.Text        = totalIGV.ToString("N2");
             txtTotalPagar.Text = total.ToString("N2");
-        }
-
-        private void ChkIGV_CheckedChanged(object sender, EventArgs e)
-        {
-            CalcularTotales();
         }
 
         private void TxtSoloNumeros_KeyPress(object sender, KeyPressEventArgs e)
@@ -725,10 +762,13 @@ namespace SistemaPOS.Forms.Ventas
                 decimal tarjeta = decimal.TryParse(txtTarjeta.Text, out decimal tj) ? tj : 0;
                 if (!TryParseMonto(txtTotalPagar.Text, out decimal total))
                     throw new Exception("Total de venta inválido.");
-                if (!TryParseMonto(txtSubtotal.Text, out decimal subTotal))
-                    throw new Exception("Subtotal inválido.");
+                if (!TryParseMonto(txtSubtotal.Text, out decimal baseImp))
+                    throw new Exception("Base imponible inválida.");
                 if (!TryParseMonto(txtIGV.Text, out decimal igv))
                     throw new Exception("IGV inválido.");
+                // SubTotal = suma bruta de líneas del carrito (sin agregar IGV adicional).
+                // Usamos _rawCartTotal que es la suma directa de colTotalDV antes de cualquier ajuste.
+                decimal subTotal = _rawCartTotal;
 
                 // Obtener serie y correlativo según tipo de comprobante
                 var configFact = EmpresaRepository.ObtenerConfiguracionFacturacion();
@@ -763,9 +803,11 @@ namespace SistemaPOS.Forms.Ventas
                     TipoComprobante = tipoComp,
                     Serie = serieComp,
                     Numero = correlativo.ToString("D8"),
-                    SubTotal = subTotal,
-                    IGV = igv,
-                    Total = total,
+                    SubTotal      = subTotal,
+                    IGV           = igv,
+                    TipoIGV       = cboIGV.SelectedIndex,
+                    BaseImponible = baseImp,
+                    Total         = total,
                     MetodoPago = ObtenerMetodoPago(),
                     MontoEfectivo = rbEfectivo.Checked ? total : (rbMixto.Checked ? efectivo : 0),
                     MontoYape = rbYape.Checked ? total : (rbMixto.Checked ? yape : 0),

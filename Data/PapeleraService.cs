@@ -14,9 +14,13 @@ namespace SistemaPOS.Data
         {
             switch (entidad)
             {
-                case "GASTO":  return "Gastos";
-                case "VENTA":  return "Ventas";
-                case "COMPRA": return "Compras";
+                case "GASTO":     return "Gastos";
+                case "VENTA":     return "Ventas";
+                case "COMPRA":    return "Compras";
+                case "CLIENTE":   return "Clientes";
+                case "PROVEEDOR": return "Proveedores";
+                case "PRODUCTO":  return "Productos";
+                case "CXP":       return "CuentasPorPagar";
                 default: throw new ArgumentException($"Entidad desconocida: {entidad}");
             }
         }
@@ -25,14 +29,44 @@ namespace SistemaPOS.Data
         {
             switch (entidad)
             {
-                case "GASTO":  return "GastoID";
-                case "VENTA":  return "VentaID";
-                case "COMPRA": return "CompraID";
+                case "GASTO":     return "GastoID";
+                case "VENTA":     return "VentaID";
+                case "COMPRA":    return "CompraID";
+                case "CLIENTE":   return "ClienteID";
+                case "PROVEEDOR": return "ProveedorID";
+                case "PRODUCTO":  return "ProductoID";
+                case "CXP":       return "CuentaPorPagarID";
                 default: throw new ArgumentException($"Entidad desconocida: {entidad}");
             }
         }
 
-        private static void InsertarLog(string entidad, int id, string accion,
+        // Columna de fecha de eliminado (varía por entidad legacy vs nuevo)
+        private static string GetColFechaElim(string entidad)
+        {
+            switch (entidad)
+            {
+                case "GASTO":
+                case "VENTA":
+                case "COMPRA":
+                    return "EliminadoFecha";
+                default:
+                    return "FechaEliminado";
+            }
+        }
+
+        // Entidades legacy GASTO/VENTA/COMPRA tienen columnas extra EliminadoPor / RestauradoFecha / RestauradoPor
+        private static bool EsEntidadLegacy(string entidad)
+            => entidad == "GASTO" || entidad == "VENTA" || entidad == "COMPRA";
+
+        // Entidades con columna Activo que se debe poner a 0/1 al eliminar/restaurar
+        private static bool TieneActivo(string entidad)
+            => entidad == "CLIENTE" || entidad == "PROVEEDOR" || entidad == "PRODUCTO";
+
+        // ----------------------------------------------------------------
+        // InsertarLog — internal para que repos puedan llamarlo directamente
+        // Solo para ELIMINAR (SoftDelete) y RESTAURAR — no para anulaciones.
+        // ----------------------------------------------------------------
+        internal static void InsertarLog(string entidad, int id, string accion,
             string fecha, string usuario, string resumen,
             SQLiteConnection conn, SQLiteTransaction tx)
         {
@@ -45,86 +79,87 @@ namespace SistemaPOS.Data
                 cmd.Parameters.AddWithValue("@acc", accion);
                 cmd.Parameters.AddWithValue("@f",   fecha);
                 cmd.Parameters.AddWithValue("@u",   usuario);
-                cmd.Parameters.AddWithValue("@res", resumen);
+                cmd.Parameters.AddWithValue("@res", resumen ?? "");
                 cmd.ExecuteNonQuery();
             }
         }
 
         // ----------------------------------------------------------------
-        // Validación: bloquear soft-delete si el registro ya tiene impacto contable
+        // TieneImpactoContable — retorna true si el registro ya tiene
+        // asiento contable vinculado O tiene CxC/CxP activas pendientes.
         // ----------------------------------------------------------------
-        private static void ValidarSinImpactoContable(
-            string entidad, int id, SQLiteConnection conn, SQLiteTransaction tx)
+        public static bool TieneImpactoContable(string entidad, int id)
         {
-            // 1. ¿Existe asiento contable para este registro?
-            //    TipoOperacion = "GASTO" | "VENTA" | "COMPRA" coincide con el entidad
-            int nAsientos;
+            using (var conn = DatabaseConnection.GetConnection())
+            {
+                return TieneImpactoContable(entidad, id, conn, null);
+            }
+        }
+
+        public static bool TieneImpactoContable(string entidad, int id,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            int n;
             using (var cmd = new SQLiteCommand(
                 "SELECT COUNT(*) FROM Asientos WHERE TipoOperacion=@tipo AND ReferenciaID=@id",
                 conn, tx))
             {
                 cmd.Parameters.AddWithValue("@tipo", entidad);
                 cmd.Parameters.AddWithValue("@id",   id);
-                nAsientos = Convert.ToInt32(cmd.ExecuteScalar());
+                n = Convert.ToInt32(cmd.ExecuteScalar());
             }
-            if (nAsientos > 0)
-                throw new InvalidOperationException(
-                    "No se puede eliminar este registro porque ya tiene impacto contable registrado.\n" +
-                    "Use la opción 'Anular' para revertir sus efectos en la contabilidad.");
 
-            // 2. Verificaciones adicionales por entidad
+            if (n > 0) return true;
+
             if (entidad == "VENTA")
             {
-                int nCxC;
-                using (var cmd = new SQLiteCommand(
-                    "SELECT COUNT(*) FROM CuentasPorCobrar WHERE VentaID=@id AND Estado != 'PAGADO'",
+                using (var cmd2 = new SQLiteCommand(
+                    "SELECT COUNT(*) FROM CreditosVentas WHERE VentaID=@id AND Estado != 'PAGADO'",
                     conn, tx))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
-                    nCxC = Convert.ToInt32(cmd.ExecuteScalar());
+                    cmd2.Parameters.AddWithValue("@id", id);
+                    n = Convert.ToInt32(cmd2.ExecuteScalar());
                 }
-                if (nCxC > 0)
-                    throw new InvalidOperationException(
-                        "No se puede eliminar esta venta porque tiene cobros pendientes.\n" +
-                        "Use la opción 'Anular' para revertir sus efectos.");
             }
             else if (entidad == "COMPRA")
             {
-                int nCxP;
-                using (var cmd = new SQLiteCommand(
-                    "SELECT COUNT(*) FROM CuentasPorPagar WHERE CompraID=@id",
+                using (var cmd2 = new SQLiteCommand(
+                    "SELECT COUNT(*) FROM CuentasPorPagar WHERE CompraID=@id AND Estado NOT IN ('ANULADO','PAGADO')",
                     conn, tx))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
-                    nCxP = Convert.ToInt32(cmd.ExecuteScalar());
+                    cmd2.Parameters.AddWithValue("@id", id);
+                    n = Convert.ToInt32(cmd2.ExecuteScalar());
                 }
-                if (nCxP > 0)
-                    throw new InvalidOperationException(
-                        "No se puede eliminar esta compra porque tiene cuentas por pagar vinculadas.\n" +
-                        "Use la opción 'Anular' para revertir sus efectos.");
             }
-            // GASTO: el guard de pagos activos ya existe en GastoRepository.Eliminar()
-            // antes de llegar aquí. No se duplica.
+
+            return n > 0;
         }
 
         // ----------------------------------------------------------------
-        // SoftDelete — ejecuta dentro de la conn+tx del llamador
+        // SoftDelete — ejecuta dentro de la conn+tx del llamador.
+        // El routing (¿tiene asiento?) debe resolverse ANTES de llamar aquí.
         // ----------------------------------------------------------------
         public static void SoftDelete(string entidad, int id, string resumen,
             string usuario, SQLiteConnection conn, SQLiteTransaction tx)
         {
-            ValidarSinImpactoContable(entidad, id, conn, tx);
+            string tabla    = GetTabla(entidad);
+            string pk       = GetPK(entidad);
+            string colFecha = GetColFechaElim(entidad);
+            string now      = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-            string tabla = GetTabla(entidad);
-            string pk    = GetPK(entidad);
-            string now   = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string sql;
+            if (EsEntidadLegacy(entidad))
+                sql = $"UPDATE {tabla} SET Eliminado=1, {colFecha}=@f, EliminadoPor=@u WHERE {pk}=@id";
+            else if (TieneActivo(entidad))
+                sql = $"UPDATE {tabla} SET Eliminado=1, {colFecha}=@f, Activo=0 WHERE {pk}=@id";
+            else
+                sql = $"UPDATE {tabla} SET Eliminado=1, {colFecha}=@f WHERE {pk}=@id";
 
-            using (var cmd = new SQLiteCommand(
-                $"UPDATE {tabla} SET Eliminado=1, EliminadoFecha=@f, EliminadoPor=@u WHERE {pk}=@id",
-                conn, tx))
+            using (var cmd = new SQLiteCommand(sql, conn, tx))
             {
                 cmd.Parameters.AddWithValue("@f",  now);
-                cmd.Parameters.AddWithValue("@u",  usuario);
+                if (EsEntidadLegacy(entidad))
+                    cmd.Parameters.AddWithValue("@u", usuario);
                 cmd.Parameters.AddWithValue("@id", id);
                 cmd.ExecuteNonQuery();
             }
@@ -137,21 +172,34 @@ namespace SistemaPOS.Data
         // ----------------------------------------------------------------
         public static void Restaurar(string entidad, int id, string usuario)
         {
+            // Guard: no restaurar si tiene asiento contable
+            if (TieneImpactoContable(entidad, id))
+                throw new InvalidOperationException(
+                    "No se puede restaurar este registro porque ya tiene impacto contable.\n" +
+                    "El historial contable permanece intacto.");
+
             using (var conn = DatabaseConnection.GetConnection())
             using (var tx  = conn.BeginTransaction())
             {
                 try
                 {
-                    string tabla = GetTabla(entidad);
-                    string pk    = GetPK(entidad);
-                    string now   = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    string tabla    = GetTabla(entidad);
+                    string pk       = GetPK(entidad);
+                    string now      = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-                    using (var cmd = new SQLiteCommand(
-                        $"UPDATE {tabla} SET Eliminado=0, RestauradoFecha=@f, RestauradoPor=@u WHERE {pk}=@id",
-                        conn, tx))
+                    string sql;
+                    if (EsEntidadLegacy(entidad))
+                        sql = $"UPDATE {tabla} SET Eliminado=0, RestauradoFecha=@f, RestauradoPor=@u WHERE {pk}=@id";
+                    else if (TieneActivo(entidad))
+                        sql = $"UPDATE {tabla} SET Eliminado=0, Activo=1 WHERE {pk}=@id";
+                    else
+                        sql = $"UPDATE {tabla} SET Eliminado=0 WHERE {pk}=@id";
+
+                    using (var cmd = new SQLiteCommand(sql, conn, tx))
                     {
                         cmd.Parameters.AddWithValue("@f",  now);
-                        cmd.Parameters.AddWithValue("@u",  usuario);
+                        if (EsEntidadLegacy(entidad))
+                            cmd.Parameters.AddWithValue("@u", usuario);
                         cmd.Parameters.AddWithValue("@id", id);
                         if (cmd.ExecuteNonQuery() == 0)
                             throw new Exception("Registro no encontrado en papelera.");
@@ -169,7 +217,9 @@ namespace SistemaPOS.Data
         }
 
         // ----------------------------------------------------------------
-        // ListarPapelera — abre su propia conn, solo lectura
+        // ListarPapelera — abre su propia conn, solo lectura.
+        // Solo muestra Eliminado=1 (soft-delete). No muestra anulados.
+        // Columnas resultado: Entidad, EntidadId, Referencia, FechaEliminado, Usuario
         // ----------------------------------------------------------------
         public static List<PapeleraEntrada> ListarPapelera(
             DateTime? desde, DateTime? hasta, string entidad, string textoBusqueda)
@@ -178,17 +228,39 @@ namespace SistemaPOS.Data
 
             string sql = @"
                 SELECT 'GASTO' AS Entidad, GastoID AS EntidadId,
-                       Concepto   AS Referencia, Monto,
+                       Concepto AS Referencia,
                        EliminadoFecha, EliminadoPor
-                FROM Gastos WHERE Eliminado = 1
+                FROM Gastos WHERE Eliminado = 1 AND (Anulado IS NULL OR Anulado = 0)
                 UNION ALL
-                SELECT 'VENTA', VentaID, NumeroVenta, Total,
+                SELECT 'VENTA', VentaID, NumeroVenta,
                        EliminadoFecha, EliminadoPor
                 FROM Ventas WHERE Eliminado = 1
                 UNION ALL
-                SELECT 'COMPRA', CompraID, NumeroCompra, Total,
+                SELECT 'COMPRA', CompraID, NumeroCompra,
                        EliminadoFecha, EliminadoPor
                 FROM Compras WHERE Eliminado = 1
+                UNION ALL
+                SELECT 'CLIENTE', ClienteID,
+                       TRIM(COALESCE(Nombres,'') || ' ' || COALESCE(Apellidos,'')),
+                       FechaEliminado,
+                       (SELECT pl.Usuario FROM PapeleraLog pl WHERE pl.Entidad='CLIENTE' AND pl.EntidadId=ClienteID ORDER BY pl.rowid DESC LIMIT 1)
+                FROM Clientes WHERE Eliminado = 1
+                UNION ALL
+                SELECT 'PROVEEDOR', ProveedorID, RazonSocial,
+                       FechaEliminado,
+                       (SELECT pl.Usuario FROM PapeleraLog pl WHERE pl.Entidad='PROVEEDOR' AND pl.EntidadId=ProveedorID ORDER BY pl.rowid DESC LIMIT 1)
+                FROM Proveedores WHERE Eliminado = 1
+                UNION ALL
+                SELECT 'PRODUCTO', ProductoID, Nombre,
+                       FechaEliminado,
+                       (SELECT pl.Usuario FROM PapeleraLog pl WHERE pl.Entidad='PRODUCTO' AND pl.EntidadId=ProductoID ORDER BY pl.rowid DESC LIMIT 1)
+                FROM Productos WHERE Eliminado = 1
+                UNION ALL
+                SELECT 'CXP', CuentaPorPagarID,
+                       COALESCE(ProveedorNombre, 'CxP #' || CAST(CuentaPorPagarID AS TEXT)),
+                       FechaEliminado,
+                       (SELECT pl.Usuario FROM PapeleraLog pl WHERE pl.Entidad='CXP' AND pl.EntidadId=CuentaPorPagarID ORDER BY pl.rowid DESC LIMIT 1)
+                FROM CuentasPorPagar WHERE Eliminado = 1
                 ORDER BY EliminadoFecha DESC";
 
             using (var conn = DatabaseConnection.GetConnection())
@@ -197,15 +269,14 @@ namespace SistemaPOS.Data
             {
                 while (reader.Read())
                 {
-                    string ent       = reader.GetString(0);
-                    int    entId     = reader.GetInt32(1);
-                    string referencia = reader.IsDBNull(2) ? "" : reader.GetString(2);
-                    decimal monto    = reader.IsDBNull(3) ? 0m : Convert.ToDecimal(reader.GetValue(3));
-                    string fechaStr  = reader.IsDBNull(4) ? "" : reader.GetString(4);
-                    string usuStr    = reader.IsDBNull(5) ? "" : reader.GetString(5);
+                    string ent        = reader.GetString(0);
+                    int    entId      = reader.GetInt32(1);
+                    string referencia = reader.IsDBNull(2) ? "" : reader.GetString(2).Trim();
+                    string fechaStr   = reader.IsDBNull(3) ? "" : reader.GetString(3);
+                    string usuStr     = reader.IsDBNull(4) ? "" : reader.GetString(4);
 
-                    // Filtros en memoria (sencillo para volumen pequeño)
-                    if (!string.IsNullOrEmpty(entidad) && ent != entidad)
+                    // Filtros en memoria
+                    if (!string.IsNullOrEmpty(entidad) && entidad != "TODOS" && ent != entidad)
                         continue;
 
                     if (!string.IsNullOrEmpty(textoBusqueda) &&
@@ -223,7 +294,7 @@ namespace SistemaPOS.Data
                         Entidad        = ent,
                         EntidadId      = entId,
                         Referencia     = referencia,
-                        Monto          = monto,
+                        Monto          = 0m,   // no se muestra en UI
                         FechaEliminado = fechaElim,
                         UsuarioElimino = usuStr
                     });

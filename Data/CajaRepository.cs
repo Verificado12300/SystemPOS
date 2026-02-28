@@ -125,6 +125,57 @@ namespace SistemaPOS.Data
             }
         }
 
+        /// <summary>
+        /// Abre caja y, si esCapitalInicial=true, genera asiento Dr 101 / Cr 300
+        /// en la misma transacción. Rollback total si falla el asiento.
+        /// </summary>
+        public static bool AbrirCaja(Caja caja, bool esCapitalInicial, int usuarioID)
+        {
+            using (var connection = DatabaseConnection.GetConnection())
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    const string query = @"
+                        INSERT INTO Cajas
+                        (UsuarioID, Turno, FechaApertura, HoraApertura, MontoInicial, Estado)
+                        SELECT @UsuarioID, @Turno, @FechaApertura, @HoraApertura, @MontoInicial, 'ABIERTA'
+                        WHERE NOT EXISTS (SELECT 1 FROM Cajas WHERE Estado = 'ABIERTA')";
+
+                    bool ok;
+                    using (var cmd = new SQLiteCommand(query, connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@UsuarioID",     caja.UsuarioID);
+                        cmd.Parameters.AddWithValue("@Turno",         caja.Turno);
+                        cmd.Parameters.AddWithValue("@FechaApertura", caja.FechaApertura.ToString("yyyy-MM-dd"));
+                        cmd.Parameters.AddWithValue("@HoraApertura",  caja.HoraApertura.ToString());
+                        cmd.Parameters.AddWithValue("@MontoInicial",  caja.MontoInicial);
+                        ok = cmd.ExecuteNonQuery() > 0;
+                    }
+
+                    if (!ok) { transaction.Rollback(); return false; }
+
+                    int cajaID;
+                    using (var cmd = new SQLiteCommand("SELECT last_insert_rowid()", connection, transaction))
+                        cajaID = Convert.ToInt32(cmd.ExecuteScalar());
+
+                    if (esCapitalInicial)
+                        ContabilidadService.RegistrarCapitalInicial(
+                            caja.FechaApertura, caja.HoraApertura,
+                            caja.MontoInicial, usuarioID, cajaID,
+                            connection, transaction);
+
+                    transaction.Commit();
+                    return true;
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+
         public static bool CerrarCaja(int cajaID, decimal efectivoReal, string motivoDiferencia)
         {
             using (var connection = DatabaseConnection.GetConnection())

@@ -63,7 +63,7 @@ namespace SistemaPOS.Forms.Compras
             numCantidad.ValueChanged += (_, __) => RecalcularDetalleSeleccionado();
             btnAgregarProducto.Click += BtnAgregarProducto_Click;
             dgvProductos.CellClick += DgvProductos_CellClick;
-            chkIncluirIGV.CheckedChanged += ChkIncluirIGV_CheckedChanged;
+            cboIGV.SelectedIndexChanged += (_, __) => CalcularTotales();
             rbCredito.CheckedChanged += RbCredito_CheckedChanged;
             btnGuardar.Click += BtnGuardar_Click;
             btnCancelar.Click += BtnCancelar_Click;
@@ -464,17 +464,31 @@ namespace SistemaPOS.Forms.Compras
                 subtotal += (decimal)item.CantidadBase * (decimal)item.CostoUnitarioBase;
             }
 
-            decimal igv = chkIncluirIGV.Checked ? subtotal * _tasaIGV : 0;
-            decimal total = subtotal + igv;
+            int tipoIGV = cboIGV.SelectedIndex < 0 ? 0 : cboIGV.SelectedIndex;
+            decimal baseImp, igv, total;
 
-            txtSubtotal.Text = subtotal.ToString("N2");
-            txtIGV.Text = igv.ToString("N2");
-            txtTotal.Text = total.ToString("N2");
-        }
+            if (tipoIGV == 1)           // IGV INCLUIDO: el precio ya lleva IGV
+            {
+                total   = subtotal;
+                baseImp = Math.Round(total / (1m + _tasaIGV), 2);
+                igv     = total - baseImp;
+            }
+            else if (tipoIGV == 2)      // IGV ADICIONAL: se suma encima del precio
+            {
+                baseImp = subtotal;
+                igv     = Math.Round(subtotal * _tasaIGV, 2);
+                total   = subtotal + igv;
+            }
+            else                        // SIN IGV
+            {
+                baseImp = subtotal;
+                igv     = 0m;
+                total   = subtotal;
+            }
 
-        private void ChkIncluirIGV_CheckedChanged(object sender, EventArgs e)
-        {
-            CalcularTotales();
+            txtSubtotal.Text = baseImp.ToString("N2");   // muestra base imponible
+            txtIGV.Text      = igv.ToString("N2");
+            txtTotal.Text    = total.ToString("N2");
         }
 
         private void RbCredito_CheckedChanged(object sender, EventArgs e)
@@ -516,7 +530,9 @@ namespace SistemaPOS.Forms.Compras
                     TipoComprobante = cmbTipoComprobante.Text,
                     Serie = cmbTipoComprobante.Text == "FACTURA" ? "F001" : (cmbTipoComprobante.Text == "BOLETA" ? "B001" : "G001"),
                     Numero = txtNumero.Text.Trim(),
-                    IncluyeIGV = chkIncluirIGV.Checked,
+                    IncluyeIGV = cboIGV.SelectedIndex > 0,
+                    TipoIGV    = cboIGV.SelectedIndex < 0 ? 0 : cboIGV.SelectedIndex,
+                    BaseImponible = subTotal,   // txtSubtotal ya muestra la base imponible
                     SubTotal = subTotal,
                     IGV = igv,
                     Total = total,
@@ -614,7 +630,7 @@ namespace SistemaPOS.Forms.Compras
             txtSubtotal.Text = "0.00";
             txtIGV.Text = "0.00";
             txtTotal.Text = "0.00";
-            chkIncluirIGV.Checked = false;
+            cboIGV.SelectedIndex = 0;
             rbContado.Checked = true;
             dtpFecha.Value = DateTime.Now;
             cmbTipoComprobante.SelectedIndex = 0;

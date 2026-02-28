@@ -207,25 +207,18 @@ namespace SistemaPOS.Forms.Finanzas
                     int gastoID = Convert.ToInt32(dgvGastos.Rows[e.RowIndex].Tag);
                     string concepto = dgvGastos.Rows[e.RowIndex].Cells["colConcepto"].Value.ToString();
 
-                    DialogResult result = MessageBox.Show(
-                        $"¿Está seguro de eliminar el gasto '{concepto}'?\n\nEsta acción no se puede deshacer.",
-                        "Confirmar Eliminación",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
+                    bool tieneImpacto = PapeleraService.TieneImpactoContable("GASTO", gastoID);
+                    string msg = tieneImpacto
+                        ? $"El gasto '{concepto}' tiene asiento contable.\n\nSe ANULARÁ (revertirá su efecto contable).\n\n¿Continuar?"
+                        : $"El gasto '{concepto}' no tiene asiento contable.\n\nSe enviará a la PAPELERA (podrá recuperarse).\n\n¿Continuar?";
 
-                    if (result == DialogResult.Yes)
+                    if (MessageBox.Show(msg, "Confirmar acción",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                     {
-                        if (GastoRepository.Eliminar(gastoID))
-                        {
-                            MessageBox.Show("Gasto eliminado correctamente", "Éxito",
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            CargarGastos();
-                        }
-                        else
-                        {
-                            MessageBox.Show("No se pudo eliminar el gasto", "Error",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
+                        GastoRepository.Eliminar(gastoID);
+                        string ok = tieneImpacto ? "Gasto anulado correctamente." : "Gasto enviado a la papelera.";
+                        MessageBox.Show(ok, "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        CargarGastos();
                     }
                 }
             }

@@ -53,11 +53,12 @@ namespace SistemaPOS.Forms.Finanzas
                     row.Cells["colEntidad"].Value     = e.Entidad;
                     row.Cells["colId"].Value          = e.EntidadId;
                     row.Cells["colReferencia"].Value  = e.Referencia;
-                    row.Cells["colMonto"].Value       = $"S/ {e.Monto:N2}";
                     row.Cells["colFechaElim"].Value   = e.FechaEliminado != DateTime.MinValue
                         ? e.FechaEliminado.ToString("dd/MM/yyyy HH:mm")
                         : "-";
-                    row.Cells["colUsuarioElim"].Value = e.UsuarioElimino;
+                    row.Cells["colUsuarioElim"].Value = string.IsNullOrEmpty(e.UsuarioElimino)
+                        ? "Sistema"
+                        : e.UsuarioElimino;
                     row.Tag = e;
                 }
 

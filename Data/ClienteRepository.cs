@@ -635,30 +635,32 @@ namespace SistemaPOS.Data
         {
             try
             {
-                using (var connection = DatabaseConnection.GetConnection())
+                // Evitar eliminar el cliente general (ID = 1)
+                if (clienteID == 1)
+                    return false;
+
+                string user = SistemaPOS.Utils.SesionActual.Usuario?.NombreUsuario ?? "Sistema";
+
+                using (var conn = DatabaseConnection.GetConnection())
+                using (var tx   = conn.BeginTransaction())
                 {
-                    // Evitar eliminar el cliente general (ID = 1)
-                    if (clienteID == 1)
-                        return false;
-
-                    // Verificar si tiene ventas asociadas
-                    string checkVentas = "SELECT COUNT(*) FROM Ventas WHERE ClienteID = @ClienteID";
-                    using (var cmdCheck = new SQLiteCommand(checkVentas, connection))
+                    try
                     {
-                        cmdCheck.Parameters.AddWithValue("@ClienteID", clienteID);
-                        int ventas = Convert.ToInt32(cmdCheck.ExecuteScalar());
-                        if (ventas > 0)
-                            return false; // No se puede eliminar si tiene ventas
-                    }
+                        string resumen;
+                        using (var cmd = new SQLiteCommand(
+                            "SELECT TRIM(COALESCE(Nombres,'') || ' ' || COALESCE(Apellidos,'')) FROM Clientes WHERE ClienteID=@id",
+                            conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@id", clienteID);
+                            resumen = cmd.ExecuteScalar()?.ToString()?.Trim() ?? $"Cliente #{clienteID}";
+                            if (string.IsNullOrEmpty(resumen)) resumen = $"Cliente #{clienteID}";
+                        }
 
-                    // Eliminar cliente
-                    string deleteQuery = "DELETE FROM Clientes WHERE ClienteID = @ClienteID";
-                    using (var cmdDelete = new SQLiteCommand(deleteQuery, connection))
-                    {
-                        cmdDelete.Parameters.AddWithValue("@ClienteID", clienteID);
-                        cmdDelete.ExecuteNonQuery();
+                        PapeleraService.SoftDelete("CLIENTE", clienteID, resumen, user, conn, tx);
+                        tx.Commit();
                         return true;
                     }
+                    catch { tx.Rollback(); throw; }
                 }
             }
             catch (Exception ex)

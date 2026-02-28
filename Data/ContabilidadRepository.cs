@@ -46,6 +46,10 @@ namespace SistemaPOS.Data
             if (asiento == null || asiento.Detalles == null || asiento.Detalles.Count == 0)
                 throw new Exception("El asiento no tiene detalles.");
 
+            // Guard de período cerrado — lanza InvalidOperationException si bloqueado,
+            // lo que provoca rollback en el llamador antes de cualquier INSERT.
+            PeriodosContablesRepository.ValidarFechaNoBloqueada(asiento.Fecha, conn, tx);
+
             decimal sumDebe = 0m;
             decimal sumHaber = 0m;
             foreach (var d in asiento.Detalles)
@@ -62,8 +66,12 @@ namespace SistemaPOS.Data
 
             // Insertar cabecera
             string queryAsiento = @"
-                INSERT INTO Asientos (Fecha, Hora, TipoOperacion, Documento, ReferenciaID, UsuarioID, Glosa, TotalDebe, TotalHaber)
-                VALUES (@Fecha, @Hora, @TipoOperacion, @Documento, @ReferenciaID, @UsuarioID, @Glosa, @TotalDebe, @TotalHaber)";
+                INSERT INTO Asientos
+                    (Fecha, Hora, TipoOperacion, Documento, ReferenciaID, UsuarioID, Glosa, TotalDebe, TotalHaber,
+                     ModuloOrigen, OrigenId)
+                VALUES
+                    (@Fecha, @Hora, @TipoOperacion, @Documento, @ReferenciaID, @UsuarioID, @Glosa, @TotalDebe, @TotalHaber,
+                     @ModuloOrigen, @OrigenId)";
 
             using (var cmd = tx != null
                 ? new SQLiteCommand(queryAsiento, conn, tx)
@@ -78,6 +86,8 @@ namespace SistemaPOS.Data
                 cmd.Parameters.AddWithValue("@Glosa", (object)asiento.Glosa ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@TotalDebe", sumDebe);
                 cmd.Parameters.AddWithValue("@TotalHaber", sumHaber);
+                cmd.Parameters.AddWithValue("@ModuloOrigen", asiento.ModuloOrigen ?? "SISTEMA");
+                cmd.Parameters.AddWithValue("@OrigenId",     (object)asiento.OrigenId     ?? DBNull.Value);
                 cmd.ExecuteNonQuery();
             }
 
@@ -112,7 +122,52 @@ namespace SistemaPOS.Data
                 }
             }
 
+            // GUARDRAIL POST-INSERT: verifica cuadratura en DB antes de retornar.
+            // Si alguien alteró los detalles fuera del flujo normal esta línea lo atrapa.
+            ValidarAsientoCuadrado((int)asientoID, conn, tx);
+
             return (int)asientoID;
+        }
+
+        // =====================================================================
+        // GUARDRAIL CONTABLE: verifica que SUM(Debe) == SUM(Haber) en DB para
+        // el asiento recién insertado. Lanza excepción si |Debe-Haber| > 0.01,
+        // lo que fuerza rollback en el llamador antes de que se haga commit.
+        // Público para poder llamarse desde ContabilidadService en flujos manuales.
+        // =====================================================================
+        public static void ValidarAsientoCuadrado(int asientoID, SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            const string sql = @"
+                SELECT SUM(Debe), SUM(Haber)
+                FROM   AsientosDetalle
+                WHERE  AsientoID = @AsientoID";
+
+            using (var cmd = tx != null
+                ? new SQLiteCommand(sql, conn, tx)
+                : new SQLiteCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@AsientoID", asientoID);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (!reader.Read())
+                        throw new InvalidOperationException(
+                            $"[GUARDRAIL] Asiento {asientoID}: query SUM no devolvió fila.");
+
+                    if (reader.IsDBNull(0) && reader.IsDBNull(1))
+                        throw new InvalidOperationException(
+                            $"[GUARDRAIL] Asiento {asientoID}: no existen detalles en AsientosDetalle.");
+
+                    decimal debe  = reader.IsDBNull(0) ? 0m : reader.GetDecimal(0);
+                    decimal haber = reader.IsDBNull(1) ? 0m : reader.GetDecimal(1);
+                    decimal dif   = Math.Abs(debe - haber);
+
+                    if (dif > 0.01m)
+                        throw new InvalidOperationException(
+                            $"[GUARDRAIL] Asiento {asientoID} descuadrado: " +
+                            $"Debe={debe:F2} Haber={haber:F2} Diferencia={dif:F2}. " +
+                            "La operación fue revertida.");
+                }
+            }
         }
 
         // =====================================================================

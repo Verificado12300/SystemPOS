@@ -40,6 +40,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.colEstado = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colVerPagos = new System.Windows.Forms.DataGridViewButtonColumn();
             this.colRegistrarPago = new System.Windows.Forms.DataGridViewButtonColumn();
+            this.colEliminar = new System.Windows.Forms.DataGridViewButtonColumn();
             this.pnlResumen = new System.Windows.Forms.Panel();
             this.lblTotalRegistros = new System.Windows.Forms.Label();
             this.lblTotalPendiente = new System.Windows.Forms.Label();
@@ -206,7 +207,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.dgvCuentas.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
                 this.colNumero, this.colTipo, this.colCompra, this.colProveedor, this.colFechaCompra,
                 this.colMontoTotal, this.colMontoPagado, this.colMontoPendiente,
-                this.colVencimiento, this.colEstado, this.colVerPagos, this.colRegistrarPago });
+                this.colVencimiento, this.colEstado, this.colVerPagos, this.colRegistrarPago, this.colEliminar });
             rowStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             rowStyle.BackColor = System.Drawing.Color.White;
             rowStyle.Font = new System.Drawing.Font("Segoe UI", 9.5F);
@@ -314,6 +315,18 @@ namespace SistemaPOS.Forms.Finanzas
             this.colRegistrarPago.UseColumnTextForButtonValue = true;
             this.colRegistrarPago.Width = 80;
             //
+            // colEliminar
+            //
+            this.colEliminar.Name = "colEliminar";
+            this.colEliminar.HeaderText = "";
+            this.colEliminar.Text = "Eliminar";
+            this.colEliminar.UseColumnTextForButtonValue = true;
+            this.colEliminar.Width = 75;
+            this.colEliminar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.colEliminar.DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(192, 57, 43);
+            this.colEliminar.DefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            this.colEliminar.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
+            //
             // pnlResumen
             //
             this.pnlResumen.BackColor = System.Drawing.Color.White;
@@ -412,5 +425,6 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.DataGridViewTextBoxColumn colEstado;
         private System.Windows.Forms.DataGridViewButtonColumn colVerPagos;
         private System.Windows.Forms.DataGridViewButtonColumn colRegistrarPago;
+        private System.Windows.Forms.DataGridViewButtonColumn colEliminar;
     }
 }

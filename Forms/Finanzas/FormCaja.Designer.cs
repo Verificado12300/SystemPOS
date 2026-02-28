@@ -28,6 +28,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.btnExportar = new System.Windows.Forms.Button();
             this.lblTotalRegistros = new System.Windows.Forms.Label();
             this.chkImprimir = new System.Windows.Forms.CheckBox();
+            this.btnCapitalInicial = new System.Windows.Forms.Button();
             this.btnCerrarCaja = new System.Windows.Forms.Button();
             this.pnlCierreCaja = new System.Windows.Forms.Panel();
             this.lblSubTitulo = new System.Windows.Forms.Label();
@@ -133,6 +134,7 @@ namespace SistemaPOS.Forms.Finanzas
             // -------------------------------------------------------
             this.pnlFooter.BackColor = System.Drawing.Color.White;
             this.pnlFooter.Controls.Add(this.btnCerrarCaja);
+            this.pnlFooter.Controls.Add(this.btnCapitalInicial);
             this.pnlFooter.Controls.Add(this.chkImprimir);
             this.pnlFooter.Controls.Add(this.lblTotalRegistros);
             this.pnlFooter.Controls.Add(this.btnExportar);
@@ -180,6 +182,23 @@ namespace SistemaPOS.Forms.Finanzas
             this.chkImprimir.TabIndex = 10013;
             this.chkImprimir.Text = "Imprimir";
             this.chkImprimir.UseVisualStyleBackColor = true;
+            //
+            // btnCapitalInicial
+            //
+            this.btnCapitalInicial.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCapitalInicial.BackColor = System.Drawing.Color.FromArgb(41, 128, 185);
+            this.btnCapitalInicial.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnCapitalInicial.FlatAppearance.BorderSize = 0;
+            this.btnCapitalInicial.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnCapitalInicial.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
+            this.btnCapitalInicial.ForeColor = System.Drawing.Color.White;
+            this.btnCapitalInicial.Location = new System.Drawing.Point(997, 11);
+            this.btnCapitalInicial.Name = "btnCapitalInicial";
+            this.btnCapitalInicial.Size = new System.Drawing.Size(136, 33);
+            this.btnCapitalInicial.TabIndex = 10011;
+            this.btnCapitalInicial.Text = "Capital Inicial";
+            this.btnCapitalInicial.UseVisualStyleBackColor = false;
+
             //
             // btnCerrarCaja
             //
@@ -886,6 +905,7 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.Button btnExportar;
         private System.Windows.Forms.Label lblTotalRegistros;
         private System.Windows.Forms.CheckBox chkImprimir;
+        private System.Windows.Forms.Button btnCapitalInicial;
         private System.Windows.Forms.Button btnCerrarCaja;
         private System.Windows.Forms.Panel pnlCierreCaja;
         private System.Windows.Forms.Label lblSubTitulo;
