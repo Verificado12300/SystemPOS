@@ -4,6 +4,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using SistemaPOS.Data;
+using SistemaPOS.Models;
 using SistemaPOS.Reports.DataSources;
 using SistemaPOS.Utils;
 
@@ -11,7 +12,13 @@ namespace SistemaPOS.Forms.Contactos
 {
     public partial class FormEstadoCuenta : Form
     {
-        private int _clienteID;
+        private readonly int _clienteID;
+
+        // Cache del resumen global (sin filtro de fecha)
+        private decimal _totalVentasGlobal;
+        private decimal _totalPagosGlobal;
+        private decimal _totalAnulacionesGlobal;
+        private decimal _saldoActual;
 
         public FormEstadoCuenta(int clienteID)
         {
@@ -19,97 +26,126 @@ namespace SistemaPOS.Forms.Contactos
             _clienteID = clienteID;
 
             ConfigurarEventos();
-            CargarDatos();
+            CargarEncabezado();
+            CargarMovimientos();
         }
+
+        // ─────────────────────────────────────────────────────────────
+        // Configuración inicial
+        // ─────────────────────────────────────────────────────────────
 
         private void ConfigurarEventos()
         {
             dtpDesde.Value = DateTime.Now.AddMonths(-3);
             dtpHasta.Value = DateTime.Now;
 
-            dgvHistorialMovimientos.AutoGenerateColumns = false;
-            dgvHistorialMovimientos.AllowUserToAddRows = false;
-            dgvHistorialMovimientos.ReadOnly = true;
+            dgvMovimientos.AutoGenerateColumns = false;
+            dgvMovimientos.AllowUserToAddRows  = false;
+            dgvMovimientos.ReadOnly            = false; // botones en col Acción
 
+            btnFiltrar.Click       += (s, e) => CargarMovimientos();
             btnRegistrarPago.Click += BtnRegistrarPago_Click;
-            btnImprimirEstado.Click += BtnImprimirEstado_Click;
-            btnCerrar.Click += BtnCerrar_Click;
-            dtpDesde.ValueChanged += Filtros_Changed;
-            dtpHasta.ValueChanged += Filtros_Changed;
+            btnImprimir.Click      += BtnImprimir_Click;
+            btnCerrar.Click        += (s, e) => Close();
+            txtBuscar.KeyDown      += (s, e) => { if (e.KeyCode == Keys.Enter) CargarMovimientos(); };
         }
 
-        private void CargarDatos()
+        // ─────────────────────────────────────────────────────────────
+        // Datos de encabezado + resumen (globales, sin filtro fecha)
+        // ─────────────────────────────────────────────────────────────
+
+        private void CargarEncabezado()
         {
             try
             {
-                var estadoCuenta = ClienteRepository.ObtenerEstadoCuenta(_clienteID);
-                var cliente = estadoCuenta.Cliente;
+                var ec      = ClienteRepository.ObtenerEstadoCuenta(_clienteID);
+                var cliente = (Cliente)ec.Cliente;
 
-                string nombreCliente = cliente.TipoDocumento == "RUC"
+                string nombre = cliente.TipoDocumento == "RUC"
                     ? cliente.RazonSocial
                     : $"{cliente.Nombres} {cliente.Apellidos}".Trim();
 
-                lblTitulo.Text = $"Estado de Cuenta  —  {nombreCliente}";
+                // Header
+                lblTitulo.Text = $"Estado de Cuenta  —  {nombre}";
 
-                txtCliente.Text = nombreCliente;
-                txtDocumento.Text = $"{cliente.TipoDocumento} - {cliente.NumeroDocumento}";
-                txtTelefono.Text = string.IsNullOrWhiteSpace(cliente.Telefono) ? "-" : cliente.Telefono;
-                txtEmail.Text = string.IsNullOrWhiteSpace(cliente.Email) ? "-" : cliente.Email;
-                txtEstado.Text = cliente.Activo ? "ACTIVO" : "INACTIVO";
-                txtEstado.ForeColor = cliente.Activo ? Color.FromArgb(39, 174, 96) : Color.FromArgb(214, 48, 49);
-                txtEstado.Font = new Font(txtEstado.Font, FontStyle.Bold);
+                // Info compacta
+                lblNombreVal.Text    = nombre;
+                lblDocVal.Text       = $"{cliente.TipoDocumento} {cliente.NumeroDocumento}";
+                lblEstadoBadge.Text  = cliente.Activo ? "ACTIVO" : "INACTIVO";
+                lblEstadoBadge.BackColor = cliente.Activo
+                    ? Color.FromArgb(39, 174, 96)
+                    : Color.FromArgb(214, 48, 49);
 
-                lblBadgeEstado.Text = cliente.Activo ? "ACTIVO" : "INACTIVO";
-                lblBadgeEstado.BackColor = cliente.Activo ? Color.FromArgb(39, 174, 96) : Color.FromArgb(214, 48, 49);
+                decimal limCred    = (decimal)ec.LimiteCredito;
+                decimal credUsado  = (decimal)ec.CreditoUtilizado;
+                decimal disponible = (decimal)ec.CreditoDisponible;
 
-                txtTotalVentas.Text = $"S/ {estadoCuenta.TotalVentas:N2}";
-                txtTotalPagos.Text = $"S/ {estadoCuenta.TotalPagos:N2}";
+                lblLimCredVal.Text    = $"S/ {limCred:N2}";
+                lblCredUsadoVal.Text  = $"S/ {credUsado:N2}";
+                lblDisponibleVal.Text = $"S/ {disponible:N2}";
+                lblDisponibleVal.ForeColor = disponible >= 0
+                    ? Color.FromArgb(39, 174, 96)
+                    : Color.FromArgb(214, 48, 49);
 
-                decimal saldo = estadoCuenta.SaldoPendiente;
-                txtSaldoPendiente.Text = $"S/ {saldo:N2}";
-                txtSaldoPendiente.ForeColor = saldo > 0 ? Color.FromArgb(214, 48, 49)
-                                            : saldo < 0 ? Color.FromArgb(39, 174, 96)
-                                            : Color.FromArgb(99, 110, 114);
-                pnlSaldoDestacado.BackColor = saldo > 0 ? Color.FromArgb(255, 235, 235)
-                                            : saldo < 0 ? Color.FromArgb(235, 255, 245)
-                                            : Color.FromArgb(244, 244, 250);
+                // Resumen global
+                _totalVentasGlobal     = (decimal)ec.TotalVentas;
+                _totalPagosGlobal      = (decimal)ec.TotalPagos;
+                _totalAnulacionesGlobal = ClienteRepository.ObtenerTotalAnulacionesCxC(_clienteID);
+                _saldoActual           = (decimal)ec.SaldoPendiente;
 
-                txtLimiteCredito.Text = $"S/ {estadoCuenta.LimiteCredito:N2}";
-                txtCreditoUtilizado.Text = $"S/ {estadoCuenta.CreditoUtilizado:N2}";
-
-                decimal disponible = estadoCuenta.CreditoDisponible;
-                txtCreditoDisponible.Text = $"S/ {disponible:N2}";
-                txtCreditoDisponible.ForeColor = disponible > 0 ? Color.FromArgb(39, 174, 96) : Color.FromArgb(214, 48, 49);
-                txtCreditoDisponible.Font = new Font(txtCreditoDisponible.Font, FontStyle.Bold);
-
-                CargarMovimientos();
+                ActualizarResumen();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al cargar datos: {ex.Message}", "Error",
+                MessageBox.Show($"Error al cargar encabezado: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private void ActualizarResumen()
+        {
+            lblVentasVal.Text      = $"S/ {_totalVentasGlobal:N2}";
+            lblPagosVal.Text       = $"S/ {_totalPagosGlobal:N2}";
+            lblAnulacionesVal.Text = $"S/ {_totalAnulacionesGlobal:N2}";
+            lblSaldoVal.Text       = $"S/ {_saldoActual:N2}";
+            lblSaldoVal.ForeColor  = _saldoActual > 0
+                ? Color.FromArgb(214, 48, 49)
+                : _saldoActual < 0
+                    ? Color.FromArgb(39, 174, 96)
+                    : Color.FromArgb(99, 110, 114);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Tabla de movimientos
+        // ─────────────────────────────────────────────────────────────
 
         private void CargarMovimientos()
         {
             try
             {
-                var movimientos = ClienteRepository.ObtenerMovimientos(_clienteID,
-                    dtpDesde.Value.Date, dtpHasta.Value.Date);
+                string buscar = txtBuscar.Text.Trim();
 
-                dgvHistorialMovimientos.Rows.Clear();
+                var movimientos = ClienteRepository.ObtenerMovimientosCuentaCliente(
+                    _clienteID,
+                    dtpDesde.Value.Date,
+                    dtpHasta.Value.Date,
+                    string.IsNullOrWhiteSpace(buscar) ? null : buscar);
 
-                int numero = 1;
-                foreach (var mov in movimientos)
+                dgvMovimientos.Rows.Clear();
+
+                // Mostrar más reciente primero (revertir)
+                var lista = new List<MovimientoCuenta>(movimientos);
+                lista.Reverse();
+
+                foreach (var mov in lista)
                 {
-                    int index = dgvHistorialMovimientos.Rows.Add();
-                    var row = dgvHistorialMovimientos.Rows[index];
+                    int idx = dgvMovimientos.Rows.Add();
+                    var row = dgvMovimientos.Rows[idx];
 
-                    row.Cells["colNumero"].Value = numero++;
-                    row.Cells["colFechaHora"].Value = $"{mov.Fecha:dd/MM/yyyy}  {mov.Hora:hh\\:mm}";
-                    row.Cells["colTipo"].Value = mov.Tipo;
-                    row.Cells["colDetalle"].Value = mov.Detalle;
+                    row.Cells["colFecha"].Value    = $"{mov.Fecha:dd/MM/yyyy}  {mov.Hora:hh\\:mm}";
+                    row.Cells["colTipo"].Value     = mov.Tipo == "ANULACION_COBRO" ? "ANULACIÓN" : mov.Tipo;
+                    row.Cells["colDocumento"].Value = mov.Documento;
+                    row.Cells["colMetodo"].Value   = mov.Metodo;
 
                     if (mov.Cargo > 0)
                     {
@@ -126,18 +162,47 @@ namespace SistemaPOS.Forms.Contactos
 
                     decimal saldo = mov.Saldo;
                     row.Cells["colSaldo"].Value = $"S/ {saldo:N2}";
-                    row.Cells["colSaldo"].Style.ForeColor = saldo > 0 ? Color.FromArgb(214, 48, 49)
-                                                          : saldo < 0 ? Color.FromArgb(39, 174, 96)
-                                                          : Color.FromArgb(45, 52, 54);
-                    row.Cells["colSaldo"].Style.Font = new Font(dgvHistorialMovimientos.Font, FontStyle.Bold);
+                    row.Cells["colSaldo"].Style.ForeColor = saldo > 0
+                        ? Color.FromArgb(214, 48, 49)
+                        : saldo < 0
+                            ? Color.FromArgb(39, 174, 96)
+                            : Color.FromArgb(45, 52, 54);
+                    row.Cells["colSaldo"].Style.Font = new Font(dgvMovimientos.Font, FontStyle.Bold);
 
-                    // Tipo con color
-                    if (mov.Tipo == "VENTA")
-                        row.Cells["colTipo"].Style.ForeColor = Color.FromArgb(214, 48, 49);
-                    else if (mov.Tipo == "PAGO")
-                        row.Cells["colTipo"].Style.ForeColor = Color.FromArgb(39, 174, 96);
+                    // Color de tipo
+                    Color tipoColor;
+                    switch (mov.Tipo)
+                    {
+                        case "VENTA":          tipoColor = Color.FromArgb(214, 48, 49);  break;
+                        case "PAGO":           tipoColor = Color.FromArgb(39, 174, 96);  break;
+                        case "ANULACION_COBRO": tipoColor = Color.FromArgb(149, 165, 166); break;
+                        default:               tipoColor = Color.FromArgb(45, 52, 54);   break;
+                    }
+                    row.Cells["colTipo"].Style.ForeColor = tipoColor;
+                    row.Cells["colTipo"].Style.Font = new Font(dgvMovimientos.Font, FontStyle.Bold);
 
-                    row.Cells["colTipo"].Style.Font = new Font(dgvHistorialMovimientos.Font, FontStyle.Bold);
+                    // Fila de PAGO anulado → gris, tachado visualmente
+                    if (mov.Anulado && mov.Tipo == "PAGO")
+                    {
+                        row.DefaultCellStyle.ForeColor = Color.FromArgb(180, 180, 180);
+                        row.DefaultCellStyle.Font      = new Font(dgvMovimientos.Font, FontStyle.Strikeout);
+                    }
+
+                    // Botón Anular: visible sólo en pagos activos
+                    var cellAccion = (DataGridViewButtonCell)row.Cells["colAccion"];
+                    if (mov.PuedeAnular)
+                    {
+                        cellAccion.Value           = "Anular";
+                        cellAccion.Style.BackColor = Color.FromArgb(214, 48, 49);
+                        cellAccion.Style.ForeColor = Color.White;
+                        row.Tag = mov.PagoVentaID;   // guardamos el ID para el clic
+                    }
+                    else
+                    {
+                        cellAccion.Value           = "";
+                        cellAccion.Style.BackColor = Color.FromArgb(240, 240, 240);
+                        row.Tag = null;
+                    }
                 }
             }
             catch (Exception ex)
@@ -147,33 +212,76 @@ namespace SistemaPOS.Forms.Contactos
             }
         }
 
+        private void DgvMovimientos_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex != dgvMovimientos.Columns["colAccion"].Index)
+                return;
+
+            var row = dgvMovimientos.Rows[e.RowIndex];
+            if (row.Tag == null) return;
+
+            int pagoVentaID = (int)row.Tag;
+
+            var resp = MessageBox.Show(
+                "¿Confirma la anulación de este cobro?\n\nSe revertirá el asiento contable.",
+                "Anular cobro", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (resp != DialogResult.Yes) return;
+
+            try
+            {
+                int usuarioID = SesionActual.Usuario?.UsuarioID ?? 0;
+                ClienteRepository.AnularPagoCxC(pagoVentaID, usuarioID);
+                MessageBox.Show("Cobro anulado correctamente.", "Éxito",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Recargar todo
+                CargarEncabezado();
+                CargarMovimientos();
+                this.DialogResult = DialogResult.OK;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al anular cobro: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Botones
+        // ─────────────────────────────────────────────────────────────
+
         private void BtnRegistrarPago_Click(object sender, EventArgs e)
         {
             try
             {
-                var estadoCuenta = ClienteRepository.ObtenerEstadoCuenta(_clienteID);
+                var ec = ClienteRepository.ObtenerEstadoCuenta(_clienteID);
 
-                if (estadoCuenta.SaldoPendiente <= 0)
+                if ((decimal)ec.SaldoPendiente <= 0)
                 {
                     MessageBox.Show("Este cliente no tiene saldo pendiente.", "Sin deuda",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
-                var formPago = new FormRegistrarPago(_clienteID, estadoCuenta.SaldoPendiente);
-                if (formPago.ShowDialog() == DialogResult.OK)
+                using (var frm = new FormRegistrarPago(_clienteID, (decimal)ec.SaldoPendiente))
                 {
-                    CargarDatos();
-                    this.DialogResult = DialogResult.OK;
+                    if (frm.ShowDialog() == DialogResult.OK)
+                    {
+                        CargarEncabezado();
+                        CargarMovimientos();
+                        this.DialogResult = DialogResult.OK;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void BtnImprimirEstado_Click(object sender, EventArgs e)
+        private void BtnImprimir_Click(object sender, EventArgs e)
         {
             try
             {
@@ -192,16 +300,6 @@ namespace SistemaPOS.Forms.Contactos
                 MessageBox.Show($"Error al imprimir: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        private void BtnCerrar_Click(object sender, EventArgs e)
-        {
-            this.Close();
-        }
-
-        private void Filtros_Changed(object sender, EventArgs e)
-        {
-            CargarMovimientos();
         }
     }
 }

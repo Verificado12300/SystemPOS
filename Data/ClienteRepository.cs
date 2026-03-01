@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.Text;
 using System.Windows.Forms;
 
 namespace SistemaPOS.Data
@@ -783,6 +784,240 @@ namespace SistemaPOS.Data
         public static Cliente ObtenerClienteGeneral()
         {
             return ObtenerPorID(1);
+        }
+
+        // ==================== MOVIMIENTOS UNIFICADOS (nueva vista) ====================
+
+        /// <summary>
+        /// Devuelve los movimientos de cuenta del cliente ordenados ASC con saldo
+        /// acumulado calculado en memoria.  Incluye: ventas crédito, pagos antiguos
+        /// (MontoEfectivo/Yape/etc. en Ventas), PagoVenta activos y anulados
+        /// (aparecen como PAGO + ANULACION_COBRO).
+        /// </summary>
+        public static List<MovimientoCuenta> ObtenerMovimientosCuentaCliente(
+            int clienteID,
+            DateTime? fechaDesde = null,
+            DateTime? fechaHasta = null,
+            string buscar = null)
+        {
+            var raw = new List<MovimientoCuenta>();
+
+            try
+            {
+                using (var conn = DatabaseConnection.GetConnection())
+                {
+                    // ---- 1. Ventas CREDITO no anuladas/eliminadas ----
+                    var sbV = new StringBuilder(@"
+                        SELECT Fecha, Hora, NumeroVenta, Total
+                        FROM Ventas
+                        WHERE ClienteID = @cid
+                          AND MetodoPago = 'CREDITO'
+                          AND Estado != 'ANULADA'
+                          AND (Eliminado IS NULL OR Eliminado = 0)");
+                    if (fechaDesde.HasValue) sbV.Append(" AND Fecha >= @fd");
+                    if (fechaHasta.HasValue) sbV.Append(" AND Fecha <= @fh");
+
+                    using (var cmd = new SQLiteCommand(sbV.ToString(), conn))
+                    {
+                        cmd.Parameters.AddWithValue("@cid", clienteID);
+                        if (fechaDesde.HasValue)
+                            cmd.Parameters.AddWithValue("@fd", fechaDesde.Value.ToString("yyyy-MM-dd"));
+                        if (fechaHasta.HasValue)
+                            cmd.Parameters.AddWithValue("@fh", fechaHasta.Value.ToString("yyyy-MM-dd"));
+
+                        using (var r = cmd.ExecuteReader())
+                        {
+                            while (r.Read())
+                                raw.Add(new MovimientoCuenta
+                                {
+                                    Fecha      = DateTime.Parse(r.GetString(0)),
+                                    Hora       = TimeSpan.Parse(r.GetString(1)),
+                                    Tipo       = "VENTA",
+                                    Documento  = r.GetString(2),
+                                    Metodo     = "CRÉDITO",
+                                    Cargo      = Convert.ToDecimal(r.GetValue(3)),
+                                    OrdenSort  = 0
+                                });
+                        }
+                    }
+
+                    // ---- 2. Pagos antiguos embebidos en Ventas (MontoEfectivo etc) ----
+                    var sbOld = new StringBuilder(@"
+                        SELECT Fecha, Hora, NumeroVenta,
+                            (MontoEfectivo + MontoYape + MontoTransferencia + MontoTarjeta) as OldPmt,
+                            CASE
+                                WHEN MontoEfectivo > 0 AND MontoYape = 0 AND MontoTransferencia = 0 AND MontoTarjeta = 0 THEN 'Efectivo'
+                                WHEN MontoYape > 0 AND MontoEfectivo = 0 AND MontoTransferencia = 0 AND MontoTarjeta = 0 THEN 'Yape'
+                                WHEN MontoTransferencia > 0 AND MontoEfectivo = 0 AND MontoYape = 0 AND MontoTarjeta = 0 THEN 'Transferencia'
+                                WHEN (MontoEfectivo + MontoYape + MontoTransferencia + MontoTarjeta) > 0 THEN 'Mixto'
+                                ELSE ''
+                            END as Metodo
+                        FROM Ventas
+                        WHERE ClienteID = @cid
+                          AND MetodoPago = 'CREDITO'
+                          AND Estado != 'ANULADA'
+                          AND (Eliminado IS NULL OR Eliminado = 0)
+                          AND (MontoEfectivo + MontoYape + MontoTransferencia + MontoTarjeta) > 0");
+                    if (fechaDesde.HasValue) sbOld.Append(" AND Fecha >= @fd");
+                    if (fechaHasta.HasValue) sbOld.Append(" AND Fecha <= @fh");
+
+                    using (var cmd = new SQLiteCommand(sbOld.ToString(), conn))
+                    {
+                        cmd.Parameters.AddWithValue("@cid", clienteID);
+                        if (fechaDesde.HasValue)
+                            cmd.Parameters.AddWithValue("@fd", fechaDesde.Value.ToString("yyyy-MM-dd"));
+                        if (fechaHasta.HasValue)
+                            cmd.Parameters.AddWithValue("@fh", fechaHasta.Value.ToString("yyyy-MM-dd"));
+
+                        using (var r = cmd.ExecuteReader())
+                        {
+                            while (r.Read())
+                                raw.Add(new MovimientoCuenta
+                                {
+                                    Fecha      = DateTime.Parse(r.GetString(0)),
+                                    Hora       = TimeSpan.Parse(r.GetString(1)),
+                                    Tipo       = "PAGO",
+                                    Documento  = r.GetString(2),
+                                    Metodo     = r.GetString(4),
+                                    Abono      = Convert.ToDecimal(r.GetValue(3)),
+                                    PuedeAnular = false,  // pagos legacy, sin PagoVentaID
+                                    OrdenSort  = 1
+                                });
+                        }
+                    }
+
+                    // ---- 3. PagoVenta: activos + anulados ----
+                    var sbPV = new StringBuilder(@"
+                        SELECT p.FechaPago, p.HoraPago,
+                               pv.PagoVentaID, v.NumeroVenta,
+                               p.MetodoPago, pv.MontoAplicado,
+                               COALESCE(pv.Anulado, 0)
+                        FROM PagoVenta pv
+                        INNER JOIN Pagos p  ON p.PagoID  = pv.PagoID
+                        INNER JOIN Ventas v ON v.VentaID = pv.VentaID
+                        WHERE v.ClienteID = @cid");
+                    if (fechaDesde.HasValue) sbPV.Append(" AND p.FechaPago >= @fd");
+                    if (fechaHasta.HasValue) sbPV.Append(" AND p.FechaPago <= @fh");
+
+                    using (var cmd = new SQLiteCommand(sbPV.ToString(), conn))
+                    {
+                        cmd.Parameters.AddWithValue("@cid", clienteID);
+                        if (fechaDesde.HasValue)
+                            cmd.Parameters.AddWithValue("@fd", fechaDesde.Value.ToString("yyyy-MM-dd"));
+                        if (fechaHasta.HasValue)
+                            cmd.Parameters.AddWithValue("@fh", fechaHasta.Value.ToString("yyyy-MM-dd"));
+
+                        using (var r = cmd.ExecuteReader())
+                        {
+                            while (r.Read())
+                            {
+                                bool anulado = r.GetInt32(6) == 1;
+                                int  pvID    = r.GetInt32(2);
+                                var  fecha   = DateTime.Parse(r.GetString(0));
+                                var  hora    = TimeSpan.Parse(r.GetString(1));
+                                string doc   = r.GetString(3);
+                                string met   = r.GetString(4);
+                                decimal mto  = Convert.ToDecimal(r.GetValue(5));
+
+                                // Fila PAGO
+                                raw.Add(new MovimientoCuenta
+                                {
+                                    PagoVentaID = pvID,
+                                    Fecha       = fecha,
+                                    Hora        = hora,
+                                    Tipo        = "PAGO",
+                                    Documento   = doc,
+                                    Metodo      = met,
+                                    Abono       = mto,
+                                    Anulado     = anulado,
+                                    PuedeAnular = !anulado,
+                                    OrdenSort   = 1
+                                });
+
+                                // Si está anulado → fila ANULACION_COBRO (restaura el cargo)
+                                if (anulado)
+                                {
+                                    raw.Add(new MovimientoCuenta
+                                    {
+                                        Fecha       = fecha,
+                                        Hora        = hora,
+                                        Tipo        = "ANULACION_COBRO",
+                                        Documento   = doc,
+                                        Metodo      = met,
+                                        Cargo       = mto,
+                                        Anulado     = true,
+                                        PuedeAnular = false,
+                                        OrdenSort   = 2
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error al obtener movimientos: {ex.Message}");
+            }
+
+            // Ordenar cronológicamente (ASC)
+            raw.Sort((a, b) =>
+            {
+                int c = a.Fecha.CompareTo(b.Fecha);
+                if (c != 0) return c;
+                c = a.Hora.CompareTo(b.Hora);
+                if (c != 0) return c;
+                return a.OrdenSort.CompareTo(b.OrdenSort);
+            });
+
+            // Filtro buscar (en memoria, sobre datos ya ordenados)
+            if (!string.IsNullOrWhiteSpace(buscar))
+            {
+                string b = buscar.ToLower();
+                raw = raw.FindAll(m =>
+                    (m.Tipo      ?? "").ToLower().Contains(b) ||
+                    (m.Documento ?? "").ToLower().Contains(b) ||
+                    (m.Metodo    ?? "").ToLower().Contains(b));
+            }
+
+            // Calcular saldo acumulado
+            decimal saldo = 0;
+            foreach (var mov in raw)
+            {
+                if (mov.Tipo == "VENTA" || mov.Tipo == "ANULACION_COBRO")
+                    saldo += mov.Cargo;
+                else
+                    saldo -= mov.Abono;
+
+                mov.Saldo = saldo;
+            }
+
+            return raw;
+        }
+
+        /// <summary>
+        /// Suma de PagoVenta anulados (MontoAplicado) para el cliente.
+        /// Usado en el resumen del estado de cuenta.
+        /// </summary>
+        public static decimal ObtenerTotalAnulacionesCxC(int clienteID)
+        {
+            try
+            {
+                using (var conn = DatabaseConnection.GetConnection())
+                using (var cmd = new SQLiteCommand(@"
+                    SELECT COALESCE(SUM(pv.MontoAplicado), 0)
+                    FROM PagoVenta pv
+                    INNER JOIN Ventas v ON v.VentaID = pv.VentaID
+                    WHERE v.ClienteID = @cid AND COALESCE(pv.Anulado, 0) = 1", conn))
+                {
+                    cmd.Parameters.AddWithValue("@cid", clienteID);
+                    return Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
+                }
+            }
+            catch
+            {
+                return 0m;
+            }
         }
 
     }

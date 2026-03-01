@@ -19,18 +19,6 @@ namespace SistemaPOS.Data
         public int DiasVencidos { get; set; }
     }
 
-    public class PagoClienteDetalle
-    {
-        public int PagoVentaID { get; set; }
-        public int PagoID { get; set; }
-        public DateTime Fecha { get; set; }
-        public TimeSpan Hora { get; set; }
-        public string MetodoPago { get; set; }
-        public decimal MontoAplicado { get; set; }
-        public string Observaciones { get; set; }
-        public bool Anulado { get; set; }
-    }
-
     public static class CuentaPorCobrarRepository
     {
         public static List<CuentaPorCobrarDetalle> Listar(int? clienteID = null, string estado = null, string busqueda = null, bool soloVencidas = false)
@@ -249,45 +237,6 @@ namespace SistemaPOS.Data
                     throw;
                 }
             }
-        }
-
-        public static List<PagoClienteDetalle> ObtenerPagosVenta(int ventaID)
-        {
-            var pagos = new List<PagoClienteDetalle>();
-            using (var connection = DatabaseConnection.GetConnection())
-            {
-                string query = @"
-                    SELECT pv.PagoVentaID, p.PagoID, p.FechaPago, p.HoraPago,
-                           p.MetodoPago, pv.MontoAplicado, p.Observaciones,
-                           COALESCE(pv.Anulado, 0)
-                    FROM PagoVenta pv
-                    INNER JOIN Pagos p ON p.PagoID = pv.PagoID
-                    WHERE pv.VentaID = @VentaID
-                    ORDER BY p.FechaPago DESC, p.HoraPago DESC";
-
-                using (var cmd = new SQLiteCommand(query, connection))
-                {
-                    cmd.Parameters.AddWithValue("@VentaID", ventaID);
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            pagos.Add(new PagoClienteDetalle
-                            {
-                                PagoVentaID   = reader.GetInt32(0),
-                                PagoID        = reader.GetInt32(1),
-                                Fecha         = DateTime.Parse(reader.GetString(2)),
-                                Hora          = TimeSpan.Parse(reader.GetString(3)),
-                                MetodoPago    = reader.GetString(4),
-                                MontoAplicado = reader.GetDecimal(5),
-                                Observaciones = reader.IsDBNull(6) ? "" : reader.GetString(6),
-                                Anulado       = reader.GetInt32(7) == 1
-                            });
-                        }
-                    }
-                }
-            }
-            return pagos;
         }
 
         public static (decimal TotalCredito, decimal TotalCobrado, decimal TotalPendiente, int CuentasAbiertas, int Vencidas) ObtenerResumen()

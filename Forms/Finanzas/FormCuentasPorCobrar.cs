@@ -36,7 +36,6 @@ namespace SistemaPOS.Forms.Finanzas
             dgv.RowHeadersVisible = false;
 
             btnBuscar.Click += (_, __) => CargarCuentas();
-            btnPagos.Click += (_, __) => VerHistorialPagos();
             btnEstadoCuenta.Click += (_, __) => AbrirEstadoCuenta();
             btnExportar.Click += BtnExportar_Click;
         }
@@ -96,26 +95,6 @@ namespace SistemaPOS.Forms.Finanzas
             }
 
             lblResumen.Text = $"Registros: {_data.Count} | Vencidas: {vencidas} | Total pendiente: S/ {totalPendiente:N2}";
-        }
-
-        private void VerHistorialPagos()
-        {
-            if (dgv.SelectedRows.Count == 0)
-            {
-                MessageBox.Show("Seleccione una cuenta para ver su historial de pagos.", "Cobros",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            int ventaID = (int)dgv.SelectedRows[0].Tag;
-            var cuenta = _data.Find(x => x.VentaID == ventaID);
-            if (cuenta == null) return;
-
-            using (var form = new FormHistorialCobros(cuenta))
-            {
-                if (form.ShowDialog(this) == DialogResult.OK)
-                    CargarCuentas();
-            }
         }
 
         private void AbrirEstadoCuenta()

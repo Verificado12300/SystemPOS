@@ -100,11 +100,12 @@ E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Contactos.FormRegistrarPago.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormGastos.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormRegistrarGasto.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormCuentasPorCobrar.resources
-E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormHistorialCobros.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormCuentasPorPagar.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormRegistrarPagoProveedor.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormContabilidad.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormPeriodosContables.resources
+E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormHistorialPagosCxP.resources
+E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormPapeleraGlobal.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Reportes.FormReportes.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Reportes.FormFlujoCaja.resources
 E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Reportes.FormEstadoResultados.resources
@@ -135,5 +136,3 @@ E:\SistemaPOS\obj\Debug\SistemaPOS.csproj.CoreCompileInputs.cache
 E:\SistemaPOS\obj\Debug\SistemaPOS.csproj.Up2Date
 E:\SistemaPOS\obj\Debug\SistemaPOS.exe
 E:\SistemaPOS\obj\Debug\SistemaPOS.pdb
-E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormHistorialPagosCxP.resources
-E:\SistemaPOS\obj\Debug\SistemaPOS.Forms.Finanzas.FormPapeleraGlobal.resources

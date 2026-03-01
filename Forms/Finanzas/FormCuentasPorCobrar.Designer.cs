@@ -26,7 +26,6 @@ namespace SistemaPOS.Forms.Finanzas
             this.txtBuscar = new System.Windows.Forms.TextBox();
             this.chkSoloVencidas = new System.Windows.Forms.CheckBox();
             this.btnBuscar = new System.Windows.Forms.Button();
-            this.btnPagos = new System.Windows.Forms.Button();
             this.btnEstadoCuenta = new System.Windows.Forms.Button();
             this.btnExportar = new System.Windows.Forms.Button();
             this.dgv = new System.Windows.Forms.DataGridView();
@@ -83,7 +82,6 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlFiltros.Controls.Add(this.txtBuscar);
             this.pnlFiltros.Controls.Add(this.chkSoloVencidas);
             this.pnlFiltros.Controls.Add(this.btnBuscar);
-            this.pnlFiltros.Controls.Add(this.btnPagos);
             this.pnlFiltros.Controls.Add(this.btnEstadoCuenta);
             this.pnlFiltros.Controls.Add(this.btnExportar);
             this.pnlFiltros.Location = new System.Drawing.Point(0, 68);
@@ -145,21 +143,6 @@ namespace SistemaPOS.Forms.Finanzas
             this.btnBuscar.Text = "Buscar";
             this.btnBuscar.UseVisualStyleBackColor = false;
             //
-            // btnPagos
-            //
-            this.btnPagos.BackColor = System.Drawing.Color.FromArgb(253, 203, 110);
-            this.btnPagos.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnPagos.FlatAppearance.BorderSize = 0;
-            this.btnPagos.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnPagos.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.btnPagos.ForeColor = System.Drawing.Color.FromArgb(45, 52, 54);
-            this.btnPagos.Location = new System.Drawing.Point(733, 19);
-            this.btnPagos.Name = "btnPagos";
-            this.btnPagos.Size = new System.Drawing.Size(105, 26);
-            this.btnPagos.TabIndex = 5;
-            this.btnPagos.Text = "Historial Pagos";
-            this.btnPagos.UseVisualStyleBackColor = false;
-            //
             // btnEstadoCuenta
             //
             this.btnEstadoCuenta.BackColor = System.Drawing.Color.FromArgb(108, 92, 231);
@@ -168,10 +151,10 @@ namespace SistemaPOS.Forms.Finanzas
             this.btnEstadoCuenta.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnEstadoCuenta.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnEstadoCuenta.ForeColor = System.Drawing.Color.White;
-            this.btnEstadoCuenta.Location = new System.Drawing.Point(848, 19);
+            this.btnEstadoCuenta.Location = new System.Drawing.Point(733, 19);
             this.btnEstadoCuenta.Name = "btnEstadoCuenta";
-            this.btnEstadoCuenta.Size = new System.Drawing.Size(120, 26);
-            this.btnEstadoCuenta.TabIndex = 6;
+            this.btnEstadoCuenta.Size = new System.Drawing.Size(130, 26);
+            this.btnEstadoCuenta.TabIndex = 5;
             this.btnEstadoCuenta.Text = "Estado de Cuenta";
             this.btnEstadoCuenta.UseVisualStyleBackColor = false;
             //
@@ -185,10 +168,10 @@ namespace SistemaPOS.Forms.Finanzas
             this.btnExportar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnExportar.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnExportar.ForeColor = System.Drawing.Color.FromArgb(45, 52, 54);
-            this.btnExportar.Location = new System.Drawing.Point(977, 19);
+            this.btnExportar.Location = new System.Drawing.Point(873, 19);
             this.btnExportar.Name = "btnExportar";
             this.btnExportar.Size = new System.Drawing.Size(88, 26);
-            this.btnExportar.TabIndex = 7;
+            this.btnExportar.TabIndex = 6;
             this.btnExportar.Text = "Exportar";
             this.btnExportar.UseVisualStyleBackColor = false;
             //
@@ -341,7 +324,6 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.TextBox txtBuscar;
         private System.Windows.Forms.CheckBox chkSoloVencidas;
         private System.Windows.Forms.Button btnBuscar;
-        private System.Windows.Forms.Button btnPagos;
         private System.Windows.Forms.Button btnEstadoCuenta;
         private System.Windows.Forms.Button btnExportar;
         private System.Windows.Forms.DataGridView dgv;
