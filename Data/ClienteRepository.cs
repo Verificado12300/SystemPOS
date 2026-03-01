@@ -273,8 +273,12 @@ namespace SistemaPOS.Data
                                 WHERE ClienteID = @ClienteID AND MetodoPago = 'CREDITO' AND Estado != 'ANULADA'
                             ), 0) as OldPayments,
                             COALESCE((
-                                SELECT SUM(Monto) FROM Pagos 
-                                WHERE ClienteID = @ClienteID
+                                SELECT SUM(pv.MontoAplicado)
+                                FROM PagoVenta pv
+                                INNER JOIN Ventas vv ON vv.VentaID = pv.VentaID
+                                WHERE vv.ClienteID = @ClienteID
+                                  AND vv.MetodoPago = 'CREDITO'
+                                  AND (pv.Anulado IS NULL OR pv.Anulado = 0)
                             ), 0) as NewPayments";
 
                     decimal totalVentas = 0;
@@ -477,7 +481,7 @@ namespace SistemaPOS.Data
                             string queryVentas = @"
                                 SELECT v.VentaID, v.Total, v.NumeroVenta,
                                     (v.MontoEfectivo + v.MontoYape + v.MontoTransferencia + v.MontoTarjeta) as OldPayments,
-                                    COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv WHERE pv.VentaID = v.VentaID), 0) as NewPayments
+                                    COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv WHERE pv.VentaID = v.VentaID AND (pv.Anulado IS NULL OR pv.Anulado = 0)), 0) as NewPayments
                                 FROM Ventas v
                                 WHERE v.ClienteID = @ClienteID AND v.MetodoPago = 'CREDITO' AND v.Estado = 'CREDITO'
                                 ORDER BY v.Fecha ASC, v.Hora ASC";
@@ -605,6 +609,103 @@ namespace SistemaPOS.Data
             catch (Exception ex)
             {
                 throw new Exception($"Error al registrar pago: {ex.Message}");
+            }
+        }
+
+        // ==================== ANULAR COBRO CxC ====================
+
+        public static void AnularPagoCxC(int pagoVentaID, int usuarioID, string motivo = "")
+        {
+            using (var connection = DatabaseConnection.GetConnection())
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    // 1. Leer datos del PagoVenta + Pagos + Ventas
+                    int    ventaID, pagoID;
+                    decimal montoAplicado, totalPago, montoEf, montoYape, montoTransf;
+                    string  metodoPago, numeroVenta;
+                    DateTime fechaPago;
+                    bool yaAnulado;
+
+                    using (var cmd = new SQLiteCommand(@"
+                        SELECT pv.PagoVentaID, pv.VentaID, pv.PagoID, pv.MontoAplicado,
+                               COALESCE(pv.Anulado, 0),
+                               p.MetodoPago, p.Monto, p.MontoEfectivo, p.MontoYape, p.MontoTransferencia,
+                               p.FechaPago,
+                               v.NumeroVenta
+                        FROM PagoVenta pv
+                        INNER JOIN Pagos p  ON p.PagoID  = pv.PagoID
+                        INNER JOIN Ventas v ON v.VentaID = pv.VentaID
+                        WHERE pv.PagoVentaID = @pvID", connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@pvID", pagoVentaID);
+                        using (var r = cmd.ExecuteReader())
+                        {
+                            if (!r.Read())
+                                throw new Exception("Registro de pago no encontrado.");
+                            yaAnulado     = r.GetInt32(4) == 1;
+                            ventaID       = r.GetInt32(1);
+                            pagoID        = r.GetInt32(2);
+                            montoAplicado = r.GetDecimal(3);
+                            metodoPago    = r.GetString(5);
+                            totalPago     = r.GetDecimal(6);
+                            montoEf       = r.GetDecimal(7);
+                            montoYape     = r.GetDecimal(8);
+                            montoTransf   = r.GetDecimal(9);
+                            fechaPago     = DateTime.Parse(r.GetString(10));
+                            numeroVenta   = r.GetString(11);
+                        }
+                    }
+
+                    if (yaAnulado)
+                        throw new Exception("Este cobro ya está anulado.");
+
+                    // 2. Asiento inverso: Dr 120 / Cr 101|102
+                    ContabilidadService.RegistrarAnulacionCobroCxC(
+                        pagoVentaID, ventaID, numeroVenta, montoAplicado,
+                        metodoPago, montoEf, montoYape, montoTransf,
+                        totalPago, fechaPago, usuarioID, connection, transaction);
+
+                    // 3. Marcar PagoVenta como anulado
+                    string ahora  = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    string usuario = SistemaPOS.Utils.SesionActual.Usuario?.NombreUsuario ?? "Sistema";
+                    using (var cmd = new SQLiteCommand(@"
+                        UPDATE PagoVenta
+                        SET Anulado=1, AnuladoFecha=@fecha, AnuladoPor=@usuario, Motivo=@motivo
+                        WHERE PagoVentaID=@pvID", connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@fecha",   ahora);
+                        cmd.Parameters.AddWithValue("@usuario", usuario);
+                        cmd.Parameters.AddWithValue("@motivo",  motivo ?? "");
+                        cmd.Parameters.AddWithValue("@pvID",    pagoVentaID);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 4. Recalcular estado de la Venta (solo pagos no anulados)
+                    using (var cmd = new SQLiteCommand(@"
+                        UPDATE Ventas SET Estado =
+                            CASE WHEN COALESCE((SELECT SUM(pv2.MontoAplicado)
+                                                FROM PagoVenta pv2
+                                                WHERE pv2.VentaID = @ventaID
+                                                  AND (pv2.Anulado IS NULL OR pv2.Anulado = 0)), 0)
+                                      >= Total
+                                 THEN 'COMPLETADA'
+                                 ELSE 'CREDITO'
+                            END
+                        WHERE VentaID = @ventaID", connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@ventaID", ventaID);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
             }
         }
 

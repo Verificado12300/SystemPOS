@@ -1554,5 +1554,53 @@ namespace SistemaPOS.Data
 
             ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
+
+        /// <summary>
+        /// Asiento inverso de un cobro anulado (ANULACION_COBRO).
+        ///   Dr 120 CxC                = monto  (restitución de la deuda)
+        ///   Cr 101 Caja o 102 Bancos  = monto  (proporcional si MIXTO)
+        /// </summary>
+        public static void RegistrarAnulacionCobroCxC(
+            int pagoVentaID, int ventaID, string numeroVenta, decimal monto,
+            string metodoPago,
+            decimal montoEfectivo, decimal montoYape, decimal montoTransferencia,
+            decimal totalPago,
+            DateTime fecha, int usuarioID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            if (monto <= 0m) return;
+
+            PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
+
+            var hora = TimeSpan.FromSeconds((int)DateTime.Now.TimeOfDay.TotalSeconds);
+            var asiento = BuildAsiento(
+                "ANULACION_COBRO", $"COBRO-{pagoVentaID}", ventaID, usuarioID,
+                fecha, hora,
+                $"Anulación cobro {numeroVenta} (PV#{pagoVentaID})", "VENTA");
+
+            // Dr 120 CxC (restitución de la deuda)
+            var c120 = GetCuenta("120", conn, tx);
+            AddLine(asiento, c120.CuentaID, monto, 0m, $"Restitución CxC {numeroVenta}");
+
+            // Cr 101/102 (proporcional si MIXTO)
+            if (metodoPago?.ToUpper() == "MIXTO" && totalPago > 0)
+            {
+                decimal ef  = Math.Round((montoEfectivo + montoYape) * monto / totalPago, 2);
+                decimal tr  = Math.Round(montoTransferencia           * monto / totalPago, 2);
+                decimal adj = monto - ef - tr;
+                ef += adj;
+                if (ef > 0) { var c101 = GetCuenta("101", conn, tx); AddLine(asiento, c101.CuentaID, 0m, ef, "Devolución efectivo/Yape"); }
+                if (tr > 0) { var c102 = GetCuenta("102", conn, tx); AddLine(asiento, c102.CuentaID, 0m, tr, "Devolución transferencia"); }
+            }
+            else
+            {
+                string cod = (metodoPago?.ToUpper() == "TRANSFERENCIA" ||
+                              metodoPago?.ToUpper() == "TARJETA") ? "102" : "101";
+                var cCr = GetCuenta(cod, conn, tx);
+                AddLine(asiento, cCr.CuentaID, 0m, monto, $"Devolución cobro ({metodoPago})");
+            }
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
     }
 }

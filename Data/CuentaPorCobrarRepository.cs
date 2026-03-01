@@ -21,12 +21,14 @@ namespace SistemaPOS.Data
 
     public class PagoClienteDetalle
     {
+        public int PagoVentaID { get; set; }
         public int PagoID { get; set; }
         public DateTime Fecha { get; set; }
         public TimeSpan Hora { get; set; }
         public string MetodoPago { get; set; }
         public decimal MontoAplicado { get; set; }
         public string Observaciones { get; set; }
+        public bool Anulado { get; set; }
     }
 
     public static class CuentaPorCobrarRepository
@@ -50,7 +52,7 @@ namespace SistemaPOS.Data
                         END as NombreCliente,
                         v.Total,
                         COALESCE(v.MontoEfectivo + v.MontoYape + v.MontoTransferencia + v.MontoTarjeta, 0) as OldPayments,
-                        COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv WHERE pv.VentaID = v.VentaID), 0) as NewPayments
+                        COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv WHERE pv.VentaID = v.VentaID AND (pv.Anulado IS NULL OR pv.Anulado = 0)), 0) as NewPayments
                     FROM Ventas v
                     INNER JOIN Clientes c ON c.ClienteID = v.ClienteID
                     LEFT JOIN CreditosVentas cv ON cv.VentaID = v.VentaID
@@ -255,7 +257,9 @@ namespace SistemaPOS.Data
             using (var connection = DatabaseConnection.GetConnection())
             {
                 string query = @"
-                    SELECT p.PagoID, p.FechaPago, p.HoraPago, p.MetodoPago, pv.MontoAplicado, p.Observaciones
+                    SELECT pv.PagoVentaID, p.PagoID, p.FechaPago, p.HoraPago,
+                           p.MetodoPago, pv.MontoAplicado, p.Observaciones,
+                           COALESCE(pv.Anulado, 0)
                     FROM PagoVenta pv
                     INNER JOIN Pagos p ON p.PagoID = pv.PagoID
                     WHERE pv.VentaID = @VentaID
@@ -270,12 +274,14 @@ namespace SistemaPOS.Data
                         {
                             pagos.Add(new PagoClienteDetalle
                             {
-                                PagoID = reader.GetInt32(0),
-                                Fecha = DateTime.Parse(reader.GetString(1)),
-                                Hora = TimeSpan.Parse(reader.GetString(2)),
-                                MetodoPago = reader.GetString(3),
-                                MontoAplicado = reader.GetDecimal(4),
-                                Observaciones = reader.IsDBNull(5) ? "" : reader.GetString(5)
+                                PagoVentaID   = reader.GetInt32(0),
+                                PagoID        = reader.GetInt32(1),
+                                Fecha         = DateTime.Parse(reader.GetString(2)),
+                                Hora          = TimeSpan.Parse(reader.GetString(3)),
+                                MetodoPago    = reader.GetString(4),
+                                MontoAplicado = reader.GetDecimal(5),
+                                Observaciones = reader.IsDBNull(6) ? "" : reader.GetString(6),
+                                Anulado       = reader.GetInt32(7) == 1
                             });
                         }
                     }

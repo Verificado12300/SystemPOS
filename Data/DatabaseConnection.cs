@@ -1039,6 +1039,26 @@ namespace SistemaPOS.Data
                         }
                     }
                     catch (Exception ex) { throw new Exception("Migración CuentasPorPagar.Eliminado falló: " + ex.Message, ex); }
+
+                    // Migración: PagoVenta — columnas de anulación de cobros CxC
+                    try
+                    {
+                        string[] pvDefs  = { "Anulado INTEGER DEFAULT 0", "AnuladoFecha TEXT NULL", "AnuladoPor TEXT NULL", "Motivo TEXT NULL" };
+                        string[] pvNames = { "Anulado", "AnuladoFecha", "AnuladoPor", "Motivo" };
+                        for (int i = 0; i < pvNames.Length; i++)
+                        {
+                            using (var cmd = connection.CreateCommand())
+                            {
+                                cmd.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('PagoVenta') WHERE name='{pvNames[i]}'";
+                                if ((long)cmd.ExecuteScalar() == 0)
+                                {
+                                    cmd.CommandText = $"ALTER TABLE PagoVenta ADD COLUMN {pvDefs[i]}";
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex) { throw new Exception("Migración PagoVenta.Anulado falló: " + ex.Message, ex); }
                 }
             }
             catch (Exception ex)

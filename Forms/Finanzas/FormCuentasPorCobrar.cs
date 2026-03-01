@@ -113,7 +113,8 @@ namespace SistemaPOS.Forms.Finanzas
 
             using (var form = new FormHistorialCobros(cuenta))
             {
-                form.ShowDialog(this);
+                if (form.ShowDialog(this) == DialogResult.OK)
+                    CargarCuentas();
             }
         }
 
