@@ -14,12 +14,6 @@ namespace SistemaPOS.Forms.Contactos
     {
         private readonly int _clienteID;
 
-        // Cache del resumen global (sin filtro de fecha)
-        private decimal _totalVentasGlobal;
-        private decimal _totalPagosGlobal;
-        private decimal _totalAnulacionesGlobal;
-        private decimal _saldoActual;
-
         public FormEstadoCuenta(int clienteID)
         {
             InitializeComponent();
@@ -86,14 +80,6 @@ namespace SistemaPOS.Forms.Contactos
                 lblDisponibleVal.ForeColor = disponible >= 0
                     ? Color.FromArgb(39, 174, 96)
                     : Color.FromArgb(214, 48, 49);
-
-                // Resumen global
-                _totalVentasGlobal     = (decimal)ec.TotalVentas;
-                _totalPagosGlobal      = (decimal)ec.TotalPagos;
-                _totalAnulacionesGlobal = ClienteRepository.ObtenerTotalAnulacionesCxC(_clienteID);
-                _saldoActual           = (decimal)ec.SaldoPendiente;
-
-                ActualizarResumen();
             }
             catch (Exception ex)
             {
@@ -102,21 +88,8 @@ namespace SistemaPOS.Forms.Contactos
             }
         }
 
-        private void ActualizarResumen()
-        {
-            lblVentasVal.Text      = $"S/ {_totalVentasGlobal:N2}";
-            lblPagosVal.Text       = $"S/ {_totalPagosGlobal:N2}";
-            lblAnulacionesVal.Text = $"S/ {_totalAnulacionesGlobal:N2}";
-            lblSaldoVal.Text       = $"S/ {_saldoActual:N2}";
-            lblSaldoVal.ForeColor  = _saldoActual > 0
-                ? Color.FromArgb(214, 48, 49)
-                : _saldoActual < 0
-                    ? Color.FromArgb(39, 174, 96)
-                    : Color.FromArgb(99, 110, 114);
-        }
-
         // ─────────────────────────────────────────────────────────────
-        // Tabla de movimientos
+        // Tabla de movimientos + cards (misma fuente de datos)
         // ─────────────────────────────────────────────────────────────
 
         private void CargarMovimientos()
@@ -131,9 +104,34 @@ namespace SistemaPOS.Forms.Contactos
                     dtpHasta.Value.Date,
                     string.IsNullOrWhiteSpace(buscar) ? null : buscar);
 
+                // ── Cards: calculados desde la misma lista ──────────
+                decimal totalVentas = 0, totalPagos = 0, totalAnulaciones = 0;
+                foreach (var m in movimientos)
+                {
+                    switch (m.Tipo)
+                    {
+                        case "VENTA":          totalVentas      += m.Cargo; break;
+                        case "PAGO":           totalPagos       += m.Abono; break;
+                        case "ANULACION_COBRO": totalAnulaciones += m.Cargo; break;
+                    }
+                }
+                decimal saldoFinal = movimientos.Count > 0
+                    ? movimientos[movimientos.Count - 1].Saldo
+                    : 0m;
+
+                lblVentasVal.Text      = $"S/ {totalVentas:N2}";
+                lblPagosVal.Text       = $"S/ {totalPagos:N2}";
+                lblAnulacionesVal.Text = $"S/ {totalAnulaciones:N2}";
+                lblSaldoVal.Text       = $"S/ {saldoFinal:N2}";
+                lblSaldoVal.ForeColor  = saldoFinal > 0
+                    ? Color.FromArgb(214, 48, 49)
+                    : saldoFinal < 0
+                        ? Color.FromArgb(39, 174, 96)
+                        : Color.FromArgb(99, 110, 114);
+
+                // ── DGV: más reciente primero ───────────────────────
                 dgvMovimientos.Rows.Clear();
 
-                // Mostrar más reciente primero (revertir)
                 var lista = new List<MovimientoCuenta>(movimientos);
                 lista.Reverse();
 
@@ -142,10 +140,10 @@ namespace SistemaPOS.Forms.Contactos
                     int idx = dgvMovimientos.Rows.Add();
                     var row = dgvMovimientos.Rows[idx];
 
-                    row.Cells["colFecha"].Value    = $"{mov.Fecha:dd/MM/yyyy}  {mov.Hora:hh\\:mm}";
-                    row.Cells["colTipo"].Value     = mov.Tipo == "ANULACION_COBRO" ? "ANULACIÓN" : mov.Tipo;
+                    row.Cells["colFecha"].Value     = $"{mov.Fecha:dd/MM/yyyy}  {mov.Hora:hh\\:mm}";
+                    row.Cells["colTipo"].Value      = mov.Tipo == "ANULACION_COBRO" ? "ANULACIÓN" : mov.Tipo;
                     row.Cells["colDocumento"].Value = mov.Documento;
-                    row.Cells["colMetodo"].Value   = mov.Metodo;
+                    row.Cells["colMetodo"].Value    = mov.Metodo;
 
                     if (mov.Cargo > 0)
                     {
@@ -153,7 +151,7 @@ namespace SistemaPOS.Forms.Contactos
                         row.Cells["colCargo"].Style.ForeColor = Color.FromArgb(214, 48, 49);
                         row.Cells["colAbono"].Value = "";
                     }
-                    else if (mov.Abono > 0)
+                    else
                     {
                         row.Cells["colAbono"].Value = $"S/ {mov.Abono:N2}";
                         row.Cells["colAbono"].Style.ForeColor = Color.FromArgb(39, 174, 96);
@@ -169,33 +167,26 @@ namespace SistemaPOS.Forms.Contactos
                             : Color.FromArgb(45, 52, 54);
                     row.Cells["colSaldo"].Style.Font = new Font(dgvMovimientos.Font, FontStyle.Bold);
 
-                    // Color de tipo
+                    // Color del tipo
                     Color tipoColor;
                     switch (mov.Tipo)
                     {
-                        case "VENTA":          tipoColor = Color.FromArgb(214, 48, 49);  break;
-                        case "PAGO":           tipoColor = Color.FromArgb(39, 174, 96);  break;
+                        case "VENTA":           tipoColor = Color.FromArgb(214, 48, 49);  break;
+                        case "PAGO":            tipoColor = Color.FromArgb(39, 174, 96);  break;
                         case "ANULACION_COBRO": tipoColor = Color.FromArgb(149, 165, 166); break;
-                        default:               tipoColor = Color.FromArgb(45, 52, 54);   break;
+                        default:                tipoColor = Color.FromArgb(45, 52, 54);   break;
                     }
                     row.Cells["colTipo"].Style.ForeColor = tipoColor;
                     row.Cells["colTipo"].Style.Font = new Font(dgvMovimientos.Font, FontStyle.Bold);
 
-                    // Fila de PAGO anulado → gris, tachado visualmente
-                    if (mov.Anulado && mov.Tipo == "PAGO")
-                    {
-                        row.DefaultCellStyle.ForeColor = Color.FromArgb(180, 180, 180);
-                        row.DefaultCellStyle.Font      = new Font(dgvMovimientos.Font, FontStyle.Strikeout);
-                    }
-
-                    // Botón Anular: visible sólo en pagos activos
+                    // Botón Anular: solo en pagos activos
                     var cellAccion = (DataGridViewButtonCell)row.Cells["colAccion"];
                     if (mov.PuedeAnular)
                     {
                         cellAccion.Value           = "Anular";
                         cellAccion.Style.BackColor = Color.FromArgb(214, 48, 49);
                         cellAccion.Style.ForeColor = Color.White;
-                        row.Tag = mov.PagoVentaID;   // guardamos el ID para el clic
+                        row.Tag = mov.PagoVentaID;
                     }
                     else
                     {

@@ -790,9 +790,11 @@ namespace SistemaPOS.Data
 
         /// <summary>
         /// Devuelve los movimientos de cuenta del cliente ordenados ASC con saldo
-        /// acumulado calculado en memoria.  Incluye: ventas crédito, pagos antiguos
-        /// (MontoEfectivo/Yape/etc. en Ventas), PagoVenta activos y anulados
-        /// (aparecen como PAGO + ANULACION_COBRO).
+        /// acumulado calculado en memoria.  Reglas por tipo:
+        ///   VENTA            → cargo  (saldo sube).
+        ///   PAGO             → abono, solo si Anulado=0 (saldo baja).
+        ///   ANULACION_COBRO  → cargo por pago anulado (saldo sube).
+        ///                      El PAGO anulado NO aparece como fila separada.
         /// </summary>
         public static List<MovimientoCuenta> ObtenerMovimientosCuentaCliente(
             int clienteID,
@@ -886,7 +888,10 @@ namespace SistemaPOS.Data
                         }
                     }
 
-                    // ---- 3. PagoVenta: activos + anulados ----
+                    // ---- 3. PagoVenta ----
+                    // Activo  (Anulado=0) → PAGO / abono  (reduce saldo).
+                    // Anulado (Anulado=1) → ANULACION_COBRO / cargo (restaura saldo).
+                    //   El PAGO anulado NO aparece como fila separada.
                     var sbPV = new StringBuilder(@"
                         SELECT p.FechaPago, p.HoraPago,
                                pv.PagoVentaID, v.NumeroVenta,
@@ -911,32 +916,33 @@ namespace SistemaPOS.Data
                         {
                             while (r.Read())
                             {
-                                bool anulado = r.GetInt32(6) == 1;
-                                int  pvID    = r.GetInt32(2);
-                                var  fecha   = DateTime.Parse(r.GetString(0));
-                                var  hora    = TimeSpan.Parse(r.GetString(1));
-                                string doc   = r.GetString(3);
-                                string met   = r.GetString(4);
-                                decimal mto  = Convert.ToDecimal(r.GetValue(5));
+                                bool    anulado = r.GetInt32(6) == 1;
+                                int     pvID    = r.GetInt32(2);
+                                var     fecha   = DateTime.Parse(r.GetString(0));
+                                var     hora    = TimeSpan.Parse(r.GetString(1));
+                                string  doc     = r.GetString(3);
+                                string  met     = r.GetString(4);
+                                decimal mto     = Convert.ToDecimal(r.GetValue(5));
 
-                                // Fila PAGO
-                                raw.Add(new MovimientoCuenta
+                                if (!anulado)
                                 {
-                                    PagoVentaID = pvID,
-                                    Fecha       = fecha,
-                                    Hora        = hora,
-                                    Tipo        = "PAGO",
-                                    Documento   = doc,
-                                    Metodo      = met,
-                                    Abono       = mto,
-                                    Anulado     = anulado,
-                                    PuedeAnular = !anulado,
-                                    OrdenSort   = 1
-                                });
-
-                                // Si está anulado → fila ANULACION_COBRO (restaura el cargo)
-                                if (anulado)
+                                    // Pago activo → abono (reduce saldo)
+                                    raw.Add(new MovimientoCuenta
+                                    {
+                                        PagoVentaID = pvID,
+                                        Fecha       = fecha,
+                                        Hora        = hora,
+                                        Tipo        = "PAGO",
+                                        Documento   = doc,
+                                        Metodo      = met,
+                                        Abono       = mto,
+                                        PuedeAnular = true,
+                                        OrdenSort   = 1
+                                    });
+                                }
+                                else
                                 {
+                                    // Pago anulado → solo ANULACIÓN como cargo (restaura saldo)
                                     raw.Add(new MovimientoCuenta
                                     {
                                         Fecha       = fecha,
@@ -946,8 +952,7 @@ namespace SistemaPOS.Data
                                         Metodo      = met,
                                         Cargo       = mto,
                                         Anulado     = true,
-                                        PuedeAnular = false,
-                                        OrdenSort   = 2
+                                        OrdenSort   = 1
                                     });
                                 }
                             }
