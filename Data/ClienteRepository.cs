@@ -475,7 +475,7 @@ namespace SistemaPOS.Data
                             // ---- 1. Obtener ventas pendientes del cliente ----
                             // SaldoVenta = Total - OldPayments - NewPayments(PagoVenta existentes)
                             string queryVentas = @"
-                                SELECT v.VentaID, v.Total,
+                                SELECT v.VentaID, v.Total, v.NumeroVenta,
                                     (v.MontoEfectivo + v.MontoYape + v.MontoTransferencia + v.MontoTarjeta) as OldPayments,
                                     COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv WHERE pv.VentaID = v.VentaID), 0) as NewPayments
                                 FROM Ventas v
@@ -494,10 +494,11 @@ namespace SistemaPOS.Data
                                     {
                                         ventasPendientes.Add(new
                                         {
-                                            VentaID = reader.GetInt32(0),
-                                            Total = reader.GetDecimal(1),
-                                            OldPayments = reader.GetDecimal(2),
-                                            NewPayments = reader.GetDecimal(3)
+                                            VentaID     = reader.GetInt32(0),
+                                            Total       = reader.GetDecimal(1),
+                                            NumeroVenta = reader.GetString(2),
+                                            OldPayments = reader.GetDecimal(3),
+                                            NewPayments = reader.GetDecimal(4)
                                         });
                                     }
                                 }
@@ -567,6 +568,14 @@ namespace SistemaPOS.Data
                                     cmdPV.Parameters.AddWithValue("@MontoAplicado", montoAPagar);
                                     cmdPV.ExecuteNonQuery();
                                 }
+
+                                // Asiento contable COBRO: Dr 101/102 / Cr 120 CxC
+                                int usuarioID = SistemaPOS.Utils.SesionActual.Usuario?.UsuarioID ?? 0;
+                                ContabilidadService.RegistrarCobroCxC(
+                                    venta.VentaID, venta.NumeroVenta, montoAPagar,
+                                    metodoPago, montoEfectivo, montoYape, montoTransferencia,
+                                    monto,   // totalPago para cálculo proporcional en MIXTO
+                                    fecha, usuarioID, connection, transaction);
 
                                 // Si se pagó completamente, cambiar estado a COMPLETADA
                                 if (montoAPagar >= saldoVenta)

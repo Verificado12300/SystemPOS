@@ -1501,5 +1501,58 @@ namespace SistemaPOS.Data
 
             ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
+
+        // ==================================================================
+        // COBRO DE CRÉDITO (CxC)
+        // ==================================================================
+
+        /// <summary>
+        /// Asiento COBRO de venta a crédito.
+        ///   Dr 101 Caja o Dr 102 Bancos = monto cobrado  (proporcional si MIXTO)
+        ///   Cr 120 Cuentas por Cobrar   = monto cobrado
+        /// Se genera por cada venta que recibe un pago (parcial o total).
+        /// </summary>
+        public static void RegistrarCobroCxC(
+            int ventaID, string numeroVenta, decimal monto,
+            string metodoPago,
+            decimal montoEfectivo, decimal montoYape, decimal montoTransferencia,
+            decimal totalPago,
+            DateTime fecha, int usuarioID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            if (monto <= 0m) return;
+
+            PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
+
+            var hora = TimeSpan.FromSeconds((int)DateTime.Now.TimeOfDay.TotalSeconds);
+            var asiento = BuildAsiento(
+                "COBRO", numeroVenta, ventaID, usuarioID,
+                fecha, hora,
+                $"Cobro crédito {numeroVenta}", "VENTA");
+
+            // Dr 101/102 según método de pago (proporcional cuando MIXTO)
+            if (metodoPago?.ToUpper() == "MIXTO" && totalPago > 0)
+            {
+                decimal ef  = Math.Round((montoEfectivo + montoYape) * monto / totalPago, 2);
+                decimal tr  = Math.Round(montoTransferencia           * monto / totalPago, 2);
+                decimal adj = monto - ef - tr;   // absorbe diferencia de redondeo
+                ef += adj;
+                if (ef > 0) { var c101 = GetCuenta("101", conn, tx); AddLine(asiento, c101.CuentaID, ef, 0m, "Cobro efectivo/Yape"); }
+                if (tr > 0) { var c102 = GetCuenta("102", conn, tx); AddLine(asiento, c102.CuentaID, tr, 0m, "Cobro transferencia"); }
+            }
+            else
+            {
+                string cod = (metodoPago?.ToUpper() == "TRANSFERENCIA" ||
+                              metodoPago?.ToUpper() == "TARJETA") ? "102" : "101";
+                var cDr = GetCuenta(cod, conn, tx);
+                AddLine(asiento, cDr.CuentaID, monto, 0m, $"Cobro crédito ({metodoPago})");
+            }
+
+            // Cr 120 CxC
+            var c120 = GetCuenta("120", conn, tx);
+            AddLine(asiento, c120.CuentaID, 0m, monto, $"Cancelación CxC {numeroVenta}");
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
     }
 }
