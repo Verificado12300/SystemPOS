@@ -150,22 +150,18 @@ namespace SistemaPOS.Data
                                 }
                             }
 
-                            // Asiento contable: ingreso (Caja/CxC vs Ventas)
+                            // Asiento contable único: ingreso + costo de ventas combinados
                             venta.VentaID = (int)ventaID;
-                            ContabilidadService.RegistrarVenta(
+                            var detalleCostos = detalles
+                                .ConvertAll(d => (d.ProductoID, d.CantidadUnidadesBase));
+                            ContabilidadService.RegistrarVentaConCosto(
                                 ventaID, venta.NumeroVenta, venta.Fecha, venta.Hora,
                                 venta.Total, venta.MetodoPago,
                                 venta.MontoEfectivo, venta.MontoYape,
                                 venta.MontoTarjeta, venta.MontoTransferencia,
                                 venta.IGV,
+                                detalleCostos,
                                 venta.UsuarioID, connection, transaction);
-
-                            // Asiento contable: costo de ventas (Dr 500 / Cr 140)
-                            var detalleCostos = detalles
-                                .ConvertAll(d => (d.ProductoID, d.CantidadUnidadesBase));
-                            ContabilidadService.RegistrarCostoVenta(
-                                ventaID, venta.NumeroVenta, venta.Fecha, venta.Hora,
-                                detalleCostos, venta.UsuarioID, connection, transaction);
 
                             transaction.Commit();
                             return true;
@@ -355,9 +351,8 @@ namespace SistemaPOS.Data
                             cmd.ExecuteNonQuery();
                         }
 
-                        // Asiento de reversión (Anulación) — ingreso y costo
-                        ContabilidadService.ReversarVenta(ventaID, connection, transaction);
-                        ContabilidadService.ReversarCostoVenta(ventaID, connection, transaction);
+                        // Asiento de reversión (Anulación) — combinado o split según histórico
+                        ContabilidadService.ReversarVentaConCosto(ventaID, connection, transaction);
 
                         transaction.Commit();
                         return true;

@@ -240,6 +240,224 @@ namespace SistemaPOS.Data
             }
         }
 
+        /// <summary>
+        /// Asiento ÚNICO que combina ingreso + costo de ventas en una sola partida.
+        ///   Debe:
+        ///     101/102/120 (según forma de pago)  = Total cobrado
+        ///     500 Costo de Ventas                = Costo total consolidado (si > 0)
+        ///   Haber:
+        ///     400 Ventas                         = Base imponible (o Total si sin IGV)
+        ///     210 Tributos por pagar             = IGV (si igv > 0)
+        ///     140 Inventario                     = Costo total consolidado (si > 0)
+        /// Cuadre: Debe = Total + COGS = Haber.
+        /// Si COGS = 0 (ningún producto tiene costo calculable) se omiten líneas 500 y 140.
+        /// </summary>
+        public static void RegistrarVentaConCosto(
+            long ventaID, string numeroVenta, DateTime fecha, TimeSpan hora,
+            decimal total, string metodoPago,
+            decimal montoEfectivo, decimal montoYape,
+            decimal montoTarjeta, decimal montoTransferencia,
+            decimal igv,
+            System.Collections.Generic.List<(int ProductoID, decimal CantidadBase)> detalles,
+            int usuarioID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            if (total <= 0m) return;
+
+            // Calcular costo total consolidado (igual que RegistrarCostoVenta)
+            decimal totalCOGS = 0m;
+            foreach (var d in detalles)
+            {
+                decimal costoUnit = ContabilidadRepository
+                    .ObtenerCostoPromedioUnitarioProducto(d.ProductoID, conn, tx);
+
+                if (costoUnit <= 0m)
+                {
+                    costoUnit = ObtenerCostoProdFallback(d.ProductoID, conn, tx);
+                    if (costoUnit > 0m)
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[COGS] Fallback costo para productoID={d.ProductoID}: {costoUnit:N2}");
+                }
+
+                if (costoUnit <= 0m) continue;
+                totalCOGS += costoUnit * d.CantidadBase;
+            }
+            totalCOGS = Math.Round(totalCOGS, 2, MidpointRounding.AwayFromZero);
+
+            var asiento = BuildAsiento("VENTA", numeroVenta, ventaID, usuarioID,
+                fecha, hora, $"Venta {numeroVenta}", "VENTA");
+
+            // Dr Caja / Bancos / CxC = total cobrado
+            BuildDebitLinesVenta(asiento, total, metodoPago,
+                montoEfectivo, montoYape, montoTarjeta, montoTransferencia,
+                false, conn, tx);
+
+            // Dr 500 Costo de ventas = costo total (si hay costo calculable)
+            if (totalCOGS > 0m)
+            {
+                var cuentaCOGS = GetCuenta("500", conn, tx);
+                AddLine(asiento, cuentaCOGS.CuentaID, totalCOGS, 0m, "Costo de ventas");
+            }
+
+            // Cr 400 Ventas + Cr 210 IGV (si aplica) = total
+            if (igv > 0m)
+            {
+                decimal base400 = total - igv;
+                var c400 = GetCuenta("400", conn, tx);
+                var c210 = GetCuenta("210", conn, tx);
+                AddLine(asiento, c400.CuentaID, 0m, base400, "Ingresos por ventas (base imponible)");
+                AddLine(asiento, c210.CuentaID, 0m, igv,     "IGV por pagar");
+            }
+            else
+            {
+                var c400 = GetCuenta("400", conn, tx);
+                AddLine(asiento, c400.CuentaID, 0m, total, "Ingresos por ventas");
+            }
+
+            // Cr 140 Inventario = costo total (si hay costo calculable)
+            if (totalCOGS > 0m)
+            {
+                var cuentaInv = GetCuenta("140", conn, tx);
+                AddLine(asiento, cuentaInv.CuentaID, 0m, totalCOGS, "Salida de inventario por venta");
+            }
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
+
+        /// <summary>
+        /// Reverso del asiento al anular una venta.
+        /// Detecta si el asiento original fue COMBINADO (nuevo) o SPLIT (histórico):
+        ///   - Combinado (1 asiento con líneas 500+140): genera 1 asiento de anulación completo.
+        ///   - Split (2 asientos separados): llama a ReversarVenta + ReversarCostoVenta.
+        /// </summary>
+        public static void ReversarVentaConCosto(int ventaID,
+            SQLiteConnection conn, SQLiteTransaction tx)
+        {
+            // Detectar cuántos asientos VENTA existen para esta venta
+            const string sqlCount = @"
+                SELECT COUNT(DISTINCT a.AsientoID)
+                FROM   Asientos a
+                WHERE  a.ReferenciaID = @VentaID
+                  AND  a.TipoOperacion = 'VENTA'";
+
+            int countAsientos;
+            using (var cmd = new SQLiteCommand(sqlCount, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@VentaID", ventaID);
+                var r = cmd.ExecuteScalar();
+                countAsientos = (r == null || r == DBNull.Value) ? 0 : Convert.ToInt32(r);
+            }
+
+            if (countAsientos == 0) return; // Sin asiento contable: nada que revertir
+
+            if (countAsientos >= 2)
+            {
+                // Asientos históricos split — usar métodos originales
+                ReversarVenta(ventaID, conn, tx);
+                ReversarCostoVenta(ventaID, conn, tx);
+                return;
+            }
+
+            // === Asiento combinado nuevo — revertir en un solo asiento ===
+
+            string   numeroVenta = null;
+            DateTime fecha       = DateTime.Now.Date;
+            TimeSpan hora        = DateTime.Now.TimeOfDay;
+            decimal  total       = 0m, igvOrig = 0m;
+            string   metodoPago  = null;
+            decimal  montoEf = 0m, montoYape = 0m, montoTarjeta = 0m, montoTransf = 0m;
+            int      usuarioID   = 1;
+
+            const string sqlVenta = @"
+                SELECT NumeroVenta, Fecha, Hora, Total, MetodoPago,
+                       MontoEfectivo, MontoYape, MontoTarjeta, MontoTransferencia,
+                       UsuarioID, IGV
+                FROM   Ventas WHERE VentaID = @ID";
+            using (var cmd = new SQLiteCommand(sqlVenta, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@ID", ventaID);
+                using (var r = cmd.ExecuteReader())
+                {
+                    if (!r.Read()) return;
+                    numeroVenta  = r.GetString(0);
+                    fecha        = DateTime.Parse(r.GetString(1));
+                    hora         = TimeSpan.Parse(r.GetString(2));
+                    total        = r.GetDecimal(3);
+                    metodoPago   = r.GetString(4);
+                    montoEf      = r.IsDBNull(5)  ? 0m : r.GetDecimal(5);
+                    montoYape    = r.IsDBNull(6)  ? 0m : r.GetDecimal(6);
+                    montoTarjeta = r.IsDBNull(7)  ? 0m : r.GetDecimal(7);
+                    montoTransf  = r.IsDBNull(8)  ? 0m : r.GetDecimal(8);
+                    usuarioID    = r.IsDBNull(9)  ? 1  : r.GetInt32(9);
+                    igvOrig      = r.IsDBNull(10) ? 0m : r.GetDecimal(10);
+                }
+            }
+
+            if (total <= 0m) return;
+
+            // Guard: bloquear anulación si la venta original es de período cerrado
+            PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
+
+            // Leer COGS del asiento original (línea 500)
+            const string sqlCOGS = @"
+                SELECT ad.Debe
+                FROM   Asientos a
+                JOIN   AsientosDetalle ad ON a.AsientoID = ad.AsientoID
+                JOIN   CuentasContables cc ON ad.CuentaID = cc.CuentaID
+                WHERE  a.ReferenciaID  = @VentaID
+                  AND  a.TipoOperacion = 'VENTA'
+                  AND  cc.Codigo       = '500'
+                LIMIT  1";
+            decimal totalCOGS = 0m;
+            using (var cmd = new SQLiteCommand(sqlCOGS, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@VentaID", ventaID);
+                var r = cmd.ExecuteScalar();
+                if (r != null && r != DBNull.Value)
+                    totalCOGS = Convert.ToDecimal(r);
+            }
+
+            var asiento = BuildAsiento("ANULACION", numeroVenta, ventaID, usuarioID,
+                DateTime.Now.Date, DateTime.Now.TimeOfDay,
+                $"Anulación venta {numeroVenta}", "VENTA");
+
+            // Dr 400 Ventas + Dr 210 IGV (si aplica)
+            if (igvOrig > 0m)
+            {
+                decimal base400 = total - igvOrig;
+                var c400 = GetCuenta("400", conn, tx);
+                var c210 = GetCuenta("210", conn, tx);
+                AddLine(asiento, c400.CuentaID, base400, 0m, "Anulación ingresos (base imponible)");
+                AddLine(asiento, c210.CuentaID, igvOrig, 0m, "Anulación IGV por pagar");
+            }
+            else
+            {
+                var c400 = GetCuenta("400", conn, tx);
+                AddLine(asiento, c400.CuentaID, total, 0m, "Anulación ingresos por ventas");
+            }
+
+            // Dr 140 Inventario = costo (reversa de la salida de inventario)
+            if (totalCOGS > 0m)
+            {
+                var cuentaInv = GetCuenta("140", conn, tx);
+                AddLine(asiento, cuentaInv.CuentaID, totalCOGS, 0m, "Devolución de inventario");
+            }
+
+            // Cr Caja/Bancos/CxC = total (reversa del ingreso)
+            BuildDebitLinesVenta(asiento, total, metodoPago,
+                montoEf, montoYape, montoTarjeta, montoTransf,
+                true, conn, tx);
+
+            // Cr 500 Costo de ventas = costo (reversa del costo)
+            if (totalCOGS > 0m)
+            {
+                var cuentaCOGS = GetCuenta("500", conn, tx);
+                AddLine(asiento, cuentaCOGS.CuentaID, 0m, totalCOGS, "Reversión costo de ventas");
+            }
+
+            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+        }
+
         // ==================================================================
         // COMPRAS
         // ==================================================================
