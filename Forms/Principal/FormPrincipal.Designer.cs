@@ -27,6 +27,7 @@ namespace SistemaPOS.Forms.Principal
             this.mnuRespaldo = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuGeneral = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuPapelera = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuConciliacion = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuLicencia = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuSep = new System.Windows.Forms.ToolStripSeparator();
             this.mnuReportes = new System.Windows.Forms.ToolStripMenuItem();
@@ -89,6 +90,7 @@ namespace SistemaPOS.Forms.Principal
             this.mnuReportes,
             this.mnuGeneral,
             this.mnuPapelera,
+            this.mnuConciliacion,
             this.mnuLicencia,
             this.mnuSep});
             this.cmsUsuarioConfig.Name = "cmsUsuarioConfig";
@@ -156,6 +158,13 @@ namespace SistemaPOS.Forms.Principal
             this.mnuPapelera.Size = new System.Drawing.Size(180, 22);
             this.mnuPapelera.Text = "Papelera";
             this.mnuPapelera.Click += new System.EventHandler(this.MnuPapelera_Click);
+            //
+            // mnuConciliacion
+            //
+            this.mnuConciliacion.Name = "mnuConciliacion";
+            this.mnuConciliacion.Size = new System.Drawing.Size(180, 22);
+            this.mnuConciliacion.Text = "Conciliación Inventario";
+            this.mnuConciliacion.Click += new System.EventHandler(this.MnuConciliacion_Click);
             //
             // mnuLicencia
             //
@@ -959,6 +968,7 @@ namespace SistemaPOS.Forms.Principal
         private System.Windows.Forms.ToolStripMenuItem mnuRespaldo;
         private System.Windows.Forms.ToolStripMenuItem mnuGeneral;
         private System.Windows.Forms.ToolStripMenuItem mnuPapelera;
+        private System.Windows.Forms.ToolStripMenuItem mnuConciliacion;
         private System.Windows.Forms.ToolStripMenuItem mnuLicencia;
         private System.Windows.Forms.ToolStripSeparator mnuSep;
         private System.Windows.Forms.ToolStripMenuItem mnuReportes;

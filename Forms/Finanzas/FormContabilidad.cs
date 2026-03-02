@@ -14,6 +14,45 @@ namespace SistemaPOS.Forms.Finanzas
             dtpHasta.Value = DateTime.Today;
             dtpDesdeC.Value = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             dtpHastaC.Value = DateTime.Today;
+            CargarCombos();
+        }
+
+        private void CargarCombos()
+        {
+            try
+            {
+                // Combo TipoOperacion
+                cboTipoOperacion.Items.Clear();
+                cboTipoOperacion.Items.Add("(TODOS)");
+                foreach (var tipo in ContabilidadRepository.ObtenerTiposOperacion())
+                    cboTipoOperacion.Items.Add(tipo);
+                cboTipoOperacion.SelectedIndex = 0;
+
+                // Combo Cuenta
+                cboCuenta.Items.Clear();
+                cboCuenta.Items.Add(new CuentaItem { Codigo = "", Display = "(TODAS)" });
+                foreach (var c in ContabilidadRepository.ObtenerCuentasActivas())
+                {
+                    var tipo = c.GetType();
+                    string codigo  = (string)tipo.GetProperty("Codigo").GetValue(c, null);
+                    string nombre  = (string)tipo.GetProperty("Nombre").GetValue(c, null);
+                    string display = (string)tipo.GetProperty("Display").GetValue(c, null);
+                    cboCuenta.Items.Add(new CuentaItem { Codigo = codigo, Display = display });
+                }
+                cboCuenta.SelectedIndex = 0;
+                cboCuenta.DisplayMember = "Display";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Contabilidad] CargarCombos: {ex.Message}");
+            }
+        }
+
+        private sealed class CuentaItem
+        {
+            public string Codigo  { get; set; }
+            public string Display { get; set; }
+            public override string ToString() => Display;
         }
 
         private void BtnBuscarAsientos_Click(object sender, EventArgs e)
@@ -33,7 +72,25 @@ namespace SistemaPOS.Forms.Finanzas
                 dgvAsientos.DataSource = null;
                 dgvDetalles.DataSource = null;
 
-                var asientos = ContabilidadRepository.ObtenerAsientos(dtpDesde.Value, dtpHasta.Value);
+                // Leer filtros opcionales
+                string tipo = (cboTipoOperacion.SelectedIndex <= 0)
+                    ? null
+                    : cboTipoOperacion.SelectedItem as string;
+
+                string cuenta = null;
+                if (cboCuenta.SelectedItem is CuentaItem ci && !string.IsNullOrEmpty(ci.Codigo))
+                    cuenta = ci.Codigo;
+
+                string texto = string.IsNullOrWhiteSpace(txtBuscar.Text) ? null : txtBuscar.Text.Trim();
+
+                decimal? montoMin = null;
+                decimal? montoMax = null;
+                if (decimal.TryParse(txtMontoMin.Text, out decimal mn) && mn > 0) montoMin = mn;
+                if (decimal.TryParse(txtMontoMax.Text, out decimal mx) && mx > 0) montoMax = mx;
+
+                var asientos = ContabilidadRepository.ObtenerAsientos(
+                    dtpDesde.Value, dtpHasta.Value,
+                    tipo, cuenta, texto, montoMin, montoMax);
                 dgvAsientos.DataSource = asientos;
 
                 // Configurar columnas

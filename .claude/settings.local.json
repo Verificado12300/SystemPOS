@@ -27,7 +27,29 @@
       "Bash(grep:*)",
       "Bash(for f in FormKardex FormBalanceGeneral FormEstadoResultados FormFlujoCaja FormGastos FormCaja FormCuentasPorPagar FormHistorialVentas FormHistorialCompras)",
       "Bash(do echo \"=== $f ===\" grep -rn \"btnImprimir\\\\|btnExportar\" \"E:/SistemaPOS/Forms/\" --include=\"*.cs\" -l)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(echo nuget NO encontrado en PATH:*)",
+      "Bash(head:*)",
+      "Bash(# Check VS MSBuild find \"\"/c/Program Files \\(x86\\)/Microsoft Visual Studio\"\" -name \"\"msbuild.exe\"\")",
+      "Bash(find:*)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\":*)",
+      "Bash(cmd:*)",
+      "Bash(MSYS_NO_PATHCONV=1 \"/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\":*)",
+      "Bash(cd:*)",
+      "Bash(tail:*)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe\":*)",
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\":*)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\":*)",
+      "Bash(del:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\":*)",
+      "Bash(powershell:*)",
+      "Bash(\"$MSBUILD_PATH\":*)",
+      "Bash(git push:*)",
+      "Bash(Start-Process:*)"
     ]
   }
 }

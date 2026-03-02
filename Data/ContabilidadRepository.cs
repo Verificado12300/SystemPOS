@@ -50,15 +50,25 @@ namespace SistemaPOS.Data
             // lo que provoca rollback en el llamador antes de cualquier INSERT.
             PeriodosContablesRepository.ValidarFechaNoBloqueada(asiento.Fecha, conn, tx);
 
+            // Redondear cada detalle a 2 decimales ANTES de validar y guardar.
+            // Esto evita que diferencias de punto flotante descuadren el asiento.
+            foreach (var d in asiento.Detalles)
+            {
+                d.Debe  = Math.Round(d.Debe,  2, MidpointRounding.AwayFromZero);
+                d.Haber = Math.Round(d.Haber, 2, MidpointRounding.AwayFromZero);
+            }
+
             decimal sumDebe = 0m;
             decimal sumHaber = 0m;
             foreach (var d in asiento.Detalles)
             {
-                sumDebe += d.Debe;
+                sumDebe  += d.Debe;
                 sumHaber += d.Haber;
             }
+            sumDebe  = Math.Round(sumDebe,  2, MidpointRounding.AwayFromZero);
+            sumHaber = Math.Round(sumHaber, 2, MidpointRounding.AwayFromZero);
 
-            if (sumDebe == 0 && sumHaber == 0)
+            if (sumDebe == 0m && sumHaber == 0m)
                 throw new Exception("El asiento no tiene montos: suma Debe y Haber son cero.");
 
             if (Math.Abs(sumDebe - sumHaber) > 0.01m)
@@ -106,8 +116,8 @@ namespace SistemaPOS.Data
 
             foreach (var detalle in asiento.Detalles)
             {
-                // Saltar lineas con monto cero (no violan constraint pero no aportan)
-                if (detalle.Debe == 0 && detalle.Haber == 0) continue;
+                // Saltar líneas que quedaron en 0.00/0.00 tras el redondeo
+                if (detalle.Debe == 0m && detalle.Haber == 0m) continue;
 
                 using (var cmd = tx != null
                     ? new SQLiteCommand(queryDetalle, conn, tx)
@@ -115,7 +125,7 @@ namespace SistemaPOS.Data
                 {
                     cmd.Parameters.AddWithValue("@AsientoID", asientoID);
                     cmd.Parameters.AddWithValue("@CuentaID", detalle.CuentaID);
-                    cmd.Parameters.AddWithValue("@Debe", detalle.Debe);
+                    cmd.Parameters.AddWithValue("@Debe",  detalle.Debe);
                     cmd.Parameters.AddWithValue("@Haber", detalle.Haber);
                     cmd.Parameters.AddWithValue("@Descripcion", (object)detalle.Descripcion ?? DBNull.Value);
                     cmd.ExecuteNonQuery();
@@ -278,24 +288,66 @@ namespace SistemaPOS.Data
         }
 
         // =====================================================================
-        // Obtiene lista de asientos con su cabecera en un rango de fechas
+        // Obtiene lista de asientos con su cabecera en un rango de fechas.
+        // Todos los filtros adicionales son opcionales (null/empty = sin filtro).
         // =====================================================================
-        public static List<dynamic> ObtenerAsientos(DateTime desde, DateTime hasta)
+        public static List<dynamic> ObtenerAsientos(
+            DateTime desde,
+            DateTime hasta,
+            string tipoOperacion = null,
+            string cuentaCodigo  = null,
+            string texto         = null,
+            decimal? montoMin    = null,
+            decimal? montoMax    = null)
         {
             var result = new List<dynamic>();
 
             using (var connection = DatabaseConnection.GetConnection())
             {
-                string query = @"
-                    SELECT AsientoID, Fecha, Hora, TipoOperacion, Documento, Glosa, TotalDebe, TotalHaber
-                    FROM Asientos
-                    WHERE Fecha >= @FechaDesde AND Fecha <= @FechaHasta
-                    ORDER BY Fecha DESC, Hora DESC";
+                var sb = new System.Text.StringBuilder(@"
+                    SELECT a.AsientoID, a.Fecha, a.Hora, a.TipoOperacion, a.Documento, a.Glosa, a.TotalDebe, a.TotalHaber
+                    FROM Asientos a
+                    WHERE a.Fecha >= @FechaDesde AND a.Fecha <= @FechaHasta");
 
-                using (var cmd = new SQLiteCommand(query, connection))
+                if (!string.IsNullOrWhiteSpace(tipoOperacion))
+                    sb.Append(" AND a.TipoOperacion = @TipoOperacion");
+
+                if (!string.IsNullOrWhiteSpace(texto))
+                    sb.Append(" AND (a.Documento LIKE @Texto OR a.Glosa LIKE @Texto)");
+
+                if (!string.IsNullOrWhiteSpace(cuentaCodigo))
+                    sb.Append(@" AND EXISTS (
+                        SELECT 1 FROM AsientosDetalle ad
+                        INNER JOIN CuentasContables cc ON cc.CuentaID = ad.CuentaID
+                        WHERE ad.AsientoID = a.AsientoID AND cc.Codigo = @CuentaCodigo)");
+
+                if (montoMin.HasValue)
+                    sb.Append(" AND a.TotalDebe >= @MontoMin");
+
+                if (montoMax.HasValue)
+                    sb.Append(" AND a.TotalDebe <= @MontoMax");
+
+                sb.Append(" ORDER BY a.Fecha DESC, a.Hora DESC");
+
+                using (var cmd = new SQLiteCommand(sb.ToString(), connection))
                 {
                     cmd.Parameters.AddWithValue("@FechaDesde", desde.ToString("yyyy-MM-dd"));
                     cmd.Parameters.AddWithValue("@FechaHasta", hasta.ToString("yyyy-MM-dd"));
+
+                    if (!string.IsNullOrWhiteSpace(tipoOperacion))
+                        cmd.Parameters.AddWithValue("@TipoOperacion", tipoOperacion);
+
+                    if (!string.IsNullOrWhiteSpace(texto))
+                        cmd.Parameters.AddWithValue("@Texto", "%" + texto + "%");
+
+                    if (!string.IsNullOrWhiteSpace(cuentaCodigo))
+                        cmd.Parameters.AddWithValue("@CuentaCodigo", cuentaCodigo);
+
+                    if (montoMin.HasValue)
+                        cmd.Parameters.AddWithValue("@MontoMin", montoMin.Value);
+
+                    if (montoMax.HasValue)
+                        cmd.Parameters.AddWithValue("@MontoMax", montoMax.Value);
 
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -303,14 +355,14 @@ namespace SistemaPOS.Data
                         {
                             result.Add(new
                             {
-                                AsientoID = reader.GetInt32(0),
-                                Fecha = reader.GetString(1),
-                                Hora = reader.GetString(2),
+                                AsientoID     = reader.GetInt32(0),
+                                Fecha         = reader.GetString(1),
+                                Hora          = reader.GetString(2),
                                 TipoOperacion = reader.GetString(3),
-                                Documento = reader.IsDBNull(4) ? "" : reader.GetString(4),
-                                Glosa = reader.IsDBNull(5) ? "" : reader.GetString(5),
-                                TotalDebe = reader.GetDecimal(6),
-                                TotalHaber = reader.GetDecimal(7)
+                                Documento     = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                                Glosa         = reader.IsDBNull(5) ? "" : reader.GetString(5),
+                                TotalDebe     = reader.GetDecimal(6),
+                                TotalHaber    = reader.GetDecimal(7)
                             });
                         }
                     }
@@ -318,6 +370,47 @@ namespace SistemaPOS.Data
             }
 
             return result;
+        }
+
+        // =====================================================================
+        // Obtiene los tipos de operación distintos para poblar el combo filtro
+        // =====================================================================
+        public static List<string> ObtenerTiposOperacion()
+        {
+            var lista = new List<string>();
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var cmd = new SQLiteCommand(
+                "SELECT DISTINCT TipoOperacion FROM Asientos ORDER BY TipoOperacion", conn))
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                    lista.Add(reader.GetString(0));
+            }
+            return lista;
+        }
+
+        // =====================================================================
+        // Obtiene todas las cuentas activas para poblar el combo filtro
+        // =====================================================================
+        public static List<dynamic> ObtenerCuentasActivas()
+        {
+            var lista = new List<dynamic>();
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var cmd = new SQLiteCommand(
+                "SELECT Codigo, Nombre FROM CuentasContables WHERE Activa = 1 ORDER BY Codigo", conn))
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    lista.Add(new
+                    {
+                        Codigo = reader.GetString(0),
+                        Nombre = reader.GetString(1),
+                        Display = reader.GetString(0) + " - " + reader.GetString(1)
+                    });
+                }
+            }
+            return lista;
         }
 
         // =====================================================================
@@ -449,6 +542,29 @@ namespace SistemaPOS.Data
             }
 
             return stockActual > 0 ? valorActual / stockActual : 0m;
+        }
+
+        // =====================================================================
+        // Saldo neto (Debe - Haber) de una cuenta contable hasta una fecha dada.
+        // Usado por FormConciliacionInventario para calcular el saldo de cuenta 140.
+        // =====================================================================
+        public static decimal ObtenerSaldoCuentaHasta(string codigoCuenta, DateTime hasta)
+        {
+            using (var conn = DatabaseConnection.GetConnection())
+            using (var cmd = new SQLiteCommand(@"
+                SELECT COALESCE(SUM(ad.Debe), 0) - COALESCE(SUM(ad.Haber), 0)
+                FROM AsientosDetalle ad
+                INNER JOIN Asientos a ON a.AsientoID = ad.AsientoID
+                INNER JOIN CuentasContables cc ON cc.CuentaID = ad.CuentaID
+                WHERE cc.Codigo = @Codigo
+                  AND a.Fecha <= @Hasta", conn))
+            {
+                cmd.Parameters.AddWithValue("@Codigo", codigoCuenta);
+                cmd.Parameters.AddWithValue("@Hasta",  hasta.ToString("yyyy-MM-dd"));
+                var result = cmd.ExecuteScalar();
+                if (result == null || result == DBNull.Value) return 0m;
+                return Convert.ToDecimal(result);
+            }
         }
 
         // =====================================================================

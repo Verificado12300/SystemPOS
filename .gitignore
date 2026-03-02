@@ -1,6 +1,8 @@
 .vs/
-.vscode/
-node_modules/
-dist/
-build/
+bin/
+obj/
+*.user
+*.suo
+*.cache
 *.log
+*.db

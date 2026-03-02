@@ -405,6 +405,10 @@ namespace SistemaPOS.Forms.Ventas
                 }
             }
 
+            // Si el carrito estaba vacío, sugerir modo IGV según la presentación del producto
+            if (dgvCarritoVenta.Rows.Count == 0 && presentacion.PrecioIncluyeIGV && cboIGV.SelectedIndex == 0)
+                cboIGV.SelectedIndex = 1; // Predeterminado: IGV INCLUIDO (el usuario puede cambiarlo)
+
             // Agregar nuevo producto
             int index = dgvCarritoVenta.Rows.Add();
             DataGridViewRow newRow = dgvCarritoVenta.Rows[index];
@@ -566,56 +570,41 @@ namespace SistemaPOS.Forms.Ventas
 
         private void CalcularTotales()
         {
-            // Separar ítems: los que tienen PrecioIncluyeIGV=true siempre se desglosan;
-            // los que tienen false siguen el modo de venta (cboIGV).
-            decimal subtotalConIGV = 0m;
-            decimal subtotalSinIGV = 0m;
+            // cboIGV aplica uniformemente a todos los ítems del carrito.
+            // PrecioIncluyeIGV de la presentación solo se usa como sugerencia al agregar.
+            decimal rawTotal = 0m;
 
             foreach (DataGridViewRow row in dgvCarritoVenta.Rows)
             {
                 if (row.Tag == null) continue;
                 string totalStr = row.Cells["colTotalDV"].Value?.ToString() ?? "0";
                 if (!TryParseMonto(totalStr, out decimal totalFila)) continue;
-                var item = (dynamic)row.Tag;
-                if ((bool)item.PrecioIncluyeIGV)
-                    subtotalConIGV += totalFila;
-                else
-                    subtotalSinIGV += totalFila;
+                rawTotal += totalFila;
             }
 
-            _rawCartTotal = subtotalConIGV + subtotalSinIGV;
+            _rawCartTotal = rawTotal;
 
-            // Ítems con IGV incluido → desglosar siempre
-            decimal baseConIGV = subtotalConIGV > 0m
-                ? Math.Round(subtotalConIGV / (1m + _tasaIGV), 2) : 0m;
-            decimal igvConIGV = subtotalConIGV - baseConIGV;
-
-            // Ítems sin flag → aplicar modo de venta (cboIGV)
             int tipoIGV = cboIGV.SelectedIndex; // 0=SIN_IGV  1=IGV_INCLUIDO  2=IGV_ADICIONAL
-            decimal baseSinIGV, igvSinIGV, totalSinIGV;
+            decimal totalBase, totalIGV, total;
 
             if (tipoIGV == 1)           // IGV INCLUIDO
             {
-                totalSinIGV = subtotalSinIGV;
-                baseSinIGV  = Math.Round(subtotalSinIGV / (1m + _tasaIGV), 2);
-                igvSinIGV   = subtotalSinIGV - baseSinIGV;
+                totalBase = Math.Round(rawTotal / (1m + _tasaIGV), 2);
+                totalIGV  = rawTotal - totalBase;
+                total     = rawTotal;
             }
             else if (tipoIGV == 2)      // IGV ADICIONAL
             {
-                baseSinIGV  = subtotalSinIGV;
-                igvSinIGV   = Math.Round(subtotalSinIGV * _tasaIGV, 2);
-                totalSinIGV = subtotalSinIGV + igvSinIGV;
+                totalBase = rawTotal;
+                totalIGV  = Math.Round(rawTotal * _tasaIGV, 2);
+                total     = rawTotal + totalIGV;
             }
             else                        // SIN IGV
             {
-                baseSinIGV  = subtotalSinIGV;
-                igvSinIGV   = 0m;
-                totalSinIGV = subtotalSinIGV;
+                totalBase = rawTotal;
+                totalIGV  = 0m;
+                total     = rawTotal;
             }
-
-            decimal totalBase = baseConIGV + baseSinIGV;
-            decimal totalIGV  = igvConIGV  + igvSinIGV;
-            decimal total     = subtotalConIGV + totalSinIGV;
 
             decimal descuento = decimal.TryParse(txtDescuento.Text, out decimal desc) ? desc : 0m;
             if (descuento < 0) descuento = 0m;
@@ -1002,6 +991,7 @@ namespace SistemaPOS.Forms.Ventas
             lblDNICliente.Text = "00000000";
 
             rbEfectivo.Checked = true;
+            cboIGV.SelectedIndex = 0; // Resetear modo IGV para la siguiente venta
         }
 
         private void DgvProductos_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)

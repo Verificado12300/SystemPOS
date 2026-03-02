@@ -166,6 +166,7 @@ namespace SistemaPOS.Forms.Principal
             mnuRespaldo.Visible       = permisoConfig;
             mnuGeneral.Visible        = permisoConfig;
             mnuPapelera.Visible       = permisoConfig;
+            mnuConciliacion.Visible   = permisoConfig;
             mnuLicencia.Visible       = permisoConfig;
             mnuSep.Visible            = permisoConfig && permisoReportes;
             mnuReportes.Visible       = permisoReportes;
@@ -221,6 +222,12 @@ namespace SistemaPOS.Forms.Principal
         {
             if (!TienePermiso(u => u.PermisoConfiguracion, "Papelera")) return;
             AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormPapeleraGlobal());
+        }
+
+        private void MnuConciliacion_Click(object sender, EventArgs e)
+        {
+            if (!TienePermiso(u => u.PermisoConfiguracion, "Conciliación Inventario")) return;
+            AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormConciliacionInventario());
         }
 
         private void MnuLicencia_Click(object sender, EventArgs e)
