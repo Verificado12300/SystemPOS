@@ -96,6 +96,44 @@ namespace SistemaPOS.Controls
                     Rectangle img = GetImageRect(pb, rect);
                     g.DrawImage(pb.Image, img);
                 }
+                else if (c is DataGridView dgv)
+                {
+                    // DataGridView no es renderizado por DrawToBitmap/HasChildren —
+                    // se dibuja manualmente celda por celda para que salga en impresión.
+                    using (var wb = new SolidBrush(Color.White))
+                        g.FillRectangle(wb, rect);
+
+                    int rowY = rect.Y;
+                    foreach (DataGridViewRow row in dgv.Rows)
+                    {
+                        int colX = rect.X;
+                        foreach (DataGridViewColumn col in dgv.Columns)
+                        {
+                            if (!col.Visible) { colX += col.Width; continue; }
+                            var cell      = row.Cells[col.Index];
+                            string txt    = cell.FormattedValue?.ToString() ?? "";
+                            var cellRect  = new Rectangle(colX, rowY, col.Width, row.Height);
+                            var style     = cell.InheritedStyle;
+                            var font      = style.Font   ?? dgv.Font;
+                            var fc        = style.ForeColor != Color.Empty ? style.ForeColor : Color.Black;
+                            var align     = DgvAlignToContent(style.Alignment);
+                            var inner     = Rectangle.Inflate(cellRect, -2, -1);
+                            if (inner.Width > 0 && inner.Height > 0)
+                            {
+                                using (var b  = new SolidBrush(fc))
+                                using (var sf = CreateStringFormat(align))
+                                {
+                                    sf.FormatFlags  &= ~StringFormatFlags.NoWrap;
+                                    sf.Trimming      = StringTrimming.None;
+                                    g.DrawString(txt, font, b, inner, sf);
+                                }
+                            }
+                            colX += col.Width;
+                        }
+                        rowY += row.Height;
+                    }
+                    continue; // HasChildren de DGV son controles nativos — no iterar
+                }
 
                 if (c.HasChildren)
                 {
@@ -183,6 +221,23 @@ namespace SistemaPOS.Controls
             }
 
             return sf;
+        }
+
+        private static ContentAlignment DgvAlignToContent(DataGridViewContentAlignment a)
+        {
+            switch (a)
+            {
+                case DataGridViewContentAlignment.TopLeft:      return ContentAlignment.TopLeft;
+                case DataGridViewContentAlignment.TopCenter:    return ContentAlignment.TopCenter;
+                case DataGridViewContentAlignment.TopRight:     return ContentAlignment.TopRight;
+                case DataGridViewContentAlignment.MiddleLeft:   return ContentAlignment.MiddleLeft;
+                case DataGridViewContentAlignment.MiddleCenter: return ContentAlignment.MiddleCenter;
+                case DataGridViewContentAlignment.MiddleRight:  return ContentAlignment.MiddleRight;
+                case DataGridViewContentAlignment.BottomLeft:   return ContentAlignment.BottomLeft;
+                case DataGridViewContentAlignment.BottomCenter: return ContentAlignment.BottomCenter;
+                case DataGridViewContentAlignment.BottomRight:  return ContentAlignment.BottomRight;
+                default:                                         return ContentAlignment.MiddleLeft;
+            }
         }
     }
 }

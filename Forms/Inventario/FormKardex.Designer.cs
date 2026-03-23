@@ -29,7 +29,6 @@ namespace SistemaPOS.Forms.Inventario
             this.cmbProducto = new System.Windows.Forms.ComboBox();
             this.lblProducto = new System.Windows.Forms.Label();
             this.btnVerAjustes = new System.Windows.Forms.Button();
-            this.btnVerAlertas = new System.Windows.Forms.Button();
             this.dgvKardex = new System.Windows.Forms.DataGridView();
             this.colFecha = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colProducto = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -226,24 +225,7 @@ namespace SistemaPOS.Forms.Inventario
             this.btnVerAjustes.TabIndex = 3;
             this.btnVerAjustes.Text = "Ajustes";
             this.btnVerAjustes.UseVisualStyleBackColor = false;
-            // 
-            // btnVerAlertas
-            // 
-            this.btnVerAlertas.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnVerAlertas.BackColor = System.Drawing.Color.White;
-            this.btnVerAlertas.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnVerAlertas.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(223)))), ((int)(((byte)(228)))), ((int)(((byte)(234)))));
-            this.btnVerAlertas.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnVerAlertas.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnVerAlertas.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
-            this.btnVerAlertas.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.btnVerAlertas.Location = new System.Drawing.Point(1355, 109);
-            this.btnVerAlertas.Name = "btnVerAlertas";
-            this.btnVerAlertas.Size = new System.Drawing.Size(94, 24);
-            this.btnVerAlertas.TabIndex = 2;
-            this.btnVerAlertas.Text = "Alertas";
-            this.btnVerAlertas.UseVisualStyleBackColor = false;
-            // 
+            //
             // dgvKardex
             // 
             this.dgvKardex.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -363,7 +345,6 @@ namespace SistemaPOS.Forms.Inventario
             this.Controls.Add(this.lblResumen);
             this.Controls.Add(this.dgvKardex);
             this.Controls.Add(this.btnVerAjustes);
-            this.Controls.Add(this.btnVerAlertas);
             this.Controls.Add(this.pnlFiltros);
             this.Controls.Add(this.lblTitulo);
             this.Name = "FormKardex";
@@ -390,7 +371,6 @@ namespace SistemaPOS.Forms.Inventario
         private System.Windows.Forms.ComboBox cmbProducto;
         private System.Windows.Forms.Label lblProducto;
         private System.Windows.Forms.Button btnVerAjustes;
-        private System.Windows.Forms.Button btnVerAlertas;
         private System.Windows.Forms.DataGridView dgvKardex;
         private System.Windows.Forms.Label lblResumen;
         private System.Windows.Forms.DataGridViewTextBoxColumn colFecha;

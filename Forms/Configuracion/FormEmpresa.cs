@@ -81,7 +81,11 @@ namespace SistemaPOS.Forms.Configuracion
 
                 // Mostrar datos de empresa
                 txtRUC.Text = _empresa.RUC ?? "";
-                txtNombre.Text = _empresa.RazonSocial ?? "";
+                // Preferir NombreComercial si existe; si no, mostrar RazonSocial
+                string nombreDisplay = !string.IsNullOrWhiteSpace(_empresa.NombreComercial)
+                    ? _empresa.NombreComercial
+                    : (_empresa.RazonSocial ?? "");
+                txtNombre.Text = nombreDisplay;
                 txtDireccion.Text = _empresa.Direccion ?? "";
                 txtTelefono.Text = _empresa.Telefono ?? "";
                 txtEmail.Text = _empresa.Email ?? "";
@@ -167,10 +171,10 @@ namespace SistemaPOS.Forms.Configuracion
                 return false;
             }
 
-            // Validar Razón Social
+            // Validar nombre del negocio
             if (string.IsNullOrWhiteSpace(txtNombre.Text))
             {
-                MessageBox.Show("Ingrese la razón social de la empresa", "Validación",
+                MessageBox.Show("Ingrese el nombre del negocio o razón social", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtNombre.Focus();
                 return false;
@@ -226,6 +230,7 @@ namespace SistemaPOS.Forms.Configuracion
                 // Guardar datos de empresa
                 _empresa.RUC = txtRUC.Text.Trim();
                 _empresa.RazonSocial = txtNombre.Text.Trim();
+                _empresa.NombreComercial = txtNombre.Text.Trim();
                 _empresa.Direccion = txtDireccion.Text.Trim();
                 _empresa.Telefono = txtTelefono.Text.Trim();
                 _empresa.Email = txtEmail.Text.Trim();

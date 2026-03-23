@@ -30,23 +30,8 @@
         {
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormHistorialVentas));
-            this.pnlResumen = new System.Windows.Forms.Panel();
-            this.pnlResumenCantidades = new System.Windows.Forms.Panel();
-            this.txtTotalCantidad = new System.Windows.Forms.TextBox();
-            this.txtEfectivoCantidad = new System.Windows.Forms.TextBox();
-            this.txtCreditoCantidad = new System.Windows.Forms.TextBox();
-            this.txtTransferenciaCantidad = new System.Windows.Forms.TextBox();
-            this.lblEfectivo = new System.Windows.Forms.Label();
-            this.lblYape = new System.Windows.Forms.Label();
-            this.txtYapeCantidad = new System.Windows.Forms.TextBox();
-            this.lblTotal = new System.Windows.Forms.Label();
-            this.lblSeparador = new System.Windows.Forms.Label();
-            this.lblTransferencia = new System.Windows.Forms.Label();
-            this.lblCredito = new System.Windows.Forms.Label();
             this.btnCerrar = new System.Windows.Forms.Button();
             this.btnExportar = new System.Windows.Forms.Button();
-            this.lblVentasPeriodo = new System.Windows.Forms.Label();
-            this.lblSubTitulo2 = new System.Windows.Forms.Label();
             this.btnLimpiar = new System.Windows.Forms.Button();
             this.btnBuscar = new System.Windows.Forms.Button();
             this.dgvVentas = new System.Windows.Forms.DataGridView();
@@ -78,173 +63,13 @@
             this.lblTitulo = new System.Windows.Forms.Label();
             this.pnlListado = new System.Windows.Forms.Panel();
             this.lblSubTitulo3 = new System.Windows.Forms.Label();
-            this.pnlResumen.SuspendLayout();
-            this.pnlResumenCantidades.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvVentas)).BeginInit();
             this.pnlFiltro.SuspendLayout();
             this.pnlListado.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // pnlResumen
-            // 
-            this.pnlResumen.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.pnlResumen.BackColor = System.Drawing.Color.White;
-            this.pnlResumen.Controls.Add(this.pnlResumenCantidades);
-            this.pnlResumen.Controls.Add(this.btnCerrar);
-            this.pnlResumen.Controls.Add(this.btnExportar);
-            this.pnlResumen.Controls.Add(this.lblVentasPeriodo);
-            this.pnlResumen.Controls.Add(this.lblSubTitulo2);
-            this.pnlResumen.Location = new System.Drawing.Point(835, 47);
-            this.pnlResumen.Name = "pnlResumen";
-            this.pnlResumen.Size = new System.Drawing.Size(337, 602);
-            this.pnlResumen.TabIndex = 135;
-            // 
-            // pnlResumenCantidades
-            // 
-            this.pnlResumenCantidades.Controls.Add(this.txtTotalCantidad);
-            this.pnlResumenCantidades.Controls.Add(this.txtEfectivoCantidad);
-            this.pnlResumenCantidades.Controls.Add(this.txtCreditoCantidad);
-            this.pnlResumenCantidades.Controls.Add(this.txtTransferenciaCantidad);
-            this.pnlResumenCantidades.Controls.Add(this.lblEfectivo);
-            this.pnlResumenCantidades.Controls.Add(this.lblYape);
-            this.pnlResumenCantidades.Controls.Add(this.txtYapeCantidad);
-            this.pnlResumenCantidades.Controls.Add(this.lblTotal);
-            this.pnlResumenCantidades.Controls.Add(this.lblSeparador);
-            this.pnlResumenCantidades.Controls.Add(this.lblTransferencia);
-            this.pnlResumenCantidades.Controls.Add(this.lblCredito);
-            this.pnlResumenCantidades.Location = new System.Drawing.Point(15, 72);
-            this.pnlResumenCantidades.Name = "pnlResumenCantidades";
-            this.pnlResumenCantidades.Size = new System.Drawing.Size(317, 193);
-            this.pnlResumenCantidades.TabIndex = 10017;
-            // 
-            // txtTotalCantidad
-            // 
-            this.txtTotalCantidad.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.txtTotalCantidad.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtTotalCantidad.Font = new System.Drawing.Font("Segoe UI", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtTotalCantidad.Location = new System.Drawing.Point(190, 144);
-            this.txtTotalCantidad.Multiline = true;
-            this.txtTotalCantidad.Name = "txtTotalCantidad";
-            this.txtTotalCantidad.ReadOnly = true;
-            this.txtTotalCantidad.Size = new System.Drawing.Size(110, 20);
-            this.txtTotalCantidad.TabIndex = 10022;
-            this.txtTotalCantidad.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            // 
-            // txtEfectivoCantidad
-            // 
-            this.txtEfectivoCantidad.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.txtEfectivoCantidad.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtEfectivoCantidad.Location = new System.Drawing.Point(190, 18);
-            this.txtEfectivoCantidad.Multiline = true;
-            this.txtEfectivoCantidad.Name = "txtEfectivoCantidad";
-            this.txtEfectivoCantidad.ReadOnly = true;
-            this.txtEfectivoCantidad.Size = new System.Drawing.Size(110, 20);
-            this.txtEfectivoCantidad.TabIndex = 10018;
-            this.txtEfectivoCantidad.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            // 
-            // txtCreditoCantidad
-            // 
-            this.txtCreditoCantidad.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.txtCreditoCantidad.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtCreditoCantidad.Location = new System.Drawing.Point(190, 102);
-            this.txtCreditoCantidad.Multiline = true;
-            this.txtCreditoCantidad.Name = "txtCreditoCantidad";
-            this.txtCreditoCantidad.ReadOnly = true;
-            this.txtCreditoCantidad.Size = new System.Drawing.Size(110, 20);
-            this.txtCreditoCantidad.TabIndex = 10021;
-            this.txtCreditoCantidad.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            // 
-            // txtTransferenciaCantidad
-            // 
-            this.txtTransferenciaCantidad.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.txtTransferenciaCantidad.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtTransferenciaCantidad.Location = new System.Drawing.Point(190, 74);
-            this.txtTransferenciaCantidad.Multiline = true;
-            this.txtTransferenciaCantidad.Name = "txtTransferenciaCantidad";
-            this.txtTransferenciaCantidad.ReadOnly = true;
-            this.txtTransferenciaCantidad.Size = new System.Drawing.Size(110, 20);
-            this.txtTransferenciaCantidad.TabIndex = 10020;
-            this.txtTransferenciaCantidad.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            // 
-            // lblEfectivo
-            // 
-            this.lblEfectivo.AutoSize = true;
-            this.lblEfectivo.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblEfectivo.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblEfectivo.Location = new System.Drawing.Point(3, 21);
-            this.lblEfectivo.Name = "lblEfectivo";
-            this.lblEfectivo.Size = new System.Drawing.Size(52, 15);
-            this.lblEfectivo.TabIndex = 168;
-            this.lblEfectivo.Text = "Efectivo:";
-            // 
-            // lblYape
-            // 
-            this.lblYape.AutoSize = true;
-            this.lblYape.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblYape.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblYape.Location = new System.Drawing.Point(3, 49);
-            this.lblYape.Name = "lblYape";
-            this.lblYape.Size = new System.Drawing.Size(35, 15);
-            this.lblYape.TabIndex = 163;
-            this.lblYape.Text = "Yape:";
-            // 
-            // txtYapeCantidad
-            // 
-            this.txtYapeCantidad.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.txtYapeCantidad.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtYapeCantidad.Location = new System.Drawing.Point(190, 46);
-            this.txtYapeCantidad.Multiline = true;
-            this.txtYapeCantidad.Name = "txtYapeCantidad";
-            this.txtYapeCantidad.ReadOnly = true;
-            this.txtYapeCantidad.Size = new System.Drawing.Size(110, 20);
-            this.txtYapeCantidad.TabIndex = 10019;
-            this.txtYapeCantidad.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            // 
-            // lblTotal
-            // 
-            this.lblTotal.AutoSize = true;
-            this.lblTotal.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblTotal.Font = new System.Drawing.Font("Segoe UI", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblTotal.Location = new System.Drawing.Point(3, 144);
-            this.lblTotal.Name = "lblTotal";
-            this.lblTotal.Size = new System.Drawing.Size(58, 20);
-            this.lblTotal.TabIndex = 164;
-            this.lblTotal.Text = "TOTAL:";
-            // 
-            // lblSeparador
-            // 
-            this.lblSeparador.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(223)))), ((int)(((byte)(228)))), ((int)(((byte)(234)))));
-            this.lblSeparador.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(223)))), ((int)(((byte)(228)))), ((int)(((byte)(234)))));
-            this.lblSeparador.Location = new System.Drawing.Point(3, 128);
-            this.lblSeparador.Name = "lblSeparador";
-            this.lblSeparador.Size = new System.Drawing.Size(305, 1);
-            this.lblSeparador.TabIndex = 165;
-            // 
-            // lblTransferencia
-            // 
-            this.lblTransferencia.AutoSize = true;
-            this.lblTransferencia.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblTransferencia.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblTransferencia.Location = new System.Drawing.Point(3, 77);
-            this.lblTransferencia.Name = "lblTransferencia";
-            this.lblTransferencia.Size = new System.Drawing.Size(79, 15);
-            this.lblTransferencia.TabIndex = 166;
-            this.lblTransferencia.Text = "Transferencia:";
-            // 
-            // lblCredito
-            // 
-            this.lblCredito.AutoSize = true;
-            this.lblCredito.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblCredito.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblCredito.Location = new System.Drawing.Point(4, 104);
-            this.lblCredito.Name = "lblCredito";
-            this.lblCredito.Size = new System.Drawing.Size(60, 15);
-            this.lblCredito.TabIndex = 167;
-            this.lblCredito.Text = "A Crédito:";
             //
             // btnCerrar
-            // 
+            //
             this.btnCerrar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(231)))), ((int)(((byte)(76)))), ((int)(((byte)(60)))));
             this.btnCerrar.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnCerrar.FlatAppearance.BorderSize = 0;
@@ -252,15 +77,15 @@
             this.btnCerrar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCerrar.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnCerrar.ForeColor = System.Drawing.Color.White;
-            this.btnCerrar.Location = new System.Drawing.Point(118, 557);
+            this.btnCerrar.Location = new System.Drawing.Point(648, 136);
             this.btnCerrar.Name = "btnCerrar";
-            this.btnCerrar.Size = new System.Drawing.Size(98, 27);
+            this.btnCerrar.Size = new System.Drawing.Size(98, 28);
             this.btnCerrar.TabIndex = 10015;
             this.btnCerrar.Text = "Cerrar";
             this.btnCerrar.UseVisualStyleBackColor = false;
-            // 
+            //
             // btnExportar
-            // 
+            //
             this.btnExportar.BackColor = System.Drawing.Color.White;
             this.btnExportar.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnExportar.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(223)))), ((int)(((byte)(228)))), ((int)(((byte)(234)))));
@@ -268,36 +93,13 @@
             this.btnExportar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnExportar.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
             this.btnExportar.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.btnExportar.Location = new System.Drawing.Point(15, 557);
+            this.btnExportar.Location = new System.Drawing.Point(537, 136);
             this.btnExportar.Name = "btnExportar";
-            this.btnExportar.Size = new System.Drawing.Size(98, 27);
+            this.btnExportar.Size = new System.Drawing.Size(98, 28);
             this.btnExportar.TabIndex = 10014;
             this.btnExportar.Text = "Exportar";
             this.btnExportar.UseVisualStyleBackColor = false;
-            // 
-            // lblVentasPeriodo
-            // 
-            this.lblVentasPeriodo.AutoSize = true;
-            this.lblVentasPeriodo.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblVentasPeriodo.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblVentasPeriodo.Location = new System.Drawing.Point(15, 54);
-            this.lblVentasPeriodo.Name = "lblVentasPeriodo";
-            this.lblVentasPeriodo.Size = new System.Drawing.Size(122, 15);
-            this.lblVentasPeriodo.TabIndex = 161;
-            this.lblVentasPeriodo.Text = "Ventas del período: 45";
-            // 
-            // lblSubTitulo2
-            // 
-            this.lblSubTitulo2.AutoSize = true;
-            this.lblSubTitulo2.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblSubTitulo2.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblSubTitulo2.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(64)))), ((int)(((byte)(64)))));
-            this.lblSubTitulo2.Location = new System.Drawing.Point(14, 11);
-            this.lblSubTitulo2.Name = "lblSubTitulo2";
-            this.lblSubTitulo2.Size = new System.Drawing.Size(79, 20);
-            this.lblSubTitulo2.TabIndex = 115;
-            this.lblSubTitulo2.Text = "RESUMEN";
-            // 
+            //
             // btnLimpiar
             // 
             this.btnLimpiar.BackColor = System.Drawing.Color.White;
@@ -456,6 +258,8 @@
             this.pnlFiltro.BackColor = System.Drawing.Color.White;
             this.pnlFiltro.Controls.Add(this.btnBuscar);
             this.pnlFiltro.Controls.Add(this.btnLimpiar);
+            this.pnlFiltro.Controls.Add(this.btnExportar);
+            this.pnlFiltro.Controls.Add(this.btnCerrar);
             this.pnlFiltro.Controls.Add(this.lblEstado);
             this.pnlFiltro.Controls.Add(this.cmbEstado);
             this.pnlFiltro.Controls.Add(this.cmbCliente);
@@ -651,7 +455,6 @@
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
             this.ClientSize = new System.Drawing.Size(1184, 661);
             this.Controls.Add(this.pnlListado);
-            this.Controls.Add(this.pnlResumen);
             this.Controls.Add(this.pnlFiltro);
             this.Controls.Add(this.lblTitulo);
             this.MaximizeBox = false;
@@ -659,10 +462,6 @@
             this.Name = "FormHistorialVentas";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "FormHistorialVentas";
-            this.pnlResumen.ResumeLayout(false);
-            this.pnlResumen.PerformLayout();
-            this.pnlResumenCantidades.ResumeLayout(false);
-            this.pnlResumenCantidades.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvVentas)).EndInit();
             this.pnlFiltro.ResumeLayout(false);
             this.pnlFiltro.PerformLayout();
@@ -675,11 +474,9 @@
 
         #endregion
 
-        private System.Windows.Forms.Panel pnlResumen;
         private System.Windows.Forms.Button btnLimpiar;
         private System.Windows.Forms.Button btnBuscar;
         private System.Windows.Forms.DataGridView dgvVentas;
-        private System.Windows.Forms.Label lblSubTitulo2;
         private System.Windows.Forms.Panel pnlFiltro;
         private System.Windows.Forms.ComboBox cmbTipoComprobante;
         private System.Windows.Forms.Label lblTipoComprobante;
@@ -697,21 +494,8 @@
         private System.Windows.Forms.Label lblDesde;
         private System.Windows.Forms.DateTimePicker dtpDesde;
         private System.Windows.Forms.Label lblSubTitulo3;
-        private System.Windows.Forms.Label lblEfectivo;
-        private System.Windows.Forms.Label lblCredito;
-        private System.Windows.Forms.Label lblTransferencia;
-        private System.Windows.Forms.Label lblSeparador;
-        private System.Windows.Forms.Label lblTotal;
-        private System.Windows.Forms.Label lblYape;
-        private System.Windows.Forms.Label lblVentasPeriodo;
         private System.Windows.Forms.Button btnCerrar;
         private System.Windows.Forms.Button btnExportar;
-        private System.Windows.Forms.Panel pnlResumenCantidades;
-        private System.Windows.Forms.TextBox txtEfectivoCantidad;
-        private System.Windows.Forms.TextBox txtYapeCantidad;
-        private System.Windows.Forms.TextBox txtTotalCantidad;
-        private System.Windows.Forms.TextBox txtCreditoCantidad;
-        private System.Windows.Forms.TextBox txtTransferenciaCantidad;
         private System.Windows.Forms.DataGridViewTextBoxColumn colNumero;
         private System.Windows.Forms.DataGridViewTextBoxColumn colFechaHora;
         private System.Windows.Forms.DataGridViewTextBoxColumn colComprobante;

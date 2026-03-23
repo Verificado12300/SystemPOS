@@ -25,23 +25,17 @@ namespace SistemaPOS.Forms.Principal
             this.mnuUnidades = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuImpresoras = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuRespaldo = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuReportes = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuGeneral = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuPapelera = new System.Windows.Forms.ToolStripMenuItem();
-            this.mnuConciliacion = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuLicencia = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuSep = new System.Windows.Forms.ToolStripSeparator();
-            this.mnuReportes = new System.Windows.Forms.ToolStripMenuItem();
             this.btnUsuarioConfig = new System.Windows.Forms.Button();
             this.pnlMenu = new System.Windows.Forms.Panel();
             this.btnToggleMenu = new System.Windows.Forms.Button();
             this.btnCerrarSesion = new System.Windows.Forms.Button();
-            this.btnReportes = new System.Windows.Forms.Button();
-            this.btnBalanceGeneral = new System.Windows.Forms.Button();
-            this.btnEstadoResultados = new System.Windows.Forms.Button();
-            this.btnFlujoCaja = new System.Windows.Forms.Button();
-            this.lblReportes = new System.Windows.Forms.Label();
-            this.btnCuentasPagar = new System.Windows.Forms.Button();
             this.btnContabilidad = new System.Windows.Forms.Button();
+            this.btnCuentasPagar = new System.Windows.Forms.Button();
             this.btnCobros = new System.Windows.Forms.Button();
             this.btnGastos = new System.Windows.Forms.Button();
             this.btnCaja = new System.Windows.Forms.Button();
@@ -90,100 +84,92 @@ namespace SistemaPOS.Forms.Principal
             this.mnuReportes,
             this.mnuGeneral,
             this.mnuPapelera,
-            this.mnuConciliacion,
             this.mnuLicencia,
             this.mnuSep});
             this.cmsUsuarioConfig.Name = "cmsUsuarioConfig";
-            this.cmsUsuarioConfig.Size = new System.Drawing.Size(181, 252);
+            this.cmsUsuarioConfig.Size = new System.Drawing.Size(154, 252);
             // 
             // mnuEmpresa
             // 
             this.mnuEmpresa.Name = "mnuEmpresa";
-            this.mnuEmpresa.Size = new System.Drawing.Size(180, 22);
+            this.mnuEmpresa.Size = new System.Drawing.Size(153, 22);
             this.mnuEmpresa.Text = "Empresa";
             this.mnuEmpresa.Click += new System.EventHandler(this.MnuEmpresa_Click);
             // 
             // mnuUsuarios
             // 
             this.mnuUsuarios.Name = "mnuUsuarios";
-            this.mnuUsuarios.Size = new System.Drawing.Size(180, 22);
+            this.mnuUsuarios.Size = new System.Drawing.Size(153, 22);
             this.mnuUsuarios.Text = "Usuarios";
             this.mnuUsuarios.Click += new System.EventHandler(this.MnuUsuarios_Click);
             // 
             // mnuCategorias
             // 
             this.mnuCategorias.Name = "mnuCategorias";
-            this.mnuCategorias.Size = new System.Drawing.Size(180, 22);
+            this.mnuCategorias.Size = new System.Drawing.Size(153, 22);
             this.mnuCategorias.Text = "Categorias";
             this.mnuCategorias.Click += new System.EventHandler(this.MnuCategorias_Click);
             // 
             // mnuPresentaciones
             // 
             this.mnuPresentaciones.Name = "mnuPresentaciones";
-            this.mnuPresentaciones.Size = new System.Drawing.Size(180, 22);
+            this.mnuPresentaciones.Size = new System.Drawing.Size(153, 22);
             this.mnuPresentaciones.Text = "Presentaciones";
             this.mnuPresentaciones.Click += new System.EventHandler(this.MnuPresentaciones_Click);
             // 
             // mnuUnidades
             // 
             this.mnuUnidades.Name = "mnuUnidades";
-            this.mnuUnidades.Size = new System.Drawing.Size(180, 22);
+            this.mnuUnidades.Size = new System.Drawing.Size(153, 22);
             this.mnuUnidades.Text = "Unidades";
             this.mnuUnidades.Click += new System.EventHandler(this.MnuUnidades_Click);
             // 
             // mnuImpresoras
             // 
             this.mnuImpresoras.Name = "mnuImpresoras";
-            this.mnuImpresoras.Size = new System.Drawing.Size(180, 22);
+            this.mnuImpresoras.Size = new System.Drawing.Size(153, 22);
             this.mnuImpresoras.Text = "Impresoras";
             this.mnuImpresoras.Click += new System.EventHandler(this.MnuImpresoras_Click);
             // 
             // mnuRespaldo
             // 
             this.mnuRespaldo.Name = "mnuRespaldo";
-            this.mnuRespaldo.Size = new System.Drawing.Size(180, 22);
+            this.mnuRespaldo.Size = new System.Drawing.Size(153, 22);
             this.mnuRespaldo.Text = "Respaldo";
             this.mnuRespaldo.Click += new System.EventHandler(this.MnuRespaldo_Click);
+            // 
+            // mnuReportes
+            // 
+            this.mnuReportes.Name = "mnuReportes";
+            this.mnuReportes.Size = new System.Drawing.Size(153, 22);
+            this.mnuReportes.Text = "Reportes";
+            this.mnuReportes.Click += new System.EventHandler(this.MnuReportes_Click);
             // 
             // mnuGeneral
             // 
             this.mnuGeneral.Name = "mnuGeneral";
-            this.mnuGeneral.Size = new System.Drawing.Size(180, 22);
+            this.mnuGeneral.Size = new System.Drawing.Size(153, 22);
             this.mnuGeneral.Text = "General";
             this.mnuGeneral.Click += new System.EventHandler(this.MnuGeneral_Click);
-            //
+            // 
             // mnuPapelera
-            //
+            // 
             this.mnuPapelera.Name = "mnuPapelera";
-            this.mnuPapelera.Size = new System.Drawing.Size(180, 22);
+            this.mnuPapelera.Size = new System.Drawing.Size(153, 22);
             this.mnuPapelera.Text = "Papelera";
             this.mnuPapelera.Click += new System.EventHandler(this.MnuPapelera_Click);
-            //
-            // mnuConciliacion
-            //
-            this.mnuConciliacion.Name = "mnuConciliacion";
-            this.mnuConciliacion.Size = new System.Drawing.Size(180, 22);
-            this.mnuConciliacion.Text = "Conciliación Inventario";
-            this.mnuConciliacion.Click += new System.EventHandler(this.MnuConciliacion_Click);
-            //
+            // 
             // mnuLicencia
-            //
+            // 
             this.mnuLicencia.Name = "mnuLicencia";
-            this.mnuLicencia.Size = new System.Drawing.Size(180, 22);
+            this.mnuLicencia.Size = new System.Drawing.Size(153, 22);
             this.mnuLicencia.Text = "Licencia";
             this.mnuLicencia.Click += new System.EventHandler(this.MnuLicencia_Click);
             // 
             // mnuSep
             // 
             this.mnuSep.Name = "mnuSep";
-            this.mnuSep.Size = new System.Drawing.Size(177, 6);
-            // 
-            // mnuReportes
-            // 
-            this.mnuReportes.Name = "mnuReportes";
-            this.mnuReportes.Size = new System.Drawing.Size(180, 22);
-            this.mnuReportes.Text = "Reportes";
-            this.mnuReportes.Click += new System.EventHandler(this.MnuReportes_Click);
+            this.mnuSep.Size = new System.Drawing.Size(150, 6);
             // 
             // btnUsuarioConfig
             // 
@@ -209,11 +195,6 @@ namespace SistemaPOS.Forms.Principal
             this.pnlMenu.BackColor = System.Drawing.Color.White;
             this.pnlMenu.Controls.Add(this.btnToggleMenu);
             this.pnlMenu.Controls.Add(this.btnCerrarSesion);
-            this.pnlMenu.Controls.Add(this.btnReportes);
-            this.pnlMenu.Controls.Add(this.btnBalanceGeneral);
-            this.pnlMenu.Controls.Add(this.btnEstadoResultados);
-            this.pnlMenu.Controls.Add(this.btnFlujoCaja);
-            this.pnlMenu.Controls.Add(this.lblReportes);
             this.pnlMenu.Controls.Add(this.btnContabilidad);
             this.pnlMenu.Controls.Add(this.btnCuentasPagar);
             this.pnlMenu.Controls.Add(this.btnCobros);
@@ -236,7 +217,7 @@ namespace SistemaPOS.Forms.Principal
             this.pnlMenu.Dock = System.Windows.Forms.DockStyle.Left;
             this.pnlMenu.Location = new System.Drawing.Point(0, 0);
             this.pnlMenu.Name = "pnlMenu";
-            this.pnlMenu.Size = new System.Drawing.Size(250, 1034);
+            this.pnlMenu.Size = new System.Drawing.Size(250, 919);
             this.pnlMenu.TabIndex = 0;
             // 
             // btnToggleMenu
@@ -267,7 +248,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnCerrarSesion.ForeColor = System.Drawing.Color.DimGray;
             this.btnCerrarSesion.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Cerrar_hover;
             this.btnCerrarSesion.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnCerrarSesion.Location = new System.Drawing.Point(0, 994);
+            this.btnCerrarSesion.Location = new System.Drawing.Point(0, 877);
             this.btnCerrarSesion.Name = "btnCerrarSesion";
             this.btnCerrarSesion.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnCerrarSesion.Size = new System.Drawing.Size(250, 40);
@@ -276,101 +257,26 @@ namespace SistemaPOS.Forms.Principal
             this.btnCerrarSesion.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnCerrarSesion.UseVisualStyleBackColor = false;
             this.btnCerrarSesion.Click += new System.EventHandler(this.BtnCerrarSesion_Click);
+            //
+            // btnContabilidad
             // 
-            // btnReportes
-            // 
-            this.btnReportes.BackColor = System.Drawing.Color.White;
-            this.btnReportes.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnReportes.FlatAppearance.BorderSize = 0;
-            this.btnReportes.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnReportes.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnReportes.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnReportes.ForeColor = System.Drawing.Color.Black;
-            this.btnReportes.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_ReportesGenerales;
-            this.btnReportes.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnReportes.Location = new System.Drawing.Point(0, 840);
-            this.btnReportes.Name = "btnReportes";
-            this.btnReportes.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
-            this.btnReportes.Size = new System.Drawing.Size(250, 35);
-            this.btnReportes.TabIndex = 22;
-            this.btnReportes.Text = "       Reportes";
-            this.btnReportes.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnReportes.UseVisualStyleBackColor = false;
-            this.btnReportes.Click += new System.EventHandler(this.BtnReportes_Click);
-            // 
-            // btnBalanceGeneral
-            // 
-            this.btnBalanceGeneral.BackColor = System.Drawing.Color.White;
-            this.btnBalanceGeneral.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnBalanceGeneral.FlatAppearance.BorderSize = 0;
-            this.btnBalanceGeneral.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnBalanceGeneral.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnBalanceGeneral.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnBalanceGeneral.ForeColor = System.Drawing.Color.Black;
-            this.btnBalanceGeneral.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_BalanceGeneral;
-            this.btnBalanceGeneral.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnBalanceGeneral.Location = new System.Drawing.Point(0, 801);
-            this.btnBalanceGeneral.Name = "btnBalanceGeneral";
-            this.btnBalanceGeneral.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
-            this.btnBalanceGeneral.Size = new System.Drawing.Size(250, 35);
-            this.btnBalanceGeneral.TabIndex = 21;
-            this.btnBalanceGeneral.Text = "       Balance";
-            this.btnBalanceGeneral.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnBalanceGeneral.UseVisualStyleBackColor = false;
-            this.btnBalanceGeneral.Click += new System.EventHandler(this.BtnBalanceGeneral_Click);
-            // 
-            // btnEstadoResultados
-            // 
-            this.btnEstadoResultados.BackColor = System.Drawing.Color.White;
-            this.btnEstadoResultados.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnEstadoResultados.FlatAppearance.BorderSize = 0;
-            this.btnEstadoResultados.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnEstadoResultados.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnEstadoResultados.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnEstadoResultados.ForeColor = System.Drawing.Color.Black;
-            this.btnEstadoResultados.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_EstadoDeResultado;
-            this.btnEstadoResultados.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnEstadoResultados.Location = new System.Drawing.Point(0, 762);
-            this.btnEstadoResultados.Name = "btnEstadoResultados";
-            this.btnEstadoResultados.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
-            this.btnEstadoResultados.Size = new System.Drawing.Size(250, 35);
-            this.btnEstadoResultados.TabIndex = 20;
-            this.btnEstadoResultados.Text = "       Resultados";
-            this.btnEstadoResultados.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnEstadoResultados.UseVisualStyleBackColor = false;
-            this.btnEstadoResultados.Click += new System.EventHandler(this.BtnEstadoResultados_Click);
-            // 
-            // btnFlujoCaja
-            // 
-            this.btnFlujoCaja.BackColor = System.Drawing.Color.White;
-            this.btnFlujoCaja.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnFlujoCaja.FlatAppearance.BorderSize = 0;
-            this.btnFlujoCaja.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnFlujoCaja.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnFlujoCaja.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnFlujoCaja.ForeColor = System.Drawing.Color.Black;
-            this.btnFlujoCaja.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_FlujoDeCaja;
-            this.btnFlujoCaja.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnFlujoCaja.Location = new System.Drawing.Point(0, 723);
-            this.btnFlujoCaja.Name = "btnFlujoCaja";
-            this.btnFlujoCaja.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
-            this.btnFlujoCaja.Size = new System.Drawing.Size(250, 35);
-            this.btnFlujoCaja.TabIndex = 19;
-            this.btnFlujoCaja.Text = "       Flujo";
-            this.btnFlujoCaja.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnFlujoCaja.UseVisualStyleBackColor = false;
-            this.btnFlujoCaja.Click += new System.EventHandler(this.BtnFlujoCaja_Click);
-            // 
-            // lblReportes
-            // 
-            this.lblReportes.AutoSize = true;
-            this.lblReportes.Font = new System.Drawing.Font("Inter V Semi Bold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblReportes.ForeColor = System.Drawing.SystemColors.AppWorkspace;
-            this.lblReportes.Location = new System.Drawing.Point(15, 705);
-            this.lblReportes.Name = "lblReportes";
-            this.lblReportes.Size = new System.Drawing.Size(66, 14);
-            this.lblReportes.TabIndex = 18;
-            this.lblReportes.Text = "ANALITICA";
+            this.btnContabilidad.BackColor = System.Drawing.Color.White;
+            this.btnContabilidad.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnContabilidad.FlatAppearance.BorderSize = 0;
+            this.btnContabilidad.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnContabilidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnContabilidad.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnContabilidad.ForeColor = System.Drawing.Color.Black;
+            this.btnContabilidad.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnContabilidad.Location = new System.Drawing.Point(0, 662);
+            this.btnContabilidad.Name = "btnContabilidad";
+            this.btnContabilidad.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
+            this.btnContabilidad.Size = new System.Drawing.Size(250, 35);
+            this.btnContabilidad.TabIndex = 29;
+            this.btnContabilidad.Text = "       Contabilidad";
+            this.btnContabilidad.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnContabilidad.UseVisualStyleBackColor = false;
+            this.btnContabilidad.Click += new System.EventHandler(this.BtnContabilidad_Click);
             // 
             // btnCuentasPagar
             // 
@@ -392,29 +298,9 @@ namespace SistemaPOS.Forms.Principal
             this.btnCuentasPagar.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnCuentasPagar.UseVisualStyleBackColor = false;
             this.btnCuentasPagar.Click += new System.EventHandler(this.BtnCuentasPagar_Click);
-            //
-            // btnContabilidad
-            //
-            this.btnContabilidad.BackColor = System.Drawing.Color.White;
-            this.btnContabilidad.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnContabilidad.FlatAppearance.BorderSize = 0;
-            this.btnContabilidad.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnContabilidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnContabilidad.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnContabilidad.ForeColor = System.Drawing.Color.Black;
-            this.btnContabilidad.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnContabilidad.Location = new System.Drawing.Point(0, 662);
-            this.btnContabilidad.Name = "btnContabilidad";
-            this.btnContabilidad.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
-            this.btnContabilidad.Size = new System.Drawing.Size(250, 35);
-            this.btnContabilidad.TabIndex = 29;
-            this.btnContabilidad.Text = "       Contabilidad";
-            this.btnContabilidad.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnContabilidad.UseVisualStyleBackColor = false;
-            this.btnContabilidad.Click += new System.EventHandler(this.BtnContabilidad_Click);
-            //
+            // 
             // btnCobros
-            //
+            // 
             this.btnCobros.BackColor = System.Drawing.Color.White;
             this.btnCobros.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnCobros.FlatAppearance.BorderSize = 0;
@@ -429,7 +315,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnCobros.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnCobros.Size = new System.Drawing.Size(250, 35);
             this.btnCobros.TabIndex = 16;
-            this.btnCobros.Text = "       Cobros";
+            this.btnCobros.Text = "       Cuentas por Cobrar";
             this.btnCobros.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnCobros.UseVisualStyleBackColor = false;
             this.btnCobros.Click += new System.EventHandler(this.BtnCobros_Click);
@@ -485,7 +371,7 @@ namespace SistemaPOS.Forms.Principal
             this.lblFinanzas.Name = "lblFinanzas";
             this.lblFinanzas.Size = new System.Drawing.Size(106, 14);
             this.lblFinanzas.TabIndex = 13;
-            this.lblFinanzas.Text = "CAJA Y FINANZAS";
+            this.lblFinanzas.Text = "FINANZAS";
             // 
             // btnProveedores
             // 
@@ -538,7 +424,7 @@ namespace SistemaPOS.Forms.Principal
             this.lblContactos.Name = "lblContactos";
             this.lblContactos.Size = new System.Drawing.Size(73, 13);
             this.lblContactos.TabIndex = 10;
-            this.lblContactos.Text = "RELACIONES";
+            this.lblContactos.Text = "CONTACTOS";
             // 
             // btnAjustes
             // 
@@ -707,7 +593,7 @@ namespace SistemaPOS.Forms.Principal
             this.lblOperaciones.Name = "lblOperaciones";
             this.lblOperaciones.Size = new System.Drawing.Size(51, 14);
             this.lblOperaciones.TabIndex = 1;
-            this.lblOperaciones.Text = "VENTAS";
+            this.lblOperaciones.Text = "COMERCIAL";
             // 
             // btnDashboard
             // 
@@ -750,6 +636,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnConfiguracion.Text = "       Configuracion del Sistema";
             this.btnConfiguracion.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnConfiguracion.UseVisualStyleBackColor = false;
+            this.btnConfiguracion.Visible = false;
             this.btnConfiguracion.Click += new System.EventHandler(this.BtnConfiguracion_Click);
             // 
             // btnEmpresa
@@ -771,6 +658,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnEmpresa.Text = "       Empresa";
             this.btnEmpresa.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnEmpresa.UseVisualStyleBackColor = false;
+            this.btnEmpresa.Visible = false;
             this.btnEmpresa.Click += new System.EventHandler(this.BtnEmpresa_Click);
             // 
             // btnUsuarios
@@ -792,6 +680,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnUsuarios.Text = "       Usuarios y Roles";
             this.btnUsuarios.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnUsuarios.UseVisualStyleBackColor = false;
+            this.btnUsuarios.Visible = false;
             this.btnUsuarios.Click += new System.EventHandler(this.BtnUsuarios_Click);
             // 
             // lblConfiguracion
@@ -804,6 +693,7 @@ namespace SistemaPOS.Forms.Principal
             this.lblConfiguracion.Size = new System.Drawing.Size(104, 14);
             this.lblConfiguracion.TabIndex = 23;
             this.lblConfiguracion.Text = "ADMINISTRACION";
+            this.lblConfiguracion.Visible = false;
             // 
             // pnlTop
             // 
@@ -822,7 +712,7 @@ namespace SistemaPOS.Forms.Principal
             this.pnlMenuBorder.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(223)))), ((int)(((byte)(228)))), ((int)(((byte)(234)))));
             this.pnlMenuBorder.Location = new System.Drawing.Point(250, 0);
             this.pnlMenuBorder.Name = "pnlMenuBorder";
-            this.pnlMenuBorder.Size = new System.Drawing.Size(1, 1034);
+            this.pnlMenuBorder.Size = new System.Drawing.Size(1, 919);
             this.pnlMenuBorder.TabIndex = 29;
             // 
             // pnlContenido
@@ -833,7 +723,7 @@ namespace SistemaPOS.Forms.Principal
             this.pnlContenido.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
             this.pnlContenido.Location = new System.Drawing.Point(251, 40);
             this.pnlContenido.Name = "pnlContenido";
-            this.pnlContenido.Size = new System.Drawing.Size(1149, 964);
+            this.pnlContenido.Size = new System.Drawing.Size(1149, 849);
             this.pnlContenido.TabIndex = 1;
             // 
             // pnlStatus
@@ -842,7 +732,7 @@ namespace SistemaPOS.Forms.Principal
             this.pnlStatus.Controls.Add(this.pnlStatusBorderTop);
             this.pnlStatus.Controls.Add(this.lblFecha);
             this.pnlStatus.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.pnlStatus.Location = new System.Drawing.Point(250, 1004);
+            this.pnlStatus.Location = new System.Drawing.Point(250, 889);
             this.pnlStatus.Name = "pnlStatus";
             this.pnlStatus.Size = new System.Drawing.Size(1150, 30);
             this.pnlStatus.TabIndex = 2;
@@ -898,7 +788,7 @@ namespace SistemaPOS.Forms.Principal
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.ClientSize = new System.Drawing.Size(1400, 1034);
+            this.ClientSize = new System.Drawing.Size(1400, 919);
             this.Controls.Add(this.pnlMenuBorder);
             this.Controls.Add(this.pnlTop);
             this.Controls.Add(this.pnlStatus);
@@ -907,7 +797,7 @@ namespace SistemaPOS.Forms.Principal
             this.MinimumSize = new System.Drawing.Size(1200, 600);
             this.Name = "FormPrincipal";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Sistema POS";
+            this.Text = "B";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.Load += new System.EventHandler(this.FormPrincipal_Load);
             this.cmsUsuarioConfig.ResumeLayout(false);
@@ -948,11 +838,6 @@ namespace SistemaPOS.Forms.Principal
         private System.Windows.Forms.Button btnCobros;
         private System.Windows.Forms.Button btnCuentasPagar;
         private System.Windows.Forms.Button btnContabilidad;
-        private System.Windows.Forms.Label lblReportes;
-        private System.Windows.Forms.Button btnFlujoCaja;
-        private System.Windows.Forms.Button btnEstadoResultados;
-        private System.Windows.Forms.Button btnBalanceGeneral;
-        private System.Windows.Forms.Button btnReportes;
         private System.Windows.Forms.Label lblConfiguracion;
         private System.Windows.Forms.Button btnUsuarios;
         private System.Windows.Forms.Button btnEmpresa;
@@ -968,7 +853,6 @@ namespace SistemaPOS.Forms.Principal
         private System.Windows.Forms.ToolStripMenuItem mnuRespaldo;
         private System.Windows.Forms.ToolStripMenuItem mnuGeneral;
         private System.Windows.Forms.ToolStripMenuItem mnuPapelera;
-        private System.Windows.Forms.ToolStripMenuItem mnuConciliacion;
         private System.Windows.Forms.ToolStripMenuItem mnuLicencia;
         private System.Windows.Forms.ToolStripSeparator mnuSep;
         private System.Windows.Forms.ToolStripMenuItem mnuReportes;

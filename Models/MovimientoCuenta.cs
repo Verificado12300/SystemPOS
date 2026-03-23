@@ -4,7 +4,8 @@ namespace SistemaPOS.Models
 {
     public class MovimientoCuenta
     {
-        public int?     PagoVentaID { get; set; }   // null si no se puede anular
+        public int?     PagoID      { get; set; }   // ID del Pagos padre (para anular a nivel pago)
+        public int?     PagoVentaID { get; set; }   // null si no se puede anular (legacy)
         public DateTime Fecha       { get; set; }
         public TimeSpan Hora        { get; set; }
         public string   Tipo        { get; set; }   // VENTA | PAGO | ANULACION_COBRO

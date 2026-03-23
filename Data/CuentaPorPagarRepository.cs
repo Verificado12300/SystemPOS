@@ -19,6 +19,38 @@ namespace SistemaPOS.Data
         // Estado = Anulado ? "ANULADO" : "ACTIVO"
     }
 
+    /// <summary>Fila de movimiento cronológico para el Estado de Cuenta Proveedor.</summary>
+    public class MovimientoCxP
+    {
+        public DateTime  Fecha            { get; set; }
+        public TimeSpan  Hora             { get; set; }
+        public string    Tipo             { get; set; }   // COMPRA | GASTO | PAGO | ANULACION_PAGO
+        public string    Documento        { get; set; }
+        public string    Metodo           { get; set; }
+        public decimal   Cargo            { get; set; }
+        public decimal   Abono            { get; set; }
+        public decimal   Saldo            { get; set; }   // acumulado (calculado en C#)
+        public bool      Anulado          { get; set; }
+        public bool      PuedeAnular      { get; set; }   // botón "Anular" en DGV
+        public bool      PuedePagar       { get; set; }   // botón "Pagar" en DGV
+        public int?      PagoProveedorID  { get; set; }
+        public int?      CuentaPorPagarID { get; set; }
+        public string    EstadoCxP        { get; set; }   // para COMPRA/GASTO
+        public int       OrdenSort        { get; set; }
+    }
+
+    /// <summary>Agrupación de CxP por proveedor, para la vista principal.</summary>
+    public class ResumenProveedorCxP
+    {
+        public int?    ProveedorID        { get; set; }
+        public string  NombreProveedor    { get; set; }
+        public int     CantidadDocumentos { get; set; }
+        public decimal TotalCompras       { get; set; }  // SUM(MontoTotal)
+        public decimal TotalPagado        { get; set; }  // SUM(MontoPagado)
+        public decimal TotalPendiente     { get; set; }  // SUM(MontoPendiente)
+        public string  Estado             { get; set; }  // PENDIENTE | CANCELADO
+    }
+
     public class CuentaPorPagarRepository
     {
         // ---------------------------------------------------------------
@@ -91,6 +123,66 @@ namespace SistemaPOS.Data
             }
 
             return cuentas;
+        }
+
+        // ---------------------------------------------------------------
+        // LISTAR AGRUPADO POR PROVEEDOR
+        // ---------------------------------------------------------------
+
+        public static List<ResumenProveedorCxP> ListarAgrupadoPorProveedor(string busqueda = null)
+        {
+            var lista = new List<ResumenProveedorCxP>();
+
+            using (var connection = DatabaseConnection.GetConnection())
+            {
+                string query = @"
+                    SELECT
+                        cp.ProveedorID,
+                        COALESCE(p.RazonSocial, cp.ProveedorNombre, 'Sin proveedor') AS NombreProveedor,
+                        COUNT(*)               AS CantidadDocumentos,
+                        SUM(cp.MontoTotal)     AS TotalCompras,
+                        SUM(cp.MontoPagado)    AS TotalPagado,
+                        SUM(cp.MontoPendiente) AS TotalPendiente
+                    FROM CuentasPorPagar cp
+                    LEFT JOIN Proveedores p ON cp.ProveedorID = p.ProveedorID
+                    WHERE cp.Estado != 'ANULADO'
+                      AND (cp.Eliminado IS NULL OR cp.Eliminado = 0)";
+
+                if (!string.IsNullOrWhiteSpace(busqueda))
+                    query += @" AND (COALESCE(p.RazonSocial, cp.ProveedorNombre, '') LIKE @Busqueda)";
+
+                query += @"
+                    GROUP BY cp.ProveedorID,
+                             COALESCE(p.RazonSocial, cp.ProveedorNombre, 'Sin proveedor')
+                    ORDER BY SUM(cp.MontoPendiente) DESC,
+                             COALESCE(p.RazonSocial, cp.ProveedorNombre, 'Sin proveedor') ASC";
+
+                using (var cmd = new SQLiteCommand(query, connection))
+                {
+                    if (!string.IsNullOrWhiteSpace(busqueda))
+                        cmd.Parameters.AddWithValue("@Busqueda", $"%{busqueda.Trim()}%");
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            decimal totalPendiente = reader.IsDBNull(5) ? 0m : Convert.ToDecimal(reader.GetValue(5));
+                            lista.Add(new ResumenProveedorCxP
+                            {
+                                ProveedorID        = reader.IsDBNull(0) ? (int?)null : reader.GetInt32(0),
+                                NombreProveedor    = reader.GetString(1),
+                                CantidadDocumentos = reader.GetInt32(2),
+                                TotalCompras       = reader.IsDBNull(3) ? 0m : Convert.ToDecimal(reader.GetValue(3)),
+                                TotalPagado        = reader.IsDBNull(4) ? 0m : Convert.ToDecimal(reader.GetValue(4)),
+                                TotalPendiente     = totalPendiente,
+                                Estado             = totalPendiente > 0.001m ? "PENDIENTE" : "CANCELADO"
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
         }
 
         // ---------------------------------------------------------------
@@ -410,35 +502,6 @@ namespace SistemaPOS.Data
         }
 
         // ---------------------------------------------------------------
-        // RESUMEN TOTAL
-        // ---------------------------------------------------------------
-
-        public static (decimal TotalDeuda, decimal TotalPagado, int CuentasPendientes) ObtenerResumen()
-        {
-            using (var connection = DatabaseConnection.GetConnection())
-            {
-                string query = @"
-                    SELECT
-                        COALESCE(SUM(MontoTotal), 0),
-                        COALESCE(SUM(MontoPagado), 0),
-                        COUNT(CASE WHEN Estado NOT IN ('PAGADO','ANULADO') THEN 1 END)
-                    FROM CuentasPorPagar
-                    WHERE Estado != 'ANULADO'";
-
-                using (var cmd = new SQLiteCommand(query, connection))
-                {
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                            return (reader.GetDecimal(0), reader.GetDecimal(1), reader.GetInt32(2));
-                    }
-                }
-            }
-
-            return (0, 0, 0);
-        }
-
-        // ---------------------------------------------------------------
         // ANULAR PAGO
         // ---------------------------------------------------------------
 
@@ -543,6 +606,200 @@ namespace SistemaPOS.Data
                     throw;
                 }
             }
+        }
+
+        // ---------------------------------------------------------------
+        // MOVIMIENTOS CRONOLÓGICOS (Estado de Cuenta Proveedor)
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// Devuelve todos los movimientos cronológicos de un proveedor dentro del rango
+        /// de fechas, con saldo acumulado calculado en C#.
+        /// </summary>
+        public static List<MovimientoCxP> ObtenerMovimientosCuentaProveedor(
+            int? proveedorID, DateTime desde, DateTime hasta, string busqueda = null)
+        {
+            string desdeStr = desde.ToString("yyyy-MM-dd");
+            string hastaStr = hasta.ToString("yyyy-MM-dd");
+
+            string whereProv = proveedorID.HasValue
+                ? "AND cp.ProveedorID = @provID"
+                : "AND (cp.ProveedorID IS NULL OR cp.ProveedorID = 0)";
+
+            var raw = new List<MovimientoCxP>();
+
+            using (var conn = DatabaseConnection.GetConnection())
+            {
+                // ── 1. Documentos (COMPRA / GASTO) ───────────────────────
+                string qDocs = $@"
+                    SELECT
+                        cp.CuentaPorPagarID,
+                        cp.TipoOrigen,
+                        cp.Estado,
+                        cp.MontoTotal,
+                        COALESCE(
+                            CASE WHEN cp.TipoOrigen='COMPRA' THEN c.NumeroCompra
+                                 ELSE g.Concepto END,
+                            'CxP-' || cp.CuentaPorPagarID
+                        ) AS Documento,
+                        COALESCE(c.Fecha, g.Fecha, cp.FechaEmision, '') AS FechaOrigen
+                    FROM CuentasPorPagar cp
+                    LEFT JOIN Compras c ON cp.TipoOrigen='COMPRA' AND cp.IdOrigen = c.CompraID
+                    LEFT JOIN Gastos  g ON cp.TipoOrigen='GASTO'  AND cp.IdOrigen = g.GastoID
+                    WHERE cp.Estado != 'ANULADO'
+                      AND (cp.Eliminado IS NULL OR cp.Eliminado = 0)
+                      {whereProv}
+                      AND COALESCE(c.Fecha, g.Fecha, cp.FechaEmision, '') BETWEEN @desde AND @hasta
+                    ORDER BY FechaOrigen ASC";
+
+                using (var cmd = new SQLiteCommand(qDocs, conn))
+                {
+                    if (proveedorID.HasValue)
+                        cmd.Parameters.AddWithValue("@provID", proveedorID.Value);
+                    cmd.Parameters.AddWithValue("@desde", desdeStr);
+                    cmd.Parameters.AddWithValue("@hasta", hastaStr);
+
+                    using (var r = cmd.ExecuteReader())
+                    {
+                        while (r.Read())
+                        {
+                            string tipo     = r.IsDBNull(1) ? "COMPRA" : r.GetString(1);
+                            string estado   = r.GetString(2);
+                            decimal monto   = r.GetDecimal(3);
+                            string doc      = r.IsDBNull(4) ? "" : r.GetString(4);
+                            string fechaStr = r.IsDBNull(5) ? DateTime.Now.ToString("yyyy-MM-dd") : r.GetString(5);
+                            DateTime.TryParse(fechaStr, out DateTime fecha);
+
+                            raw.Add(new MovimientoCxP
+                            {
+                                Fecha            = fecha,
+                                Hora             = TimeSpan.Zero,
+                                Tipo             = tipo,
+                                Documento        = doc,
+                                Metodo           = "",
+                                Cargo            = monto,
+                                PuedePagar       = estado != "PAGADO" && estado != "ANULADO",
+                                CuentaPorPagarID = r.GetInt32(0),
+                                EstadoCxP        = estado,
+                                OrdenSort        = 0
+                            });
+                        }
+                    }
+                }
+
+                // ── 2. Pagos ─────────────────────────────────────────────
+                string qPagos = $@"
+                    SELECT
+                        pp.PagoProveedorID,
+                        pp.Fecha,
+                        pp.Hora,
+                        pp.Monto,
+                        pp.MetodoPago,
+                        pp.Anulado,
+                        cp.CuentaPorPagarID,
+                        COALESCE(
+                            CASE WHEN cp.TipoOrigen='COMPRA' THEN c.NumeroCompra
+                                 ELSE g.Concepto END,
+                            'CxP-' || cp.CuentaPorPagarID
+                        ) AS Documento
+                    FROM PagosProveedores pp
+                    INNER JOIN CuentasPorPagar cp ON pp.CuentaPorPagarID = cp.CuentaPorPagarID
+                    LEFT JOIN Compras c ON cp.TipoOrigen='COMPRA' AND cp.IdOrigen = c.CompraID
+                    LEFT JOIN Gastos  g ON cp.TipoOrigen='GASTO'  AND cp.IdOrigen = g.GastoID
+                    WHERE cp.Estado != 'ANULADO'
+                      AND (cp.Eliminado IS NULL OR cp.Eliminado = 0)
+                      {whereProv}
+                      AND pp.Fecha BETWEEN @desde AND @hasta
+                    ORDER BY pp.Fecha ASC, pp.Hora ASC";
+
+                using (var cmd = new SQLiteCommand(qPagos, conn))
+                {
+                    if (proveedorID.HasValue)
+                        cmd.Parameters.AddWithValue("@provID", proveedorID.Value);
+                    cmd.Parameters.AddWithValue("@desde", desdeStr);
+                    cmd.Parameters.AddWithValue("@hasta", hastaStr);
+
+                    using (var r = cmd.ExecuteReader())
+                    {
+                        while (r.Read())
+                        {
+                            int pagoID    = r.GetInt32(0);
+                            string fechaS = r.GetString(1);
+                            string horaS  = r.IsDBNull(2) ? "00:00:00" : r.GetString(2);
+                            decimal monto = r.GetDecimal(3);
+                            string metodo = r.IsDBNull(4) ? "" : r.GetString(4);
+                            bool anulado  = r.GetInt32(5) == 1;
+                            int cxpId     = r.GetInt32(6);
+                            string doc    = r.IsDBNull(7) ? "" : r.GetString(7);
+
+                            DateTime.TryParse(fechaS, out DateTime fecha);
+                            TimeSpan.TryParse(horaS,  out TimeSpan hora);
+
+                            if (anulado)
+                            {
+                                // Pago anulado → fila PAGO (abono) + fila ANULACION_PAGO (cargo)
+                                raw.Add(new MovimientoCxP
+                                {
+                                    Fecha = fecha, Hora = hora, Tipo = "PAGO",
+                                    Documento = doc, Metodo = metodo,
+                                    Abono = monto, Anulado = true, PuedeAnular = false,
+                                    PagoProveedorID = pagoID, CuentaPorPagarID = cxpId,
+                                    OrdenSort = 1
+                                });
+                                raw.Add(new MovimientoCxP
+                                {
+                                    Fecha = fecha, Hora = hora, Tipo = "ANULACION_PAGO",
+                                    Documento = doc, Metodo = metodo,
+                                    Cargo = monto, Anulado = true, PuedeAnular = false,
+                                    PagoProveedorID = pagoID, CuentaPorPagarID = cxpId,
+                                    OrdenSort = 2
+                                });
+                            }
+                            else
+                            {
+                                raw.Add(new MovimientoCxP
+                                {
+                                    Fecha = fecha, Hora = hora, Tipo = "PAGO",
+                                    Documento = doc, Metodo = metodo,
+                                    Abono = monto, PuedeAnular = true,
+                                    PagoProveedorID = pagoID, CuentaPorPagarID = cxpId,
+                                    OrdenSort = 1
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── 3. Ordenar por fecha+hora+orden y calcular saldo ─────────
+            raw.Sort((a, b) =>
+            {
+                int c = a.Fecha.CompareTo(b.Fecha);
+                if (c != 0) return c;
+                c = a.Hora.CompareTo(b.Hora);
+                if (c != 0) return c;
+                return a.OrdenSort.CompareTo(b.OrdenSort);
+            });
+
+            // ── 4. Filtro búsqueda (en memoria) ─────────────────────────
+            if (!string.IsNullOrWhiteSpace(busqueda))
+            {
+                string b = busqueda.ToLower();
+                raw.RemoveAll(m =>
+                    !m.Documento.ToLower().Contains(b) &&
+                    !m.Tipo.ToLower().Contains(b) &&
+                    !(m.Metodo ?? "").ToLower().Contains(b));
+            }
+
+            // ── 5. Calcular saldo acumulado ──────────────────────────────
+            decimal saldo = 0;
+            foreach (var mov in raw)
+            {
+                saldo += mov.Cargo - mov.Abono;
+                mov.Saldo = saldo;
+            }
+
+            return raw;
         }
 
         // ---------------------------------------------------------------

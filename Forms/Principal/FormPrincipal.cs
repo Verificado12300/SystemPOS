@@ -23,7 +23,6 @@ namespace SistemaPOS.Forms.Principal
         public FormPrincipal()
         {
             InitializeComponent();
-            ConfigurarAccesosMiEmpresa();
             ConfigurarIconosMenu();
             AplicarPermisosUI();
             ConfigurarMenuUsuario();
@@ -77,10 +76,6 @@ namespace SistemaPOS.Forms.Principal
                 btnGastos.Enabled = true;
                 btnCobros.Enabled = true;
                 btnCuentasPagar.Enabled = true;
-                btnFlujoCaja.Enabled = true;
-                btnEstadoResultados.Enabled = true;
-                btnBalanceGeneral.Enabled = true;
-                btnReportes.Enabled = true;
                 btnUsuarios.Enabled = true;
                 btnEmpresa.Enabled = true;
                 btnConfiguracion.Enabled = true;
@@ -105,11 +100,6 @@ namespace SistemaPOS.Forms.Principal
             btnGastos.Enabled = u.PermisoFinanzas;
             btnCobros.Enabled = u.PermisoFinanzas;
             btnCuentasPagar.Enabled = u.PermisoFinanzas;
-
-            btnFlujoCaja.Enabled = u.PermisoReportes;
-            btnEstadoResultados.Enabled = u.PermisoReportes;
-            btnBalanceGeneral.Enabled = u.PermisoReportes;
-            btnReportes.Enabled = u.PermisoReportes;
 
             btnUsuarios.Enabled = u.PermisoConfiguracion;
             btnEmpresa.Enabled = u.PermisoConfiguracion;
@@ -166,7 +156,6 @@ namespace SistemaPOS.Forms.Principal
             mnuRespaldo.Visible       = permisoConfig;
             mnuGeneral.Visible        = permisoConfig;
             mnuPapelera.Visible       = permisoConfig;
-            mnuConciliacion.Visible   = permisoConfig;
             mnuLicencia.Visible       = permisoConfig;
             mnuSep.Visible            = permisoConfig && permisoReportes;
             mnuReportes.Visible       = permisoReportes;
@@ -224,12 +213,6 @@ namespace SistemaPOS.Forms.Principal
             AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormPapeleraGlobal());
         }
 
-        private void MnuConciliacion_Click(object sender, EventArgs e)
-        {
-            if (!TienePermiso(u => u.PermisoConfiguracion, "Conciliación Inventario")) return;
-            AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormConciliacionInventario());
-        }
-
         private void MnuLicencia_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoConfiguracion, "Licencia")) return;
@@ -271,24 +254,10 @@ namespace SistemaPOS.Forms.Principal
             RegistrarIcono(btnGastos, r.GetObject("Icono-Boton-Gastos") as Image, r.GetObject("Icono-Boton-Gastos-hover") as Image);
             RegistrarIcono(btnCobros, r.GetObject("Icono-Boton-LibroDiario") as Image, r.GetObject("Icono-Boton-LibroDiario-hover") as Image);
             RegistrarIcono(btnCuentasPagar, r.GetObject("Icono-Boton-CuentasPorPagar") as Image, r.GetObject("Icono-Boton-CuentasPorPagar-hover") as Image);
-            RegistrarIcono(btnFlujoCaja, r.GetObject("Icono-Boton-FlujoDeCaja") as Image, r.GetObject("Icono-Boton-FlujoDeCaja-hover") as Image);
-            RegistrarIcono(btnEstadoResultados, r.GetObject("Icono-Boton-EstadoDeResultado") as Image, r.GetObject("Icono-Boton-EstadoDeResultado-hover") as Image);
-            RegistrarIcono(btnBalanceGeneral, r.GetObject("Icono-Boton-BalanceGeneral") as Image, r.GetObject("Icono-Boton-BalanceGeneral-hover") as Image);
-            RegistrarIcono(btnReportes, r.GetObject("Icono-Boton-ReportesGenerales") as Image, r.GetObject("Icono-Boton-ReportesGenerales-hover") as Image);
             RegistrarIcono(btnUsuarios, r.GetObject("Icono-Boton-Usuarios") as Image, r.GetObject("Icono-Boton-Usuarios-hover") as Image);
             RegistrarIcono(btnEmpresa, r.GetObject("Icono-Boton-Empresa") as Image, r.GetObject("Icono-Boton-Empresa-hover") as Image);
             RegistrarIcono(btnConfiguracion, r.GetObject("Icono-Boton-Configuracion") as Image, r.GetObject("Icono-Boton-Configuraciones-hover") as Image);
             RegistrarIcono(btnCerrarSesion, r.GetObject("Icono-Boton-Cerrar") as Image, r.GetObject("Icono-Boton-Cerrar-hover") as Image);
-        }
-
-        private void ConfigurarAccesosMiEmpresa()
-        {
-            // Estos accesos se muestran solo en el selector "Mi empresa" (parte superior)
-            btnReportes.Visible = false;
-            btnUsuarios.Visible = false;
-            btnEmpresa.Visible = false;
-            btnConfiguracion.Visible = false;
-            lblConfiguracion.Visible = false;
         }
 
         private void RegistrarIcono(Button btn, Image normal, Image hover)
@@ -474,28 +443,11 @@ namespace SistemaPOS.Forms.Principal
             AbrirFormEnPanel(new Finanzas.FormCuentasPorPagar(), btnCuentasPagar);
         }
 
-        private void BtnFlujoCaja_Click(object sender, EventArgs e)
-        {
-            if (!TienePermiso(u => u.PermisoReportes, "Flujo de Caja")) return;
-            AbrirFormEnPanel(new Reportes.FormFlujoCaja(), btnFlujoCaja);
-        }
-
-        private void BtnEstadoResultados_Click(object sender, EventArgs e)
-        {
-            if (!TienePermiso(u => u.PermisoReportes, "Estado de Resultados")) return;
-            AbrirFormEnPanel(new Reportes.FormEstadoResultados(), btnEstadoResultados);
-        }
-
-        private void BtnBalanceGeneral_Click(object sender, EventArgs e)
-        {
-            if (!TienePermiso(u => u.PermisoReportes, "Balance General")) return;
-            AbrirFormEnPanel(new Reportes.FormBalanceGeneral(), btnBalanceGeneral);
-        }
 
         private void BtnReportes_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoReportes, "Reportes")) return;
-            AbrirFormEnPanel(new Reportes.FormReportes(), btnReportes);
+            AbrirFormEnPanel(new Reportes.FormReportes());
         }
 
         private void BtnUsuarios_Click(object sender, EventArgs e)

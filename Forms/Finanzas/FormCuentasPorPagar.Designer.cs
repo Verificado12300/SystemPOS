@@ -15,36 +15,29 @@ namespace SistemaPOS.Forms.Finanzas
         {
             System.Windows.Forms.DataGridViewCellStyle hdrStyle = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle rowStyle = new System.Windows.Forms.DataGridViewCellStyle();
-            this.pnlHeader = new System.Windows.Forms.Panel();
-            this.lblTitulo = new System.Windows.Forms.Label();
-            this.lblHeaderSub = new System.Windows.Forms.Label();
-            this.pnlFiltros = new System.Windows.Forms.Panel();
-            this.lblProveedor = new System.Windows.Forms.Label();
-            this.cmbProveedor = new System.Windows.Forms.ComboBox();
-            this.lblEstado = new System.Windows.Forms.Label();
-            this.cmbEstado = new System.Windows.Forms.ComboBox();
-            this.lblTipo = new System.Windows.Forms.Label();
-            this.cmbTipo = new System.Windows.Forms.ComboBox();
-            this.btnFiltrar = new System.Windows.Forms.Button();
-            this.btnExportar = new System.Windows.Forms.Button();
-            this.dgvCuentas = new System.Windows.Forms.DataGridView();
-            this.colNumero = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colTipo = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colProveedor = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colFechaCompra = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colMontoTotal = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colMontoPagado = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colMontoPendiente = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colVencimiento = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colEstado = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colVerPagos = new System.Windows.Forms.DataGridViewButtonColumn();
-            this.colRegistrarPago = new System.Windows.Forms.DataGridViewButtonColumn();
-
-            this.pnlResumen = new System.Windows.Forms.Panel();
-            this.lblTotalRegistros = new System.Windows.Forms.Label();
-            this.lblTotalPendiente = new System.Windows.Forms.Label();
-            this.txtTotalPendiente = new System.Windows.Forms.TextBox();
+            this.pnlHeader        = new System.Windows.Forms.Panel();
+            this.lblTitulo        = new System.Windows.Forms.Label();
+            this.lblHeaderSub     = new System.Windows.Forms.Label();
+            this.pnlFiltros       = new System.Windows.Forms.Panel();
+            this.lblBuscar        = new System.Windows.Forms.Label();
+            this.txtBuscar        = new System.Windows.Forms.TextBox();
+            this.lblEstado        = new System.Windows.Forms.Label();
+            this.cmbEstado        = new System.Windows.Forms.ComboBox();
+            this.btnFiltrar       = new System.Windows.Forms.Button();
+            this.btnExportar      = new System.Windows.Forms.Button();
+            this.dgvCuentas       = new System.Windows.Forms.DataGridView();
+            this.colNumero        = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colProveedor     = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colDocumentos    = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTotalCompras  = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTotalPagado   = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colTotalPendiente= new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colEstado        = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colDetalle       = new System.Windows.Forms.DataGridViewButtonColumn();
+            this.pnlResumen       = new System.Windows.Forms.Panel();
+            this.lblTotalRegistros= new System.Windows.Forms.Label();
+            this.lblTotalPendiente= new System.Windows.Forms.Label();
+            this.txtTotalPendiente= new System.Windows.Forms.TextBox();
             this.pnlHeader.SuspendLayout();
             this.pnlFiltros.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvCuentas)).BeginInit();
@@ -76,18 +69,16 @@ namespace SistemaPOS.Forms.Finanzas
             this.lblHeaderSub.ForeColor = System.Drawing.Color.FromArgb(178, 190, 195);
             this.lblHeaderSub.Location = new System.Drawing.Point(22, 42);
             this.lblHeaderSub.Name = "lblHeaderSub";
-            this.lblHeaderSub.Text = "Gestión de obligaciones con proveedores";
+            this.lblHeaderSub.Text = "Resumen de obligaciones por proveedor";
             //
             // pnlFiltros
             //
             this.pnlFiltros.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
             this.pnlFiltros.BackColor = System.Drawing.Color.White;
-            this.pnlFiltros.Controls.Add(this.lblProveedor);
-            this.pnlFiltros.Controls.Add(this.cmbProveedor);
+            this.pnlFiltros.Controls.Add(this.lblBuscar);
+            this.pnlFiltros.Controls.Add(this.txtBuscar);
             this.pnlFiltros.Controls.Add(this.lblEstado);
             this.pnlFiltros.Controls.Add(this.cmbEstado);
-            this.pnlFiltros.Controls.Add(this.lblTipo);
-            this.pnlFiltros.Controls.Add(this.cmbTipo);
             this.pnlFiltros.Controls.Add(this.btnFiltrar);
             this.pnlFiltros.Controls.Add(this.btnExportar);
             this.pnlFiltros.Location = new System.Drawing.Point(0, 68);
@@ -95,23 +86,22 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlFiltros.Size = new System.Drawing.Size(1200, 60);
             this.pnlFiltros.TabIndex = 1;
             //
-            // lblProveedor
+            // lblBuscar
             //
-            this.lblProveedor.AutoSize = true;
-            this.lblProveedor.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblProveedor.ForeColor = System.Drawing.Color.FromArgb(99, 110, 114);
-            this.lblProveedor.Location = new System.Drawing.Point(15, 8);
-            this.lblProveedor.Name = "lblProveedor";
-            this.lblProveedor.Text = "Proveedor:";
+            this.lblBuscar.AutoSize = true;
+            this.lblBuscar.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblBuscar.ForeColor = System.Drawing.Color.FromArgb(99, 110, 114);
+            this.lblBuscar.Location = new System.Drawing.Point(15, 8);
+            this.lblBuscar.Name = "lblBuscar";
+            this.lblBuscar.Text = "Buscar proveedor:";
             //
-            // cmbProveedor
+            // txtBuscar
             //
-            this.cmbProveedor.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.cmbProveedor.FormattingEnabled = true;
-            this.cmbProveedor.Location = new System.Drawing.Point(15, 28);
-            this.cmbProveedor.Name = "cmbProveedor";
-            this.cmbProveedor.Size = new System.Drawing.Size(260, 23);
-            this.cmbProveedor.TabIndex = 0;
+            this.txtBuscar.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.txtBuscar.Location = new System.Drawing.Point(15, 28);
+            this.txtBuscar.Name = "txtBuscar";
+            this.txtBuscar.Size = new System.Drawing.Size(260, 23);
+            this.txtBuscar.TabIndex = 0;
             //
             // lblEstado
             //
@@ -127,31 +117,11 @@ namespace SistemaPOS.Forms.Finanzas
             this.cmbEstado.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbEstado.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.cmbEstado.FormattingEnabled = true;
-            this.cmbEstado.Items.AddRange(new object[] { "TODOS", "PENDIENTE", "PARCIAL", "PAGADO" });
+            this.cmbEstado.Items.AddRange(new object[] { "TODOS", "PENDIENTE", "CANCELADO" });
             this.cmbEstado.Location = new System.Drawing.Point(290, 28);
             this.cmbEstado.Name = "cmbEstado";
-            this.cmbEstado.Size = new System.Drawing.Size(185, 23);
+            this.cmbEstado.Size = new System.Drawing.Size(160, 23);
             this.cmbEstado.TabIndex = 1;
-            //
-            // lblTipo
-            //
-            this.lblTipo.AutoSize = true;
-            this.lblTipo.Font = new System.Drawing.Font("Segoe UI", 8.5F);
-            this.lblTipo.ForeColor = System.Drawing.Color.FromArgb(99, 110, 114);
-            this.lblTipo.Location = new System.Drawing.Point(490, 8);
-            this.lblTipo.Name = "lblTipo";
-            this.lblTipo.Text = "Tipo:";
-            //
-            // cmbTipo
-            //
-            this.cmbTipo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbTipo.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.cmbTipo.FormattingEnabled = true;
-            this.cmbTipo.Items.AddRange(new object[] { "TODOS", "COMPRA", "GASTO" });
-            this.cmbTipo.Location = new System.Drawing.Point(490, 28);
-            this.cmbTipo.Name = "cmbTipo";
-            this.cmbTipo.Size = new System.Drawing.Size(140, 23);
-            this.cmbTipo.TabIndex = 4;
             //
             // btnFiltrar
             //
@@ -162,7 +132,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.btnFiltrar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnFiltrar.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.btnFiltrar.ForeColor = System.Drawing.Color.FromArgb(45, 52, 54);
-            this.btnFiltrar.Location = new System.Drawing.Point(645, 27);
+            this.btnFiltrar.Location = new System.Drawing.Point(465, 27);
             this.btnFiltrar.Name = "btnFiltrar";
             this.btnFiltrar.Size = new System.Drawing.Size(100, 26);
             this.btnFiltrar.TabIndex = 2;
@@ -205,9 +175,9 @@ namespace SistemaPOS.Forms.Finanzas
             this.dgvCuentas.ColumnHeadersDefaultCellStyle = hdrStyle;
             this.dgvCuentas.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvCuentas.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-                this.colNumero, this.colTipo, this.colCompra, this.colProveedor, this.colFechaCompra,
-                this.colMontoTotal, this.colMontoPagado, this.colMontoPendiente,
-                this.colVencimiento, this.colEstado, this.colVerPagos, this.colRegistrarPago });
+                this.colNumero, this.colProveedor, this.colDocumentos,
+                this.colTotalCompras, this.colTotalPagado, this.colTotalPendiente,
+                this.colEstado, this.colDetalle });
             rowStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             rowStyle.BackColor = System.Drawing.Color.White;
             rowStyle.Font = new System.Drawing.Font("Segoe UI", 9.5F);
@@ -231,21 +201,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.colNumero.HeaderText = "#";
             this.colNumero.Name = "colNumero";
             this.colNumero.ReadOnly = true;
-            this.colNumero.Width = 50;
-            //
-            // colTipo
-            //
-            this.colTipo.HeaderText = "Tipo";
-            this.colTipo.Name = "colTipo";
-            this.colTipo.ReadOnly = true;
-            this.colTipo.Width = 70;
-            //
-            // colCompra
-            //
-            this.colCompra.HeaderText = "Referencia";
-            this.colCompra.Name = "colCompra";
-            this.colCompra.ReadOnly = true;
-            this.colCompra.Width = 120;
+            this.colNumero.Width = 45;
             //
             // colProveedor
             //
@@ -254,66 +210,55 @@ namespace SistemaPOS.Forms.Finanzas
             this.colProveedor.Name = "colProveedor";
             this.colProveedor.ReadOnly = true;
             //
-            // colFechaCompra
+            // colDocumentos
             //
-            this.colFechaCompra.HeaderText = "Fecha Compra";
-            this.colFechaCompra.Name = "colFechaCompra";
-            this.colFechaCompra.ReadOnly = true;
-            this.colFechaCompra.Width = 110;
+            this.colDocumentos.HeaderText = "Docs";
+            this.colDocumentos.Name = "colDocumentos";
+            this.colDocumentos.ReadOnly = true;
+            this.colDocumentos.Width = 55;
+            this.colDocumentos.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
             //
-            // colMontoTotal
+            // colTotalCompras
             //
-            this.colMontoTotal.HeaderText = "Monto Total";
-            this.colMontoTotal.Name = "colMontoTotal";
-            this.colMontoTotal.ReadOnly = true;
-            this.colMontoTotal.Width = 100;
+            this.colTotalCompras.HeaderText = "Total Compras";
+            this.colTotalCompras.Name = "colTotalCompras";
+            this.colTotalCompras.ReadOnly = true;
+            this.colTotalCompras.Width = 120;
+            this.colTotalCompras.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             //
-            // colMontoPagado
+            // colTotalPagado
             //
-            this.colMontoPagado.HeaderText = "Pagado";
-            this.colMontoPagado.Name = "colMontoPagado";
-            this.colMontoPagado.ReadOnly = true;
-            this.colMontoPagado.Width = 100;
+            this.colTotalPagado.HeaderText = "Pagado";
+            this.colTotalPagado.Name = "colTotalPagado";
+            this.colTotalPagado.ReadOnly = true;
+            this.colTotalPagado.Width = 115;
+            this.colTotalPagado.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             //
-            // colMontoPendiente
+            // colTotalPendiente
             //
-            this.colMontoPendiente.HeaderText = "Pendiente";
-            this.colMontoPendiente.Name = "colMontoPendiente";
-            this.colMontoPendiente.ReadOnly = true;
-            this.colMontoPendiente.Width = 100;
-            //
-            // colVencimiento
-            //
-            this.colVencimiento.HeaderText = "Vencimiento";
-            this.colVencimiento.Name = "colVencimiento";
-            this.colVencimiento.ReadOnly = true;
-            this.colVencimiento.Width = 110;
+            this.colTotalPendiente.HeaderText = "Pendiente";
+            this.colTotalPendiente.Name = "colTotalPendiente";
+            this.colTotalPendiente.ReadOnly = true;
+            this.colTotalPendiente.Width = 115;
+            this.colTotalPendiente.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             //
             // colEstado
             //
             this.colEstado.HeaderText = "Estado";
             this.colEstado.Name = "colEstado";
             this.colEstado.ReadOnly = true;
-            this.colEstado.Width = 90;
+            this.colEstado.Width = 100;
+            this.colEstado.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
             //
-            // colVerPagos
+            // colDetalle
             //
-            this.colVerPagos.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.colVerPagos.HeaderText = "";
-            this.colVerPagos.Name = "colVerPagos";
-            this.colVerPagos.ReadOnly = false;
-            this.colVerPagos.Text = "Ver Pagos";
-            this.colVerPagos.UseColumnTextForButtonValue = true;
-            this.colVerPagos.Width = 80;
-            //
-            // colRegistrarPago
-            //
-            this.colRegistrarPago.HeaderText = "";
-            this.colRegistrarPago.Name = "colRegistrarPago";
-            this.colRegistrarPago.ReadOnly = true;
-            this.colRegistrarPago.Text = "Pagar";
-            this.colRegistrarPago.UseColumnTextForButtonValue = true;
-            this.colRegistrarPago.Width = 80;
+            this.colDetalle.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.colDetalle.HeaderText = "";
+            this.colDetalle.Name = "colDetalle";
+            this.colDetalle.ReadOnly = false;
+            this.colDetalle.Text = "Detalle";
+            this.colDetalle.UseColumnTextForButtonValue = true;
+            this.colDetalle.Width = 90;
             //
             // pnlResumen
             //
@@ -333,7 +278,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.lblTotalRegistros.ForeColor = System.Drawing.Color.FromArgb(99, 110, 114);
             this.lblTotalRegistros.Location = new System.Drawing.Point(15, 17);
             this.lblTotalRegistros.Name = "lblTotalRegistros";
-            this.lblTotalRegistros.Text = "Total: 0 registros";
+            this.lblTotalRegistros.Text = "Total: 0 proveedores";
             //
             // lblTotalPendiente
             //
@@ -384,34 +329,28 @@ namespace SistemaPOS.Forms.Finanzas
             this.ResumeLayout(false);
         }
 
-        private System.Windows.Forms.Panel pnlHeader;
-        private System.Windows.Forms.Label lblTitulo;
-        private System.Windows.Forms.Label lblHeaderSub;
-        private System.Windows.Forms.Panel pnlFiltros;
-        private System.Windows.Forms.Label lblProveedor;
-        private System.Windows.Forms.ComboBox cmbProveedor;
-        private System.Windows.Forms.Label lblEstado;
+        private System.Windows.Forms.Panel    pnlHeader;
+        private System.Windows.Forms.Label    lblTitulo;
+        private System.Windows.Forms.Label    lblHeaderSub;
+        private System.Windows.Forms.Panel    pnlFiltros;
+        private System.Windows.Forms.Label    lblBuscar;
+        private System.Windows.Forms.TextBox  txtBuscar;
+        private System.Windows.Forms.Label    lblEstado;
         private System.Windows.Forms.ComboBox cmbEstado;
-        private System.Windows.Forms.Label lblTipo;
-        private System.Windows.Forms.ComboBox cmbTipo;
-        private System.Windows.Forms.Button btnFiltrar;
-        private System.Windows.Forms.Button btnExportar;
+        private System.Windows.Forms.Button   btnFiltrar;
+        private System.Windows.Forms.Button   btnExportar;
         private System.Windows.Forms.DataGridView dgvCuentas;
-        private System.Windows.Forms.Panel pnlResumen;
-        private System.Windows.Forms.Label lblTotalRegistros;
-        private System.Windows.Forms.Label lblTotalPendiente;
-        private System.Windows.Forms.TextBox txtTotalPendiente;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colNumero;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colTipo;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colCompra;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colProveedor;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colFechaCompra;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colMontoTotal;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colMontoPagado;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colMontoPendiente;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colVencimiento;
-        private System.Windows.Forms.DataGridViewTextBoxColumn colEstado;
-        private System.Windows.Forms.DataGridViewButtonColumn colVerPagos;
-        private System.Windows.Forms.DataGridViewButtonColumn colRegistrarPago;
+        private System.Windows.Forms.Panel    pnlResumen;
+        private System.Windows.Forms.Label    lblTotalRegistros;
+        private System.Windows.Forms.Label    lblTotalPendiente;
+        private System.Windows.Forms.TextBox  txtTotalPendiente;
+        private System.Windows.Forms.DataGridViewTextBoxColumn  colNumero;
+        private System.Windows.Forms.DataGridViewTextBoxColumn  colProveedor;
+        private System.Windows.Forms.DataGridViewTextBoxColumn  colDocumentos;
+        private System.Windows.Forms.DataGridViewTextBoxColumn  colTotalCompras;
+        private System.Windows.Forms.DataGridViewTextBoxColumn  colTotalPagado;
+        private System.Windows.Forms.DataGridViewTextBoxColumn  colTotalPendiente;
+        private System.Windows.Forms.DataGridViewTextBoxColumn  colEstado;
+        private System.Windows.Forms.DataGridViewButtonColumn   colDetalle;
     }
 }

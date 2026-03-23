@@ -549,7 +549,7 @@ namespace SistemaPOS.Data
                                 pagoID = Convert.ToInt32(cmdId.ExecuteScalar());
                             }
 
-                            // ---- 3. Aplicar el pago a las ventas pendientes (más antiguas primero) ----
+                            // ---- 3. Aplicar el pago FIFO: distribuir entre ventas pendientes ----
                             decimal montoRestante = monto;
 
                             foreach (var venta in ventasPendientes)
@@ -561,32 +561,21 @@ namespace SistemaPOS.Data
 
                                 decimal montoAPagar = Math.Min(montoRestante, saldoVenta);
 
-                                // Crear entrada en PagoVenta
-                                string insertPV = @"
-                                    INSERT INTO PagoVenta (PagoID, VentaID, MontoAplicado)
-                                    VALUES (@PagoID, @VentaID, @MontoAplicado)";
-
-                                using (var cmdPV = new SQLiteCommand(insertPV, connection, transaction))
+                                using (var cmdPV = new SQLiteCommand(
+                                    "INSERT INTO PagoVenta (PagoID, VentaID, MontoAplicado) VALUES (@PagoID, @VentaID, @MontoAplicado)",
+                                    connection, transaction))
                                 {
-                                    cmdPV.Parameters.AddWithValue("@PagoID", pagoID);
-                                    cmdPV.Parameters.AddWithValue("@VentaID", venta.VentaID);
+                                    cmdPV.Parameters.AddWithValue("@PagoID",        pagoID);
+                                    cmdPV.Parameters.AddWithValue("@VentaID",       venta.VentaID);
                                     cmdPV.Parameters.AddWithValue("@MontoAplicado", montoAPagar);
                                     cmdPV.ExecuteNonQuery();
                                 }
 
-                                // Asiento contable COBRO: Dr 101/102 / Cr 120 CxC
-                                int usuarioID = SistemaPOS.Utils.SesionActual.Usuario?.UsuarioID ?? 0;
-                                ContabilidadService.RegistrarCobroCxC(
-                                    venta.VentaID, venta.NumeroVenta, montoAPagar,
-                                    metodoPago, montoEfectivo, montoYape, montoTransferencia,
-                                    monto,   // totalPago para cálculo proporcional en MIXTO
-                                    fecha, usuarioID, connection, transaction);
-
-                                // Si se pagó completamente, cambiar estado a COMPLETADA
                                 if (montoAPagar >= saldoVenta)
                                 {
-                                    string updateEstado = "UPDATE Ventas SET Estado = 'COMPLETADA' WHERE VentaID = @VentaID";
-                                    using (var cmdEstado = new SQLiteCommand(updateEstado, connection, transaction))
+                                    using (var cmdEstado = new SQLiteCommand(
+                                        "UPDATE Ventas SET Estado = 'COMPLETADA' WHERE VentaID = @VentaID",
+                                        connection, transaction))
                                     {
                                         cmdEstado.Parameters.AddWithValue("@VentaID", venta.VentaID);
                                         cmdEstado.ExecuteNonQuery();
@@ -594,6 +583,37 @@ namespace SistemaPOS.Data
                                 }
 
                                 montoRestante -= montoAPagar;
+                            }
+
+                            // ---- 4. UN asiento contable por pago (no por documento) ----
+                            // Guard: solo si Pagos aún no tiene asiento
+                            long asientoExistente;
+                            using (var cmdChk = new SQLiteCommand(
+                                "SELECT COALESCE(AsientoId, 0) FROM Pagos WHERE PagoID = @pid",
+                                connection, transaction))
+                            {
+                                cmdChk.Parameters.AddWithValue("@pid", pagoID);
+                                asientoExistente = Convert.ToInt64(cmdChk.ExecuteScalar() ?? 0L);
+                            }
+                            if (asientoExistente == 0)
+                            {
+                                int usuarioID = SistemaPOS.Utils.SesionActual.Usuario?.UsuarioID ?? 0;
+                                string docRef = $"PAGO-{pagoID:D6}";
+                                int asientoId = ContabilidadService.RegistrarCobroCxC(
+                                    0, docRef, monto,
+                                    metodoPago, montoEfectivo, montoYape, montoTransferencia,
+                                    monto, fecha, usuarioID, connection, transaction);
+                                if (asientoId > 0)
+                                {
+                                    using (var cmdUpd = new SQLiteCommand(
+                                        "UPDATE Pagos SET AsientoId = @aid WHERE PagoID = @pid",
+                                        connection, transaction))
+                                    {
+                                        cmdUpd.Parameters.AddWithValue("@aid", asientoId);
+                                        cmdUpd.Parameters.AddWithValue("@pid", pagoID);
+                                        cmdUpd.ExecuteNonQuery();
+                                    }
+                                }
                             }
 
                             transaction.Commit();
@@ -613,7 +633,103 @@ namespace SistemaPOS.Data
             }
         }
 
-        // ==================== ANULAR COBRO CxC ====================
+        // ==================== ANULAR COBRO CxC — NIVEL PAGO (nuevo modelo) ====================
+        // Anula el pago completo: reversa UN asiento, marca todos los PagoVenta activos
+        // y recalcula el estado de todas las ventas afectadas.
+
+        public static void AnularPago(int pagoID, int usuarioID)
+        {
+            using (var connection = DatabaseConnection.GetConnection())
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    // 1. Leer datos del pago
+                    decimal monto, montoEf, montoYape, montoTransf;
+                    string  metodoPago;
+                    DateTime fechaPago;
+
+                    using (var cmd = new SQLiteCommand(@"
+                        SELECT Monto, MetodoPago, MontoEfectivo, MontoYape, MontoTransferencia, FechaPago
+                        FROM Pagos WHERE PagoID = @pid", connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@pid", pagoID);
+                        using (var r = cmd.ExecuteReader())
+                        {
+                            if (!r.Read())
+                                throw new Exception("Pago no encontrado.");
+                            monto          = r.GetDecimal(0);
+                            metodoPago     = r.GetString(1);
+                            montoEf        = r.GetDecimal(2);
+                            montoYape      = r.GetDecimal(3);
+                            montoTransf    = r.GetDecimal(4);
+                            fechaPago      = DateTime.Parse(r.GetString(5));
+                        }
+                    }
+
+                    // 2. Verificar que al menos un PagoVenta esté activo
+                    int activosCount;
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT COUNT(*) FROM PagoVenta WHERE PagoID = @pid AND (Anulado IS NULL OR Anulado = 0)",
+                        connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@pid", pagoID);
+                        activosCount = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+                    }
+                    if (activosCount == 0)
+                        throw new Exception("Este pago ya está completamente anulado.");
+
+                    // 3. Asiento inverso ÚNICO por el total del pago
+                    ContabilidadService.RegistrarAnulacionCobroCxC(
+                        pagoID, 0, $"PAGO-{pagoID:D6}", monto,
+                        metodoPago, montoEf, montoYape, montoTransf,
+                        monto, fechaPago, usuarioID, connection, transaction);
+
+                    // 4. Marcar TODOS los PagoVenta activos como anulados
+                    string ahora   = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    string usuario = SistemaPOS.Utils.SesionActual.Usuario?.NombreUsuario ?? "Sistema";
+                    using (var cmd = new SQLiteCommand(@"
+                        UPDATE PagoVenta
+                        SET Anulado=1, AnuladoFecha=@fecha, AnuladoPor=@usuario, Motivo='Anulación pago'
+                        WHERE PagoID=@pid AND (Anulado IS NULL OR Anulado = 0)",
+                        connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@pid",    pagoID);
+                        cmd.Parameters.AddWithValue("@fecha",  ahora);
+                        cmd.Parameters.AddWithValue("@usuario", usuario);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 5. Recalcular estado de TODAS las ventas afectadas por este pago
+                    using (var cmd = new SQLiteCommand(@"
+                        UPDATE Ventas SET Estado =
+                            CASE WHEN COALESCE((SELECT SUM(pv2.MontoAplicado)
+                                                FROM PagoVenta pv2
+                                                WHERE pv2.VentaID = Ventas.VentaID
+                                                  AND (pv2.Anulado IS NULL OR pv2.Anulado = 0)), 0)
+                                      >= Total
+                                 THEN 'COMPLETADA'
+                                 ELSE 'CREDITO'
+                            END
+                        WHERE VentaID IN (
+                            SELECT VentaID FROM PagoVenta WHERE PagoID = @pid)",
+                        connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@pid", pagoID);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+
+        // ==================== ANULAR COBRO CxC — NIVEL PAGOVENTA (legacy) ====================
 
         public static void AnularPagoCxC(int pagoVentaID, int usuarioID, string motivo = "")
         {
@@ -888,21 +1004,26 @@ namespace SistemaPOS.Data
                         }
                     }
 
-                    // ---- 3. PagoVenta ----
-                    // Activo  (Anulado=0) → PAGO / abono  (reduce saldo).
-                    // Anulado (Anulado=1) → ANULACION_COBRO / cargo (restaura saldo).
-                    //   El PAGO anulado NO aparece como fila separada.
+                    // ---- 3. Pagos (agrupados por PagoID) ----
+                    // UN pago = UNA fila en el historial (modelo cuenta corriente).
+                    // PuedeAnular = true solo si todos los PagoVenta del pago están activos.
                     var sbPV = new StringBuilder(@"
-                        SELECT p.FechaPago, p.HoraPago,
-                               pv.PagoVentaID, v.NumeroVenta,
-                               p.MetodoPago, pv.MontoAplicado,
-                               COALESCE(pv.Anulado, 0)
-                        FROM PagoVenta pv
-                        INNER JOIN Pagos p  ON p.PagoID  = pv.PagoID
-                        INNER JOIN Ventas v ON v.VentaID = pv.VentaID
+                        SELECT p.PagoID,
+                               p.FechaPago, p.HoraPago,
+                               p.MetodoPago, p.Monto,
+                               -- Todos anulados → pago anulado
+                               CASE WHEN COUNT(pv.PagoVentaID) = SUM(COALESCE(pv.Anulado,0))
+                                    THEN 1 ELSE 0 END as TodosAnulados,
+                               -- Ninguno anulado → puede anular
+                               CASE WHEN SUM(COALESCE(pv.Anulado,0)) = 0
+                                    THEN 1 ELSE 0 END as PuedeAnular
+                        FROM Pagos p
+                        INNER JOIN PagoVenta pv ON pv.PagoID = p.PagoID
+                        INNER JOIN Ventas    v  ON v.VentaID = pv.VentaID
                         WHERE v.ClienteID = @cid");
                     if (fechaDesde.HasValue) sbPV.Append(" AND p.FechaPago >= @fd");
                     if (fechaHasta.HasValue) sbPV.Append(" AND p.FechaPago <= @fh");
+                    sbPV.Append(" GROUP BY p.PagoID");
 
                     using (var cmd = new SQLiteCommand(sbPV.ToString(), conn))
                     {
@@ -916,43 +1037,56 @@ namespace SistemaPOS.Data
                         {
                             while (r.Read())
                             {
-                                bool    anulado = r.GetInt32(6) == 1;
-                                int     pvID    = r.GetInt32(2);
-                                var     fecha   = DateTime.Parse(r.GetString(0));
-                                var     hora    = TimeSpan.Parse(r.GetString(1));
-                                string  doc     = r.GetString(3);
-                                string  met     = r.GetString(4);
-                                decimal mto     = Convert.ToDecimal(r.GetValue(5));
+                                int     pagoID  = r.GetInt32(0);
+                                var     fecha   = DateTime.Parse(r.GetString(1));
+                                var     hora    = r.IsDBNull(2) ? TimeSpan.Zero : TimeSpan.Parse(r.GetString(2));
+                                string  met     = r.GetString(3);
+                                decimal mto     = Convert.ToDecimal(r.GetValue(4));
+                                bool    anulado = r.GetInt32(5) == 1;
+                                bool    puedeAnular = r.GetInt32(6) == 1;
+                                string  docRef  = $"PAGO-{pagoID:D6}";
 
                                 if (!anulado)
                                 {
-                                    // Pago activo → abono (reduce saldo)
                                     raw.Add(new MovimientoCuenta
                                     {
-                                        PagoVentaID = pvID,
+                                        PagoID      = pagoID,
                                         Fecha       = fecha,
                                         Hora        = hora,
                                         Tipo        = "PAGO",
-                                        Documento   = doc,
+                                        Documento   = docRef,
                                         Metodo      = met,
                                         Abono       = mto,
-                                        PuedeAnular = true,
+                                        PuedeAnular = puedeAnular,
                                         OrdenSort   = 1
                                     });
                                 }
                                 else
                                 {
-                                    // Pago anulado → solo ANULACIÓN como cargo (restaura saldo)
+                                    // Pago totalmente anulado: PAGO (abono) + ANULACION_COBRO (cargo)
                                     raw.Add(new MovimientoCuenta
                                     {
+                                        PagoID      = pagoID,
                                         Fecha       = fecha,
                                         Hora        = hora,
-                                        Tipo        = "ANULACION_COBRO",
-                                        Documento   = doc,
+                                        Tipo        = "PAGO",
+                                        Documento   = docRef,
                                         Metodo      = met,
-                                        Cargo       = mto,
+                                        Abono       = mto,
                                         Anulado     = true,
+                                        PuedeAnular = false,
                                         OrdenSort   = 1
+                                    });
+                                    raw.Add(new MovimientoCuenta
+                                    {
+                                        Fecha     = fecha,
+                                        Hora      = hora,
+                                        Tipo      = "ANULACION_COBRO",
+                                        Documento = docRef,
+                                        Metodo    = met,
+                                        Cargo     = mto,
+                                        Anulado   = true,
+                                        OrdenSort = 2
                                     });
                                 }
                             }

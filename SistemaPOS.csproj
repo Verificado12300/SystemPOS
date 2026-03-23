@@ -294,7 +294,6 @@
     <Compile Include="Forms\Finanzas\FormCuentasPorCobrar.Designer.cs">
       <DependentUpon>FormCuentasPorCobrar.cs</DependentUpon>
     </Compile>
-
     <Compile Include="Forms\Finanzas\FormRegistrarPagoProveedor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -312,12 +311,6 @@
     </Compile>
     <Compile Include="Forms\Inventario\FormAjustes.Designer.cs">
       <DependentUpon>FormAjustes.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Forms\Inventario\FormAlertas.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\Inventario\FormAlertas.Designer.cs">
-      <DependentUpon>FormAlertas.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\Inventario\FormProductoDetalle.cs">
       <SubType>Form</SubType>
@@ -379,11 +372,29 @@
     <Compile Include="Forms\Ventas\FormHistorialVentas.Designer.cs">
       <DependentUpon>FormHistorialVentas.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\Ventas\FormPreviewTicket.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Ventas\FormPreviewTicket.Designer.cs">
+      <DependentUpon>FormPreviewTicket.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Ventas\FormPago.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Ventas\FormPago.Designer.cs">
+      <DependentUpon>FormPago.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Ventas\FormVentas.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\Ventas\FormVentas.Designer.cs">
       <DependentUpon>FormVentas.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Finanzas\FormAsientosDiario.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Finanzas\FormAsientosDiario.Designer.cs">
+      <DependentUpon>FormAsientosDiario.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\Finanzas\FormContabilidad.cs">
       <SubType>Form</SubType>
@@ -397,11 +408,11 @@
     <Compile Include="Forms\Finanzas\FormPeriodosContables.Designer.cs">
       <DependentUpon>FormPeriodosContables.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\Finanzas\FormHistorialPagosCxP.cs">
+    <Compile Include="Forms\Finanzas\FormEstadoCuentaProveedor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\Finanzas\FormHistorialPagosCxP.Designer.cs">
-      <DependentUpon>FormHistorialPagosCxP.cs</DependentUpon>
+    <Compile Include="Forms\Finanzas\FormEstadoCuentaProveedor.Designer.cs">
+      <DependentUpon>FormEstadoCuentaProveedor.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\Finanzas\FormPapeleraGlobal.cs">
       <SubType>Form</SubType>
@@ -418,6 +429,7 @@
     <Compile Include="Models\AsientoContable.cs" />
     <Compile Include="Models\PeriodoContable.cs" />
     <Compile Include="Models\MovimientoCuenta.cs" />
+    <Compile Include="Models\TicketConfig.cs" />
     <Compile Include="Models\PapeleraEntrada.cs" />
     <Compile Include="Models\AsientoDetalleContable.cs" />
     <Compile Include="Models\CuentaContable.cs" />
@@ -454,6 +466,12 @@
     </Compile>
     <Compile Include="Controls\TicketDesignPanel.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\TicketPreviewControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\TicketPreviewControl.Designer.cs">
+      <DependentUpon>TicketPreviewControl.cs</DependentUpon>
     </Compile>
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Utils\PasswordHelper.cs" />
@@ -509,7 +527,6 @@
     <EmbeddedResource Include="Forms\Finanzas\FormCuentasPorCobrar.resx">
       <DependentUpon>FormCuentasPorCobrar.cs</DependentUpon>
     </EmbeddedResource>
-
     <EmbeddedResource Include="Forms\Finanzas\FormCuentasPorPagar.resx">
       <DependentUpon>FormCuentasPorPagar.cs</DependentUpon>
     </EmbeddedResource>
@@ -521,9 +538,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Finanzas\FormPeriodosContables.resx">
       <DependentUpon>FormPeriodosContables.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Forms\Finanzas\FormHistorialPagosCxP.resx">
-      <DependentUpon>FormHistorialPagosCxP.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Finanzas\FormPapeleraGlobal.resx">
       <DependentUpon>FormPapeleraGlobal.cs</DependentUpon>
@@ -567,9 +581,6 @@
     <EmbeddedResource Include="Forms\Inventario\FormAjustes.resx">
       <DependentUpon>FormAjustes.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\Inventario\FormAlertas.resx">
-      <DependentUpon>FormAlertas.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Forms\Inventario\FormProductoDetalle.resx">
       <DependentUpon>FormProductoDetalle.cs</DependentUpon>
     </EmbeddedResource>
@@ -579,7 +590,7 @@
     <EmbeddedResource Include="Forms\Inventario\FormKardex.resx">
       <DependentUpon>FormKardex.cs</DependentUpon>
     </EmbeddedResource>
-<EmbeddedResource Include="Forms\Principal\FormLogin.resx">
+    <EmbeddedResource Include="Forms\Principal\FormLogin.resx">
       <DependentUpon>FormLogin.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Principal\FormRegistroInicial.resx">
@@ -591,11 +602,17 @@
     <EmbeddedResource Include="Forms\Principal\FormPrincipal.resx">
       <DependentUpon>FormPrincipal.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Ventas\FormPago.resx">
+      <DependentUpon>FormPago.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\Ventas\FormDetalleVenta.resx">
       <DependentUpon>FormDetalleVenta.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Ventas\FormHistorialVentas.resx">
       <DependentUpon>FormHistorialVentas.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\Ventas\FormPreviewTicket.resx">
+      <DependentUpon>FormPreviewTicket.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Ventas\FormVentas.resx">
       <DependentUpon>FormVentas.cs</DependentUpon>
@@ -646,9 +663,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Reports\Tabular\RptHistorialCompras.rdlc">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Reports\Documents\RptTicketVenta.rdlc">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Reports\Documents\RptDetalleCompra.rdlc">

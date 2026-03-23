@@ -161,11 +161,8 @@ namespace SistemaPOS.Forms.Ventas
                 var parametros = ReportHelper.GetCompanyParameters();
                 var dt = ReportDataSourceHelper.ObtenerDatosTicketVenta(_ventaID, parametros);
 
-                var dataSources = new Dictionary<string, DataTable> { { "DsDetalleVenta", dt } };
-
-                ReportHelper.MostrarDialogoExportacion(
-                    ReportHelper.GetRdlcPath(@"Documents\RptTicketVenta.rdlc"),
-                    dataSources, parametros, "ticket_venta");
+                using (var preview = new FormPreviewTicket(dt, parametros))
+                    preview.ShowDialog(this);
             }
             catch (Exception ex)
             {

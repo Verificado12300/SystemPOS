@@ -43,6 +43,8 @@
             this.chkMostrarQR = new System.Windows.Forms.CheckBox();
             this.lblMensajePie = new System.Windows.Forms.Label();
             this.txtMensajePie1 = new System.Windows.Forms.TextBox();
+            this.chkMostrarDNI = new System.Windows.Forms.CheckBox();
+            this.chkMostrarPie = new System.Windows.Forms.CheckBox();
             this.chkMostrarEmail = new System.Windows.Forms.CheckBox();
             this.chkMostrarTelefono = new System.Windows.Forms.CheckBox();
             this.chkMostrarDireccion = new System.Windows.Forms.CheckBox();
@@ -271,6 +273,8 @@
             this.pnlContenidoTicket.Controls.Add(this.chkMostrarQR);
             this.pnlContenidoTicket.Controls.Add(this.lblMensajePie);
             this.pnlContenidoTicket.Controls.Add(this.txtMensajePie1);
+            this.pnlContenidoTicket.Controls.Add(this.chkMostrarDNI);
+            this.pnlContenidoTicket.Controls.Add(this.chkMostrarPie);
             this.pnlContenidoTicket.Controls.Add(this.chkMostrarEmail);
             this.pnlContenidoTicket.Controls.Add(this.chkMostrarTelefono);
             this.pnlContenidoTicket.Controls.Add(this.chkMostrarDireccion);
@@ -286,7 +290,7 @@
             // txtMensajePie2
             // 
             this.txtMensajePie2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtMensajePie2.Location = new System.Drawing.Point(20, 291);
+            this.txtMensajePie2.Location = new System.Drawing.Point(20, 337);
             this.txtMensajePie2.Multiline = true;
             this.txtMensajePie2.Name = "txtMensajePie2";
             this.txtMensajePie2.Size = new System.Drawing.Size(378, 24);
@@ -296,7 +300,7 @@
             // 
             this.chkMostrarInfoPago.AutoSize = true;
             this.chkMostrarInfoPago.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.chkMostrarInfoPago.Location = new System.Drawing.Point(20, 368);
+            this.chkMostrarInfoPago.Location = new System.Drawing.Point(20, 414);
             this.chkMostrarInfoPago.Name = "chkMostrarInfoPago";
             this.chkMostrarInfoPago.Size = new System.Drawing.Size(178, 19);
             this.chkMostrarInfoPago.TabIndex = 73;
@@ -307,7 +311,7 @@
             // 
             this.chkMostrarQR.AutoSize = true;
             this.chkMostrarQR.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.chkMostrarQR.Location = new System.Drawing.Point(20, 343);
+            this.chkMostrarQR.Location = new System.Drawing.Point(20, 389);
             this.chkMostrarQR.Name = "chkMostrarQR";
             this.chkMostrarQR.Size = new System.Drawing.Size(172, 19);
             this.chkMostrarQR.TabIndex = 72;
@@ -319,7 +323,7 @@
             this.lblMensajePie.AutoSize = true;
             this.lblMensajePie.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblMensajePie.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblMensajePie.Location = new System.Drawing.Point(17, 235);
+            this.lblMensajePie.Location = new System.Drawing.Point(17, 281);
             this.lblMensajePie.Name = "lblMensajePie";
             this.lblMensajePie.Size = new System.Drawing.Size(128, 15);
             this.lblMensajePie.TabIndex = 71;
@@ -328,11 +332,33 @@
             // txtMensajePie1
             // 
             this.txtMensajePie1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtMensajePie1.Location = new System.Drawing.Point(20, 260);
+            this.txtMensajePie1.Location = new System.Drawing.Point(20, 306);
             this.txtMensajePie1.Multiline = true;
             this.txtMensajePie1.Name = "txtMensajePie1";
             this.txtMensajePie1.Size = new System.Drawing.Size(378, 24);
             this.txtMensajePie1.TabIndex = 70;
+            // 
+            // chkMostrarDNI
+            // 
+            this.chkMostrarDNI.AutoSize = true;
+            this.chkMostrarDNI.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.chkMostrarDNI.Location = new System.Drawing.Point(20, 198);
+            this.chkMostrarDNI.Name = "chkMostrarDNI";
+            this.chkMostrarDNI.Size = new System.Drawing.Size(146, 19);
+            this.chkMostrarDNI.TabIndex = 115;
+            this.chkMostrarDNI.Text = "Mostrar DNI del Cliente";
+            this.chkMostrarDNI.UseVisualStyleBackColor = true;
+            // 
+            // chkMostrarPie
+            // 
+            this.chkMostrarPie.AutoSize = true;
+            this.chkMostrarPie.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.chkMostrarPie.Location = new System.Drawing.Point(20, 221);
+            this.chkMostrarPie.Name = "chkMostrarPie";
+            this.chkMostrarPie.Size = new System.Drawing.Size(138, 19);
+            this.chkMostrarPie.TabIndex = 116;
+            this.chkMostrarPie.Text = "Mostrar Pie de Página";
+            this.chkMostrarPie.UseVisualStyleBackColor = true;
             // 
             // chkMostrarEmail
             // 
@@ -760,7 +786,7 @@
             this.label19.AutoSize = true;
             this.label19.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label19.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label19.Location = new System.Drawing.Point(113, 389);
+            this.label19.Location = new System.Drawing.Point(113, 380);
             this.label19.Name = "label19";
             this.label19.Size = new System.Drawing.Size(41, 15);
             this.label19.TabIndex = 111;
@@ -771,7 +797,7 @@
             this.label20.AutoSize = true;
             this.label20.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label20.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label20.Location = new System.Drawing.Point(180, 389);
+            this.label20.Location = new System.Drawing.Point(180, 380);
             this.label20.Name = "label20";
             this.label20.Size = new System.Drawing.Size(33, 15);
             this.label20.TabIndex = 109;
@@ -782,7 +808,7 @@
             this.label21.AutoSize = true;
             this.label21.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label21.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label21.Location = new System.Drawing.Point(235, 389);
+            this.label21.Location = new System.Drawing.Point(234, 380);
             this.label21.Name = "label21";
             this.label21.Size = new System.Drawing.Size(33, 15);
             this.label21.TabIndex = 110;
@@ -793,7 +819,7 @@
             this.label38.AutoSize = true;
             this.label38.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label38.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label38.Location = new System.Drawing.Point(12, 381);
+            this.label38.Location = new System.Drawing.Point(12, 372);
             this.label38.Name = "label38";
             this.label38.Size = new System.Drawing.Size(72, 30);
             this.label38.TabIndex = 108;
@@ -804,7 +830,7 @@
             this.label39.AutoSize = true;
             this.label39.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label39.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label39.Location = new System.Drawing.Point(113, 354);
+            this.label39.Location = new System.Drawing.Point(113, 345);
             this.label39.Name = "label39";
             this.label39.Size = new System.Drawing.Size(32, 15);
             this.label39.TabIndex = 107;
@@ -815,7 +841,7 @@
             this.lblUnidad.AutoSize = true;
             this.lblUnidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblUnidad.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblUnidad.Location = new System.Drawing.Point(113, 325);
+            this.lblUnidad.Location = new System.Drawing.Point(113, 316);
             this.lblUnidad.Name = "lblUnidad";
             this.lblUnidad.Size = new System.Drawing.Size(35, 13);
             this.lblUnidad.TabIndex = 106;
@@ -823,7 +849,7 @@
             // 
             // pbQR
             // 
-            this.pbQR.Location = new System.Drawing.Point(98, 597);
+            this.pbQR.Location = new System.Drawing.Point(97, 584);
             this.pbQR.Name = "pbQR";
             this.pbQR.Size = new System.Drawing.Size(100, 100);
             this.pbQR.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
@@ -835,7 +861,7 @@
             this.label37.AutoSize = true;
             this.label37.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label37.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label37.Location = new System.Drawing.Point(13, 559);
+            this.label37.Location = new System.Drawing.Point(13, 546);
             this.label37.Name = "label37";
             this.label37.Size = new System.Drawing.Size(262, 15);
             this.label37.TabIndex = 104;
@@ -846,7 +872,7 @@
             this.lblCantidad.AutoSize = true;
             this.lblCantidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblCantidad.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblCantidad.Location = new System.Drawing.Point(180, 325);
+            this.lblCantidad.Location = new System.Drawing.Point(180, 316);
             this.lblCantidad.Name = "lblCantidad";
             this.lblCantidad.Size = new System.Drawing.Size(34, 13);
             this.lblCantidad.TabIndex = 78;
@@ -857,7 +883,7 @@
             this.label17.AutoSize = true;
             this.label17.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label17.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label17.Location = new System.Drawing.Point(180, 354);
+            this.label17.Location = new System.Drawing.Point(180, 345);
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(33, 15);
             this.label17.TabIndex = 79;
@@ -868,7 +894,7 @@
             this.lblPiePagina.AutoSize = true;
             this.lblPiePagina.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblPiePagina.Font = new System.Drawing.Font("Segoe UI", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblPiePagina.Location = new System.Drawing.Point(63, 574);
+            this.lblPiePagina.Location = new System.Drawing.Point(59, 561);
             this.lblPiePagina.Name = "lblPiePagina";
             this.lblPiePagina.Size = new System.Drawing.Size(177, 20);
             this.lblPiePagina.TabIndex = 103;
@@ -879,7 +905,7 @@
             this.label35.AutoSize = true;
             this.label35.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label35.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label35.Location = new System.Drawing.Point(13, 488);
+            this.label35.Location = new System.Drawing.Point(13, 475);
             this.label35.Name = "label35";
             this.label35.Size = new System.Drawing.Size(262, 15);
             this.label35.TabIndex = 102;
@@ -890,7 +916,7 @@
             this.label33.AutoSize = true;
             this.label33.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label33.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label33.Location = new System.Drawing.Point(12, 544);
+            this.label33.Location = new System.Drawing.Point(12, 531);
             this.label33.Name = "label33";
             this.label33.Size = new System.Drawing.Size(44, 15);
             this.label33.TabIndex = 101;
@@ -901,7 +927,7 @@
             this.lblVueltoCantidad.AutoSize = true;
             this.lblVueltoCantidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblVueltoCantidad.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblVueltoCantidad.Location = new System.Drawing.Point(217, 544);
+            this.lblVueltoCantidad.Location = new System.Drawing.Point(216, 531);
             this.lblVueltoCantidad.Name = "lblVueltoCantidad";
             this.lblVueltoCantidad.Size = new System.Drawing.Size(51, 15);
             this.lblVueltoCantidad.TabIndex = 100;
@@ -912,7 +938,7 @@
             this.label31.AutoSize = true;
             this.label31.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label31.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label31.Location = new System.Drawing.Point(12, 524);
+            this.label31.Location = new System.Drawing.Point(12, 510);
             this.label31.Name = "label31";
             this.label31.Size = new System.Drawing.Size(56, 15);
             this.label31.TabIndex = 99;
@@ -923,7 +949,7 @@
             this.lblRecibidoCantidad.AutoSize = true;
             this.lblRecibidoCantidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblRecibidoCantidad.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblRecibidoCantidad.Location = new System.Drawing.Point(214, 524);
+            this.lblRecibidoCantidad.Location = new System.Drawing.Point(213, 510);
             this.lblRecibidoCantidad.Name = "lblRecibidoCantidad";
             this.lblRecibidoCantidad.Size = new System.Drawing.Size(54, 15);
             this.lblRecibidoCantidad.TabIndex = 98;
@@ -934,7 +960,7 @@
             this.lblMetodoPago.AutoSize = true;
             this.lblMetodoPago.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblMetodoPago.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblMetodoPago.Location = new System.Drawing.Point(12, 502);
+            this.lblMetodoPago.Location = new System.Drawing.Point(12, 489);
             this.lblMetodoPago.Name = "lblMetodoPago";
             this.lblMetodoPago.Size = new System.Drawing.Size(98, 15);
             this.lblMetodoPago.TabIndex = 97;
@@ -945,7 +971,7 @@
             this.lblMetodoPagoSeleccion.AutoSize = true;
             this.lblMetodoPagoSeleccion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblMetodoPagoSeleccion.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblMetodoPagoSeleccion.Location = new System.Drawing.Point(219, 502);
+            this.lblMetodoPagoSeleccion.Location = new System.Drawing.Point(218, 489);
             this.lblMetodoPagoSeleccion.Name = "lblMetodoPagoSeleccion";
             this.lblMetodoPagoSeleccion.Size = new System.Drawing.Size(49, 15);
             this.lblMetodoPagoSeleccion.TabIndex = 96;
@@ -956,7 +982,7 @@
             this.lblTotal.AutoSize = true;
             this.lblTotal.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblTotal.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblTotal.Location = new System.Drawing.Point(12, 469);
+            this.lblTotal.Location = new System.Drawing.Point(12, 456);
             this.lblTotal.Name = "lblTotal";
             this.lblTotal.Size = new System.Drawing.Size(54, 20);
             this.lblTotal.TabIndex = 95;
@@ -967,7 +993,7 @@
             this.lblTotalCantidad.AutoSize = true;
             this.lblTotalCantidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblTotalCantidad.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblTotalCantidad.Location = new System.Drawing.Point(199, 469);
+            this.lblTotalCantidad.Location = new System.Drawing.Point(198, 456);
             this.lblTotalCantidad.Name = "lblTotalCantidad";
             this.lblTotalCantidad.Size = new System.Drawing.Size(69, 20);
             this.lblTotalCantidad.TabIndex = 94;
@@ -978,7 +1004,7 @@
             this.lblIGV.AutoSize = true;
             this.lblIGV.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblIGV.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblIGV.Location = new System.Drawing.Point(12, 450);
+            this.lblIGV.Location = new System.Drawing.Point(12, 437);
             this.lblIGV.Name = "lblIGV";
             this.lblIGV.Size = new System.Drawing.Size(61, 15);
             this.lblIGV.TabIndex = 93;
@@ -989,7 +1015,7 @@
             this.lblIGVCantidad.AutoSize = true;
             this.lblIGVCantidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblIGVCantidad.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblIGVCantidad.Location = new System.Drawing.Point(217, 450);
+            this.lblIGVCantidad.Location = new System.Drawing.Point(216, 437);
             this.lblIGVCantidad.Name = "lblIGVCantidad";
             this.lblIGVCantidad.Size = new System.Drawing.Size(51, 15);
             this.lblIGVCantidad.TabIndex = 92;
@@ -1000,7 +1026,7 @@
             this.lblSubTotal.AutoSize = true;
             this.lblSubTotal.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblSubTotal.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblSubTotal.Location = new System.Drawing.Point(12, 431);
+            this.lblSubTotal.Location = new System.Drawing.Point(12, 418);
             this.lblSubTotal.Name = "lblSubTotal";
             this.lblSubTotal.Size = new System.Drawing.Size(67, 15);
             this.lblSubTotal.TabIndex = 90;
@@ -1011,7 +1037,7 @@
             this.lblSubTotalCantidad.AutoSize = true;
             this.lblSubTotalCantidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblSubTotalCantidad.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblSubTotalCantidad.Location = new System.Drawing.Point(214, 431);
+            this.lblSubTotalCantidad.Location = new System.Drawing.Point(213, 418);
             this.lblSubTotalCantidad.Name = "lblSubTotalCantidad";
             this.lblSubTotalCantidad.Size = new System.Drawing.Size(54, 15);
             this.lblSubTotalCantidad.TabIndex = 87;
@@ -1022,7 +1048,7 @@
             this.label22.AutoSize = true;
             this.label22.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label22.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label22.Location = new System.Drawing.Point(13, 412);
+            this.label22.Location = new System.Drawing.Point(13, 399);
             this.label22.Name = "label22";
             this.label22.Size = new System.Drawing.Size(262, 15);
             this.label22.TabIndex = 86;
@@ -1033,7 +1059,7 @@
             this.label11.AutoSize = true;
             this.label11.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label11.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label11.Location = new System.Drawing.Point(13, 308);
+            this.label11.Location = new System.Drawing.Point(13, 303);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(262, 15);
             this.label11.TabIndex = 85;
@@ -1042,7 +1068,7 @@
             // pnlLineaDivisora
             // 
             this.pnlLineaDivisora.BackColor = System.Drawing.SystemColors.ControlDark;
-            this.pnlLineaDivisora.Location = new System.Drawing.Point(14, 342);
+            this.pnlLineaDivisora.Location = new System.Drawing.Point(14, 333);
             this.pnlLineaDivisora.Name = "pnlLineaDivisora";
             this.pnlLineaDivisora.Size = new System.Drawing.Size(257, 1);
             this.pnlLineaDivisora.TabIndex = 81;
@@ -1052,7 +1078,7 @@
             this.label18.AutoSize = true;
             this.label18.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label18.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label18.Location = new System.Drawing.Point(229, 354);
+            this.label18.Location = new System.Drawing.Point(228, 345);
             this.label18.Name = "label18";
             this.label18.Size = new System.Drawing.Size(39, 15);
             this.label18.TabIndex = 80;
@@ -1063,7 +1089,7 @@
             this.label15.AutoSize = true;
             this.label15.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label15.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label15.Location = new System.Drawing.Point(12, 346);
+            this.label15.Location = new System.Drawing.Point(12, 337);
             this.label15.Name = "label15";
             this.label15.Size = new System.Drawing.Size(72, 30);
             this.label15.TabIndex = 77;
@@ -1074,18 +1100,18 @@
             this.lblCosto.AutoSize = true;
             this.lblCosto.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblCosto.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblCosto.Location = new System.Drawing.Point(231, 325);
+            this.lblCosto.Location = new System.Drawing.Point(235, 316);
             this.lblCosto.Name = "lblCosto";
-            this.lblCosto.Size = new System.Drawing.Size(37, 13);
+            this.lblCosto.Size = new System.Drawing.Size(32, 13);
             this.lblCosto.TabIndex = 76;
-            this.lblCosto.Text = "Costo";
+            this.lblCosto.Text = "Total";
             // 
             // lblDescripcion
             // 
             this.lblDescripcion.AutoSize = true;
             this.lblDescripcion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblDescripcion.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblDescripcion.Location = new System.Drawing.Point(12, 325);
+            this.lblDescripcion.Location = new System.Drawing.Point(12, 316);
             this.lblDescripcion.Name = "lblDescripcion";
             this.lblDescripcion.Size = new System.Drawing.Size(67, 13);
             this.lblDescripcion.TabIndex = 75;
@@ -1096,7 +1122,7 @@
             this.lblDNI.AutoSize = true;
             this.lblDNI.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblDNI.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblDNI.Location = new System.Drawing.Point(12, 291);
+            this.lblDNI.Location = new System.Drawing.Point(12, 289);
             this.lblDNI.Name = "lblDNI";
             this.lblDNI.Size = new System.Drawing.Size(135, 15);
             this.lblDNI.TabIndex = 74;
@@ -1107,18 +1133,18 @@
             this.lblCliente.AutoSize = true;
             this.lblCliente.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblCliente.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblCliente.Location = new System.Drawing.Point(12, 275);
+            this.lblCliente.Location = new System.Drawing.Point(12, 273);
             this.lblCliente.Name = "lblCliente";
-            this.lblCliente.Size = new System.Drawing.Size(169, 15);
+            this.lblCliente.Size = new System.Drawing.Size(185, 15);
             this.lblCliente.TabIndex = 72;
-            this.lblCliente.Text = "Cliente         :    Steven Gamboa";
+            this.lblCliente.Text = "Cliente         :    Juan Pérez Llontop";
             // 
             // lblFecha
             // 
             this.lblFecha.AutoSize = true;
             this.lblFecha.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblFecha.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblFecha.Location = new System.Drawing.Point(12, 260);
+            this.lblFecha.Location = new System.Drawing.Point(12, 258);
             this.lblFecha.Name = "lblFecha";
             this.lblFecha.Size = new System.Drawing.Size(177, 15);
             this.lblFecha.TabIndex = 71;
@@ -1129,29 +1155,29 @@
             this.lblnumSerie.AutoSize = true;
             this.lblnumSerie.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblnumSerie.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblnumSerie.Location = new System.Drawing.Point(103, 237);
+            this.lblnumSerie.Location = new System.Drawing.Point(104, 237);
             this.lblnumSerie.Name = "lblnumSerie";
-            this.lblnumSerie.Size = new System.Drawing.Size(85, 15);
+            this.lblnumSerie.Size = new System.Drawing.Size(87, 15);
             this.lblnumSerie.TabIndex = 70;
-            this.lblnumSerie.Text = "B001-00000123";
+            this.lblnumSerie.Text = "N001-00000123";
             // 
             // lblComprobante
             // 
             this.lblComprobante.AutoSize = true;
             this.lblComprobante.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblComprobante.Font = new System.Drawing.Font("Segoe UI", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblComprobante.Location = new System.Drawing.Point(79, 217);
+            this.lblComprobante.Location = new System.Drawing.Point(88, 217);
             this.lblComprobante.Name = "lblComprobante";
-            this.lblComprobante.Size = new System.Drawing.Size(133, 20);
+            this.lblComprobante.Size = new System.Drawing.Size(119, 20);
             this.lblComprobante.TabIndex = 69;
-            this.lblComprobante.Text = "BOLETA DE VENTA";
+            this.lblComprobante.Text = "NOTA DE VENTA";
             // 
             // label3
             // 
             this.label3.AutoSize = true;
             this.label3.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.label3.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(12, 202);
+            this.label3.Location = new System.Drawing.Point(12, 206);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(262, 15);
             this.label3.TabIndex = 68;
@@ -1162,39 +1188,39 @@
             this.lblEmail.AutoSize = true;
             this.lblEmail.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblEmail.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblEmail.Location = new System.Drawing.Point(83, 185);
+            this.lblEmail.Location = new System.Drawing.Point(71, 192);
             this.lblEmail.Name = "lblEmail";
-            this.lblEmail.Size = new System.Drawing.Size(129, 15);
+            this.lblEmail.Size = new System.Drawing.Size(153, 15);
             this.lblEmail.TabIndex = 113;
-            this.lblEmail.Text = "Email: ejemplo@x.com";
+            this.lblEmail.Text = "Email: agropec@gmail.com";
             // 
             // lblTelfono
             // 
             this.lblTelfono.AutoSize = true;
             this.lblTelfono.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblTelfono.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblTelfono.Location = new System.Drawing.Point(100, 169);
+            this.lblTelfono.Location = new System.Drawing.Point(91, 176);
             this.lblTelfono.Name = "lblTelfono";
-            this.lblTelfono.Size = new System.Drawing.Size(91, 15);
+            this.lblTelfono.Size = new System.Drawing.Size(112, 15);
             this.lblTelfono.TabIndex = 67;
-            this.lblTelfono.Text = "Tel: 999-999-999";
+            this.lblTelfono.Text = "Teléfono: 979085925";
             // 
             // lblDireccion
             // 
             this.lblDireccion.AutoSize = true;
             this.lblDireccion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.lblDireccion.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblDireccion.Location = new System.Drawing.Point(70, 153);
+            this.lblDireccion.Location = new System.Drawing.Point(40, 160);
             this.lblDireccion.Name = "lblDireccion";
-            this.lblDireccion.Size = new System.Drawing.Size(150, 15);
+            this.lblDireccion.Size = new System.Drawing.Size(215, 15);
             this.lblDireccion.TabIndex = 66;
-            this.lblDireccion.Text = "Dirección: Av. Principal 123";
+            this.lblDireccion.Text = "Dirección: Av. Los Olivos 245 - Chiclayo";
             // 
             // pbLogo
             // 
             this.pbLogo.Location = new System.Drawing.Point(69, 13);
             this.pbLogo.Name = "pbLogo";
-            this.pbLogo.Size = new System.Drawing.Size(150, 100);
+            this.pbLogo.Size = new System.Drawing.Size(150, 90);
             this.pbLogo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pbLogo.TabIndex = 65;
             this.pbLogo.TabStop = false;
@@ -1203,23 +1229,23 @@
             // 
             this.lblRuc.AutoSize = true;
             this.lblRuc.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblRuc.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblRuc.Location = new System.Drawing.Point(94, 137);
+            this.lblRuc.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblRuc.Location = new System.Drawing.Point(89, 133);
             this.lblRuc.Name = "lblRuc";
-            this.lblRuc.Size = new System.Drawing.Size(102, 15);
+            this.lblRuc.Size = new System.Drawing.Size(117, 17);
             this.lblRuc.TabIndex = 64;
-            this.lblRuc.Text = "RUC: 20123456789";
+            this.lblRuc.Text = "RUC: 20498737689";
             // 
             // lblNombreNegocio
             // 
             this.lblNombreNegocio.AutoSize = true;
             this.lblNombreNegocio.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.lblNombreNegocio.Font = new System.Drawing.Font("Segoe UI", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblNombreNegocio.Location = new System.Drawing.Point(83, 116);
+            this.lblNombreNegocio.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblNombreNegocio.Location = new System.Drawing.Point(42, 111);
             this.lblNombreNegocio.Name = "lblNombreNegocio";
-            this.lblNombreNegocio.Size = new System.Drawing.Size(125, 20);
+            this.lblNombreNegocio.Size = new System.Drawing.Size(211, 20);
             this.lblNombreNegocio.TabIndex = 47;
-            this.lblNombreNegocio.Text = "MI NEGOCIO SAC";
+            this.lblNombreNegocio.Text = "AGROPECUARIA SAN MIGUEL";
             // 
             // FormImpresoras
             // 
@@ -1282,6 +1308,8 @@
         private System.Windows.Forms.Label lblNumeroCopias;
         private System.Windows.Forms.CheckBox chkMostrarInfoPago;
         private System.Windows.Forms.CheckBox chkMostrarQR;
+        private System.Windows.Forms.CheckBox chkMostrarDNI;
+        private System.Windows.Forms.CheckBox chkMostrarPie;
         private System.Windows.Forms.Label lblMensajePie;
         private System.Windows.Forms.TextBox txtMensajePie1;
         private System.Windows.Forms.ComboBox cmbAnchoPapel;

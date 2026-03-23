@@ -41,12 +41,12 @@ namespace SistemaPOS.Forms.Principal
             this.lblTopTitulo = new System.Windows.Forms.Label();
             this.pnlOperaciones = new System.Windows.Forms.Panel();
             this.dgvOperaciones = new System.Windows.Forms.DataGridView();
-            this.lblOperacionesTitulo = new System.Windows.Forms.Label();
             this.colNumero = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colCliente = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colMetodoPago = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colMonto = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colFechaHora = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lblOperacionesTitulo = new System.Windows.Forms.Label();
             this.pnlHeader.SuspendLayout();
             this.pnlPeriodToggle.SuspendLayout();
             this.pnlKPIVentas.SuspendLayout();
@@ -405,17 +405,6 @@ namespace SistemaPOS.Forms.Principal
             this.dgvOperaciones.Size = new System.Drawing.Size(1639, 199);
             this.dgvOperaciones.TabIndex = 0;
             // 
-            // lblOperacionesTitulo
-            // 
-            this.lblOperacionesTitulo.AutoSize = true;
-            this.lblOperacionesTitulo.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this.lblOperacionesTitulo.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.lblOperacionesTitulo.Location = new System.Drawing.Point(20, 12);
-            this.lblOperacionesTitulo.Name = "lblOperacionesTitulo";
-            this.lblOperacionesTitulo.Size = new System.Drawing.Size(161, 19);
-            this.lblOperacionesTitulo.TabIndex = 1;
-            this.lblOperacionesTitulo.Text = "OPERACIONES DEL DIA";
-            // 
             // colNumero
             // 
             dataGridViewCellStyle2.Font = new System.Drawing.Font("Be Vietnam Pro Light", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -464,6 +453,17 @@ namespace SistemaPOS.Forms.Principal
             this.colFechaHora.Name = "colFechaHora";
             this.colFechaHora.ReadOnly = true;
             this.colFechaHora.Width = 250;
+            // 
+            // lblOperacionesTitulo
+            // 
+            this.lblOperacionesTitulo.AutoSize = true;
+            this.lblOperacionesTitulo.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.lblOperacionesTitulo.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
+            this.lblOperacionesTitulo.Location = new System.Drawing.Point(20, 12);
+            this.lblOperacionesTitulo.Name = "lblOperacionesTitulo";
+            this.lblOperacionesTitulo.Size = new System.Drawing.Size(161, 19);
+            this.lblOperacionesTitulo.TabIndex = 1;
+            this.lblOperacionesTitulo.Text = "OPERACIONES DEL DIA";
             // 
             // FormDashboard
             // 

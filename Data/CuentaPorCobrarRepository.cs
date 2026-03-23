@@ -19,8 +19,87 @@ namespace SistemaPOS.Data
         public int DiasVencidos { get; set; }
     }
 
+    public class ClienteResumenCxC
+    {
+        public int     ClienteID          { get; set; }
+        public string  NombreCliente      { get; set; }
+        public int     CantidadDocumentos { get; set; }
+        public decimal TotalVentas        { get; set; }
+        public decimal TotalPagado        { get; set; }
+        public decimal TotalPendiente     { get; set; }
+        public string  Estado             { get; set; }
+    }
+
     public static class CuentaPorCobrarRepository
     {
+        public static List<ClienteResumenCxC> ListarAgrupadoPorCliente(string busqueda = null)
+        {
+            var lista = new List<ClienteResumenCxC>();
+
+            using (var connection = DatabaseConnection.GetConnection())
+            {
+                string query = @"
+                    SELECT
+                        c.ClienteID,
+                        CASE
+                            WHEN c.TipoDocumento = 'RUC' THEN c.RazonSocial
+                            ELSE trim(COALESCE(c.Nombres,'') || ' ' || COALESCE(c.Apellidos,''))
+                        END as NombreCliente,
+                        COUNT(v.VentaID) as CantidadDocumentos,
+                        SUM(v.Total) as TotalVentas,
+                        SUM(
+                            COALESCE(v.MontoEfectivo + v.MontoYape + v.MontoTransferencia + v.MontoTarjeta, 0)
+                            + COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv
+                                        WHERE pv.VentaID = v.VentaID
+                                          AND (pv.Anulado IS NULL OR pv.Anulado = 0)), 0)
+                        ) as TotalPagado
+                    FROM Ventas v
+                    INNER JOIN Clientes c ON c.ClienteID = v.ClienteID
+                    WHERE v.MetodoPago = 'CREDITO'
+                      AND v.Estado != 'ANULADA'
+                      AND (v.Eliminado IS NULL OR v.Eliminado = 0)";
+
+                if (!string.IsNullOrWhiteSpace(busqueda))
+                    query += @" AND (c.RazonSocial LIKE @Busqueda
+                                 OR c.Nombres LIKE @Busqueda
+                                 OR c.Apellidos LIKE @Busqueda
+                                 OR c.NumeroDocumento LIKE @Busqueda)";
+
+                query += " GROUP BY c.ClienteID ORDER BY NombreCliente ASC";
+
+                using (var cmd = new SQLiteCommand(query, connection))
+                {
+                    if (!string.IsNullOrWhiteSpace(busqueda))
+                        cmd.Parameters.AddWithValue("@Busqueda", $"%{busqueda.Trim()}%");
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            decimal totalVentas   = reader.IsDBNull(3) ? 0 : reader.GetDecimal(3);
+                            decimal totalPagado   = reader.IsDBNull(4) ? 0 : reader.GetDecimal(4);
+                            decimal totalPendiente = totalVentas - totalPagado;
+                            if (totalPendiente < 0) totalPendiente = 0;
+
+                            lista.Add(new ClienteResumenCxC
+                            {
+                                ClienteID          = reader.GetInt32(0),
+                                NombreCliente      = reader.GetString(1),
+                                CantidadDocumentos = reader.GetInt32(2),
+                                TotalVentas        = totalVentas,
+                                TotalPagado        = totalPagado,
+                                TotalPendiente     = totalPendiente,
+                                Estado             = totalPendiente <= 0.0001m ? "CANCELADO" : "PENDIENTE"
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
+
+
         public static List<CuentaPorCobrarDetalle> Listar(int? clienteID = null, string estado = null, string busqueda = null, bool soloVencidas = false)
         {
             var lista = new List<CuentaPorCobrarDetalle>();
@@ -130,7 +209,8 @@ namespace SistemaPOS.Data
                             v.ClienteID,
                             v.Total,
                             COALESCE(v.MontoEfectivo + v.MontoYape + v.MontoTransferencia + v.MontoTarjeta, 0) as OldPayments,
-                            COALESCE((SELECT SUM(MontoAplicado) FROM PagoVenta WHERE VentaID = v.VentaID), 0) as NewPayments
+                            COALESCE((SELECT SUM(MontoAplicado) FROM PagoVenta WHERE VentaID = v.VentaID AND (Anulado IS NULL OR Anulado = 0)), 0) as NewPayments,
+                            v.NumeroVenta
                         FROM Ventas v
                         WHERE v.VentaID = @VentaID
                           AND v.MetodoPago = 'CREDITO'
@@ -138,6 +218,7 @@ namespace SistemaPOS.Data
 
                     int clienteID;
                     decimal saldoPendiente;
+                    string numeroVenta;
 
                     using (var cmd = new SQLiteCommand(queryVenta, connection, transaction))
                     {
@@ -152,6 +233,7 @@ namespace SistemaPOS.Data
                             var oldPay = reader.GetDecimal(2);
                             var newPay = reader.GetDecimal(3);
                             saldoPendiente = total - oldPay - newPay;
+                            numeroVenta = reader.GetString(4);
                         }
                     }
 
@@ -181,12 +263,46 @@ namespace SistemaPOS.Data
                     using (var cmd = new SQLiteCommand("SELECT last_insert_rowid()", connection, transaction))
                         pagoID = Convert.ToInt32(cmd.ExecuteScalar());
 
+                    int pagoVentaID;
                     using (var cmd = new SQLiteCommand("INSERT INTO PagoVenta (PagoID, VentaID, MontoAplicado) VALUES (@PagoID, @VentaID, @MontoAplicado)", connection, transaction))
                     {
                         cmd.Parameters.AddWithValue("@PagoID", pagoID);
                         cmd.Parameters.AddWithValue("@VentaID", ventaID);
                         cmd.Parameters.AddWithValue("@MontoAplicado", monto);
                         cmd.ExecuteNonQuery();
+                    }
+                    using (var cmd = new SQLiteCommand("SELECT last_insert_rowid()", connection, transaction))
+                        pagoVentaID = Convert.ToInt32(cmd.ExecuteScalar());
+
+                    // Asiento contable COBRO: Dr 101/102 / Cr 120 CxC — dentro de la misma tx
+                    // Guard: no duplicar si ya tiene AsientoId (red de seguridad para reintentos)
+                    long asientoExistente;
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT COALESCE(AsientoId, 0) FROM PagoVenta WHERE PagoVentaID = @pvid",
+                        connection, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@pvid", pagoVentaID);
+                        asientoExistente = Convert.ToInt64(cmd.ExecuteScalar());
+                    }
+                    if (asientoExistente == 0)
+                    {
+                        int usuarioID = SistemaPOS.Utils.SesionActual.Usuario?.UsuarioID ?? 0;
+                        int asientoId = ContabilidadService.RegistrarCobroCxC(
+                            ventaID, numeroVenta, monto,
+                            metodoPago, montoEfectivo, montoYape, montoTransferencia,
+                            monto,  // totalPago = monto cobrado (cobro de venta única)
+                            fechaPago, usuarioID, connection, transaction);
+                        if (asientoId > 0)
+                        {
+                            using (var cmd = new SQLiteCommand(
+                                "UPDATE PagoVenta SET AsientoId = @aid WHERE PagoVentaID = @pvid",
+                                connection, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@aid", asientoId);
+                                cmd.Parameters.AddWithValue("@pvid", pagoVentaID);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
                     }
 
                     decimal saldoFinal = saldoPendiente - monto;
@@ -239,25 +355,5 @@ namespace SistemaPOS.Data
             }
         }
 
-        public static (decimal TotalCredito, decimal TotalCobrado, decimal TotalPendiente, int CuentasAbiertas, int Vencidas) ObtenerResumen()
-        {
-            var cuentas = Listar();
-            decimal totalCredito = 0m;
-            decimal totalCobrado = 0m;
-            decimal totalPendiente = 0m;
-            int abiertas = 0;
-            int vencidas = 0;
-
-            foreach (var c in cuentas)
-            {
-                totalCredito += c.TotalCredito;
-                totalCobrado += c.MontoPagado;
-                totalPendiente += c.SaldoPendiente;
-                if (c.Estado != "PAGADO") abiertas++;
-                if (c.Estado == "VENCIDO") vencidas++;
-            }
-
-            return (totalCredito, totalCobrado, totalPendiente, abiertas, vencidas);
-        }
     }
 }

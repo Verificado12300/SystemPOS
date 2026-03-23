@@ -43,7 +43,6 @@ namespace SistemaPOS.Forms.Inventario
                 CargarKardex();
             };
             btnExportar.Click += (_, __) => ExportarReporte();
-            btnVerAlertas.Click += (_, __) => new FormAlertas().ShowDialog(this);
             btnVerAjustes.Click += (_, __) => new FormAjustes().ShowDialog(this);
 
             dgvKardex.AutoGenerateColumns = false;

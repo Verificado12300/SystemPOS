@@ -176,20 +176,17 @@ namespace SistemaPOS.Forms.Contactos
                 return false;
             }
 
-            // Advertencia si paga más del saldo (genera saldo a favor)
+            // Rechazar si el monto supera el saldo pendiente
             if (montoPagar > _saldoActual)
             {
-                decimal saldoAFavor = montoPagar - _saldoActual;
-                DialogResult result = MessageBox.Show(
-                    $"El monto ingresado (S/ {montoPagar:N2}) es mayor al saldo pendiente (S/ {_saldoActual:N2}).\n\n" +
-                    $"Esto generará un saldo a favor de S/ {saldoAFavor:N2} para el cliente.\n\n" +
-                    "¿Desea continuar?",
-                    "Confirmar",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-
-                if (result == DialogResult.No)
-                    return false;
+                MessageBox.Show(
+                    $"El monto ingresado (S/ {montoPagar:N2}) excede el saldo pendiente (S/ {_saldoActual:N2}).\n\n" +
+                    "Corrija el monto e intente de nuevo.",
+                    "Monto inválido",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                txtMontoPagar.Focus();
+                return false;
             }
 
             // Validar método de pago mixto

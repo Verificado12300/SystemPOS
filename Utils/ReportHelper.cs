@@ -35,22 +35,31 @@ namespace SistemaPOS.Utils
                 var empresa = EmpresaRepository.ObtenerEmpresa();
                 if (empresa != null)
                 {
-                    parameters["pEmpresaNombre"] = empresa.RazonSocial ?? empresa.NombreComercial ?? "";
-                    parameters["pEmpresaDireccion"] = empresa.Direccion ?? "";
-                    parameters["pEmpresaRUC"] = empresa.RUC ?? "";
+                    string nombre = !string.IsNullOrWhiteSpace(empresa.NombreComercial)
+                        ? empresa.NombreComercial
+                        : (empresa.RazonSocial ?? "");
+                    parameters["pEmpresaNombre"]    = nombre;
+                    parameters["pEmpresaRUC"]       = empresa.RUC       ?? "";
+                    parameters["pEmpresaDireccion"] = empresa.Direccion  ?? "";
+                    parameters["pEmpresaTelefono"]  = empresa.Telefono   ?? "";
+                    parameters["pEmpresaEmail"]     = empresa.Email      ?? "";
                 }
                 else
                 {
-                    parameters["pEmpresaNombre"] = "";
+                    parameters["pEmpresaNombre"]    = "";
+                    parameters["pEmpresaRUC"]       = "";
                     parameters["pEmpresaDireccion"] = "";
-                    parameters["pEmpresaRUC"] = "";
+                    parameters["pEmpresaTelefono"]  = "";
+                    parameters["pEmpresaEmail"]     = "";
                 }
             }
             catch
             {
-                parameters["pEmpresaNombre"] = "";
+                parameters["pEmpresaNombre"]    = "";
+                parameters["pEmpresaRUC"]       = "";
                 parameters["pEmpresaDireccion"] = "";
-                parameters["pEmpresaRUC"] = "";
+                parameters["pEmpresaTelefono"]  = "";
+                parameters["pEmpresaEmail"]     = "";
             }
 
             parameters["pFechaGeneracion"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
@@ -157,6 +166,28 @@ namespace SistemaPOS.Utils
                     File.WriteAllBytes(sfd.FileName, bytes);
                     System.Diagnostics.Process.Start(sfd.FileName);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Renderiza el reporte como PDF y lo abre directamente (sin guardar).
+        /// </summary>
+        public static void MostrarVistaPrevia(string rdlcPath,
+            Dictionary<string, DataTable> dataSources,
+            Dictionary<string, string> parameters)
+        {
+            try
+            {
+                byte[] pdfBytes = RenderReport(rdlcPath, dataSources, parameters, "PDF");
+                string tempFile = Path.Combine(Path.GetTempPath(),
+                    "preview_ticket_" + DateTime.Now.Ticks + ".pdf");
+                File.WriteAllBytes(tempFile, pdfBytes);
+                System.Diagnostics.Process.Start(tempFile);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al generar vista previa: " + ex.Message,
+                    "Vista previa", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

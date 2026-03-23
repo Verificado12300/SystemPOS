@@ -447,7 +447,7 @@ namespace SistemaPOS.Reports.DataSources
             dt.Columns.Add("Numero", typeof(int));
             dt.Columns.Add("Producto", typeof(string));
             dt.Columns.Add("Presentacion", typeof(string));
-            dt.Columns.Add("Cantidad", typeof(string));
+            dt.Columns.Add("Cantidad", typeof(decimal));
             dt.Columns.Add("PrecioUnitario", typeof(decimal));
             dt.Columns.Add("SubTotal", typeof(decimal));
 
@@ -497,13 +497,10 @@ namespace SistemaPOS.Reports.DataSources
             int numero = 1;
             foreach (var detalle in detalles)
             {
-                string simbolo = detalle.UnidadSimbolo ?? "";
-                string cantidadTexto = ((decimal)detalle.CantidadUnidadesBase).ToString("N2")
-                    + (string.IsNullOrEmpty(simbolo) ? "" : " " + simbolo);
                 dt.Rows.Add(numero++,
                     (string)detalle.Producto,
-                    (string)detalle.Presentacion,
-                    cantidadTexto,
+                    detalle.UnidadSimbolo ?? "",
+                    (decimal)detalle.CantidadUnidadesBase,
                     (decimal)detalle.PrecioUnitario,
                     (decimal)detalle.Subtotal);
             }

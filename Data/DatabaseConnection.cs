@@ -110,6 +110,7 @@ namespace SistemaPOS.Data
                                 PagoID INTEGER NOT NULL,
                                 VentaID INTEGER NOT NULL,
                                 MontoAplicado REAL NOT NULL CHECK(MontoAplicado > 0),
+                                AsientoId INTEGER NULL,
                                 FOREIGN KEY (PagoID) REFERENCES Pagos(PagoID) ON DELETE CASCADE,
                                 FOREIGN KEY (VentaID) REFERENCES Ventas(VentaID)
                             );";
@@ -1059,6 +1060,36 @@ namespace SistemaPOS.Data
                         }
                     }
                     catch (Exception ex) { throw new Exception("Migración PagoVenta.Anulado falló: " + ex.Message, ex); }
+
+                    // Migración: PagoVenta.AsientoId — trazabilidad contable del cobro CxC
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('PagoVenta') WHERE name='AsientoId'";
+                            if ((long)cmd.ExecuteScalar() == 0)
+                            {
+                                cmd.CommandText = "ALTER TABLE PagoVenta ADD COLUMN AsientoId INTEGER NULL";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    catch (Exception ex) { throw new Exception("Migración PagoVenta.AsientoId falló: " + ex.Message, ex); }
+
+                    // Migración: Pagos.AsientoId — asiento único consolidado por pago CxC
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Pagos') WHERE name='AsientoId'";
+                            if ((long)cmd.ExecuteScalar() == 0)
+                            {
+                                cmd.CommandText = "ALTER TABLE Pagos ADD COLUMN AsientoId INTEGER NULL";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    catch (Exception ex) { throw new Exception("Migración Pagos.AsientoId falló: " + ex.Message, ex); }
                 }
             }
             catch (Exception ex)

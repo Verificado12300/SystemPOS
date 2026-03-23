@@ -145,11 +145,6 @@ namespace SistemaPOS.Forms.Ventas
                 var ventas = VentaRepository.Listar(clienteID, estado, tipoComprobante, fechaDesde, fechaHasta, cajaID);
                 dgvVentas.Rows.Clear();
                 int numero = 1;
-                decimal totalEfectivo = 0;
-                decimal totalYape = 0;
-                decimal totalTransferencia = 0;
-                decimal totalCredito = 0;
-                decimal totalGeneral = 0;
                 foreach (var venta in ventas)
                 {
                     int index = dgvVentas.Rows.Add();
@@ -171,26 +166,7 @@ namespace SistemaPOS.Forms.Ventas
                         row.Cells["colEstado"].Style.ForeColor = Color.Red;
 
                     row.Tag = venta.VentaID;
-
-                    if (venta.Estado != "ANULADA")
-                    {
-                        totalGeneral += venta.Total;
-                        totalEfectivo += venta.MontoEfectivo;
-                        totalYape += venta.MontoYape;
-                        totalTransferencia += venta.MontoTransferencia;
-
-                        if (venta.Estado == "CREDITO" || venta.Estado == "PENDIENTE")
-                        {
-                            totalCredito += venta.Total;
-                        }
-                    }
                 }
-                lblVentasPeriodo.Text = $"Ventas del periodo: {ventas.Count}";
-                txtEfectivoCantidad.Text = $"S/ {totalEfectivo:N2}";
-                txtYapeCantidad.Text = $"S/ {totalYape:N2}";
-                txtTransferenciaCantidad.Text = $"S/ {totalTransferencia:N2}";
-                txtCreditoCantidad.Text = $"S/ {totalCredito:N2}";
-                txtTotalCantidad.Text = $"S/ {totalGeneral:N2}";
             }
             catch (Exception ex)
             {
@@ -282,11 +258,8 @@ namespace SistemaPOS.Forms.Ventas
                 var parametros = ReportHelper.GetCompanyParameters();
                 var dt = ReportDataSourceHelper.ObtenerDatosTicketVenta(ventaID, parametros);
 
-                var dataSources = new Dictionary<string, DataTable> { { "DsDetalleVenta", dt } };
-
-                ReportHelper.MostrarDialogoExportacion(
-                    ReportHelper.GetRdlcPath(@"Documents\RptTicketVenta.rdlc"),
-                    dataSources, parametros, "ticket_venta");
+                using (var preview = new FormPreviewTicket(dt, parametros))
+                    preview.ShowDialog(this);
             }
             catch (Exception ex)
             {

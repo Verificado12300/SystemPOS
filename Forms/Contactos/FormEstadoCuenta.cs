@@ -104,31 +104,6 @@ namespace SistemaPOS.Forms.Contactos
                     dtpHasta.Value.Date,
                     string.IsNullOrWhiteSpace(buscar) ? null : buscar);
 
-                // ── Cards: calculados desde la misma lista ──────────
-                decimal totalVentas = 0, totalPagos = 0, totalAnulaciones = 0;
-                foreach (var m in movimientos)
-                {
-                    switch (m.Tipo)
-                    {
-                        case "VENTA":          totalVentas      += m.Cargo; break;
-                        case "PAGO":           totalPagos       += m.Abono; break;
-                        case "ANULACION_COBRO": totalAnulaciones += m.Cargo; break;
-                    }
-                }
-                decimal saldoFinal = movimientos.Count > 0
-                    ? movimientos[movimientos.Count - 1].Saldo
-                    : 0m;
-
-                lblVentasVal.Text      = $"S/ {totalVentas:N2}";
-                lblPagosVal.Text       = $"S/ {totalPagos:N2}";
-                lblAnulacionesVal.Text = $"S/ {totalAnulaciones:N2}";
-                lblSaldoVal.Text       = $"S/ {saldoFinal:N2}";
-                lblSaldoVal.ForeColor  = saldoFinal > 0
-                    ? Color.FromArgb(214, 48, 49)
-                    : saldoFinal < 0
-                        ? Color.FromArgb(39, 174, 96)
-                        : Color.FromArgb(99, 110, 114);
-
                 // ── DGV: más reciente primero ───────────────────────
                 dgvMovimientos.Rows.Clear();
 
@@ -179,14 +154,15 @@ namespace SistemaPOS.Forms.Contactos
                     row.Cells["colTipo"].Style.ForeColor = tipoColor;
                     row.Cells["colTipo"].Style.Font = new Font(dgvMovimientos.Font, FontStyle.Bold);
 
-                    // Botón Anular: solo en pagos activos
+                    // Botón Anular: solo en pagos activos (PagoID preferido, PagoVentaID como fallback legacy)
                     var cellAccion = (DataGridViewButtonCell)row.Cells["colAccion"];
                     if (mov.PuedeAnular)
                     {
                         cellAccion.Value           = "Anular";
                         cellAccion.Style.BackColor = Color.FromArgb(214, 48, 49);
                         cellAccion.Style.ForeColor = Color.White;
-                        row.Tag = mov.PagoVentaID;
+                        // Guardamos PagoID si existe (nuevo modelo), sino PagoVentaID (legacy)
+                        row.Tag = mov.PagoID.HasValue ? (object)("P" + mov.PagoID.Value) : ("V" + mov.PagoVentaID);
                     }
                     else
                     {
@@ -211,7 +187,7 @@ namespace SistemaPOS.Forms.Contactos
             var row = dgvMovimientos.Rows[e.RowIndex];
             if (row.Tag == null) return;
 
-            int pagoVentaID = (int)row.Tag;
+            var tagStr = row.Tag?.ToString() ?? "";
 
             var resp = MessageBox.Show(
                 "¿Confirma la anulación de este cobro?\n\nSe revertirá el asiento contable.",
@@ -222,11 +198,23 @@ namespace SistemaPOS.Forms.Contactos
             try
             {
                 int usuarioID = SesionActual.Usuario?.UsuarioID ?? 0;
-                ClienteRepository.AnularPagoCxC(pagoVentaID, usuarioID);
+
+                if (tagStr.StartsWith("P"))
+                {
+                    // Nuevo modelo: anular pago completo por PagoID
+                    int pagoID = int.Parse(tagStr.Substring(1));
+                    ClienteRepository.AnularPago(pagoID, usuarioID);
+                }
+                else
+                {
+                    // Legacy: anular PagoVenta individual
+                    int pagoVentaID = int.Parse(tagStr.Substring(1));
+                    ClienteRepository.AnularPagoCxC(pagoVentaID, usuarioID);
+                }
+
                 MessageBox.Show("Cobro anulado correctamente.", "Éxito",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // Recargar todo
                 CargarEncabezado();
                 CargarMovimientos();
                 this.DialogResult = DialogResult.OK;

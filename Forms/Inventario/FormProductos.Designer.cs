@@ -57,9 +57,6 @@
             this.colEditar = new System.Windows.Forms.DataGridViewImageColumn();
             this.colEliminar = new System.Windows.Forms.DataGridViewImageColumn();
             this.pnlInferior = new System.Windows.Forms.Panel();
-            this.btnInventarioFisico = new System.Windows.Forms.Button();
-            this.btnAjustes = new System.Windows.Forms.Button();
-            this.btnAlertas = new System.Windows.Forms.Button();
             this.lblRegistros = new System.Windows.Forms.Label();
             this.pnlProducto.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvProductos)).BeginInit();
@@ -348,68 +345,13 @@
             // 
             this.pnlInferior.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pnlInferior.Controls.Add(this.btnInventarioFisico);
-            this.pnlInferior.Controls.Add(this.btnAjustes);
-            this.pnlInferior.Controls.Add(this.btnAlertas);
             this.pnlInferior.Controls.Add(this.lblRegistros);
             this.pnlInferior.BackColor = System.Drawing.Color.White;
             this.pnlInferior.Location = new System.Drawing.Point(0, 578);
             this.pnlInferior.Name = "pnlInferior";
             this.pnlInferior.Size = new System.Drawing.Size(1184, 83);
             this.pnlInferior.TabIndex = 2;
-            // 
-            // 
-            // btnInventarioFisico
-            // 
-            this.btnInventarioFisico.BackColor = System.Drawing.Color.White;
-            this.btnInventarioFisico.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnInventarioFisico.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(223)))), ((int)(((byte)(228)))), ((int)(((byte)(234)))));
-            this.btnInventarioFisico.FlatAppearance.BorderSize = 1;
-            this.btnInventarioFisico.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnInventarioFisico.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnInventarioFisico.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
-            this.btnInventarioFisico.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.btnInventarioFisico.Location = new System.Drawing.Point(286, 36);
-            this.btnInventarioFisico.Name = "btnInventarioFisico";
-            this.btnInventarioFisico.Size = new System.Drawing.Size(117, 35);
-            this.btnInventarioFisico.TabIndex = 3;
-            this.btnInventarioFisico.Text = "Inv. Físico";
-            this.btnInventarioFisico.UseVisualStyleBackColor = false;
-            // 
-            // btnAjustes
-            // 
-            this.btnAjustes.BackColor = System.Drawing.Color.White;
-            this.btnAjustes.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnAjustes.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(223)))), ((int)(((byte)(228)))), ((int)(((byte)(234)))));
-            this.btnAjustes.FlatAppearance.BorderSize = 1;
-            this.btnAjustes.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnAjustes.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnAjustes.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
-            this.btnAjustes.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.btnAjustes.Location = new System.Drawing.Point(149, 36);
-            this.btnAjustes.Name = "btnAjustes";
-            this.btnAjustes.Size = new System.Drawing.Size(117, 35);
-            this.btnAjustes.TabIndex = 2;
-            this.btnAjustes.Text = "Ajustes";
-            this.btnAjustes.UseVisualStyleBackColor = false;
-            // 
-            // btnAlertas
-            // 
-            this.btnAlertas.BackColor = System.Drawing.Color.White;
-            this.btnAlertas.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnAlertas.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(223)))), ((int)(((byte)(228)))), ((int)(((byte)(234)))));
-            this.btnAlertas.FlatAppearance.BorderSize = 1;
-            this.btnAlertas.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnAlertas.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnAlertas.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
-            this.btnAlertas.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
-            this.btnAlertas.Location = new System.Drawing.Point(12, 36);
-            this.btnAlertas.Name = "btnAlertas";
-            this.btnAlertas.Size = new System.Drawing.Size(117, 35);
-            this.btnAlertas.TabIndex = 1;
-            this.btnAlertas.Text = "Alertas";
-            this.btnAlertas.UseVisualStyleBackColor = false;
-            // 
+            //
             // lblRegistros
             // 
             this.lblRegistros.AutoSize = true;
@@ -450,10 +392,7 @@
         private System.Windows.Forms.ComboBox cmbFiltroStock;
         private System.Windows.Forms.DataGridView dgvProductos;
         private System.Windows.Forms.Panel pnlInferior;
-        private System.Windows.Forms.Button btnAlertas;
         private System.Windows.Forms.Label lblRegistros;
-        private System.Windows.Forms.Button btnAjustes;
-        private System.Windows.Forms.Button btnInventarioFisico;
         private System.Windows.Forms.Button btnImportar;
         private System.Windows.Forms.Button btnExportar;
         private System.Windows.Forms.Label lblStock;

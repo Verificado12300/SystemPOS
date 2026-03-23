@@ -31,10 +31,6 @@ namespace SistemaPOS.Forms.Inventario
             txtBuscar.TextChanged += TxtBuscar_TextChanged;
             txtBuscar.KeyDown += TxtBuscar_KeyDown;
             dgvProductos.CellClick += DgvProductos_CellClick;
-            btnAlertas.Click += BtnAlertas_Click;
-            btnAjustes.Click += BtnAjustes_Click;
-            btnInventarioFisico.Click += BtnInventarioFisico_Click;
-
             btnExportar.Click += BtnExportar_Click;
             btnImportar.Click += BtnImportar_Click;
             cmbCategoria.SelectedIndexChanged += Filtros_Changed;
@@ -174,22 +170,6 @@ namespace SistemaPOS.Forms.Inventario
             {
                 CargarProductos();
             }
-        }
-
-        private void BtnAlertas_Click(object sender, EventArgs e)
-        {
-            AbrirFormEnPanel(new FormAlertas());
-        }
-
-        private void BtnAjustes_Click(object sender, EventArgs e)
-        {
-            AbrirFormEnPanel(new FormAjustes());
-        }
-
-        private void BtnInventarioFisico_Click(object sender, EventArgs e)
-        {
-            // Inventario físico usa el mismo formulario de ajustes
-            AbrirFormEnPanel(new FormAjustes());
         }
 
         private void BtnExportar_Click(object sender, EventArgs e)

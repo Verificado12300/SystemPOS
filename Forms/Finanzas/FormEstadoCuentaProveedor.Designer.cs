@@ -1,6 +1,6 @@
-namespace SistemaPOS.Forms.Contactos
+namespace SistemaPOS.Forms.Finanzas
 {
-    partial class FormEstadoCuenta
+    partial class FormEstadoCuentaProveedor
     {
         private System.ComponentModel.IContainer components = null;
 
@@ -17,18 +17,8 @@ namespace SistemaPOS.Forms.Contactos
             this.lblTitulo        = new System.Windows.Forms.Label();
 
             this.pnlInfo          = new System.Windows.Forms.Panel();
-            this.lblNombreLbl     = new System.Windows.Forms.Label();
-            this.lblNombreVal     = new System.Windows.Forms.Label();
-            this.lblDocLbl        = new System.Windows.Forms.Label();
-            this.lblDocVal        = new System.Windows.Forms.Label();
-            this.lblEstadoBadge   = new System.Windows.Forms.Label();
-            this.lblSep1          = new System.Windows.Forms.Label();
-            this.lblLimCredLbl    = new System.Windows.Forms.Label();
-            this.lblLimCredVal    = new System.Windows.Forms.Label();
-            this.lblCredUsadoLbl  = new System.Windows.Forms.Label();
-            this.lblCredUsadoVal  = new System.Windows.Forms.Label();
-            this.lblDisponibleLbl = new System.Windows.Forms.Label();
-            this.lblDisponibleVal = new System.Windows.Forms.Label();
+            this.lblProveedorLbl  = new System.Windows.Forms.Label();
+            this.lblProveedorVal  = new System.Windows.Forms.Label();
 
             this.pnlFiltros       = new System.Windows.Forms.Panel();
             this.lblDesde         = new System.Windows.Forms.Label();
@@ -39,14 +29,26 @@ namespace SistemaPOS.Forms.Contactos
             this.txtBuscar        = new System.Windows.Forms.TextBox();
             this.btnFiltrar       = new System.Windows.Forms.Button();
 
+            this.pnlResumen       = new System.Windows.Forms.Panel();
+            this.pnlCardCompras   = new System.Windows.Forms.Panel();
+            this.lblComprasLbl    = new System.Windows.Forms.Label();
+            this.lblComprasVal    = new System.Windows.Forms.Label();
+            this.pnlCardPagos     = new System.Windows.Forms.Panel();
+            this.lblPagosLbl      = new System.Windows.Forms.Label();
+            this.lblPagosVal      = new System.Windows.Forms.Label();
+            this.pnlCardAnul      = new System.Windows.Forms.Panel();
+            this.lblAnulLbl       = new System.Windows.Forms.Label();
+            this.lblAnulVal       = new System.Windows.Forms.Label();
+            this.pnlCardSaldo     = new System.Windows.Forms.Panel();
+            this.lblSaldoLbl      = new System.Windows.Forms.Label();
+            this.lblSaldoVal      = new System.Windows.Forms.Label();
+
             this.pnlBotones       = new System.Windows.Forms.Panel();
             this.btnRegistrarPago = new System.Windows.Forms.Button();
-            this.btnImprimir      = new System.Windows.Forms.Button();
             this.btnCerrar        = new System.Windows.Forms.Button();
 
             this.dgvMovimientos   = new System.Windows.Forms.DataGridView();
 
-            // Columnas DGV
             this.colFecha     = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colTipo      = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colDocumento = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -59,13 +61,18 @@ namespace SistemaPOS.Forms.Contactos
             this.pnlHeader.SuspendLayout();
             this.pnlInfo.SuspendLayout();
             this.pnlFiltros.SuspendLayout();
+            this.pnlResumen.SuspendLayout();
+            this.pnlCardCompras.SuspendLayout();
+            this.pnlCardPagos.SuspendLayout();
+            this.pnlCardAnul.SuspendLayout();
+            this.pnlCardSaldo.SuspendLayout();
             this.pnlBotones.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)this.dgvMovimientos).BeginInit();
             this.SuspendLayout();
 
-            // ─── FORM ───────────────────────────────────────────────
-            this.Text            = "Estado de Cuenta";
-            this.ClientSize      = new System.Drawing.Size(980, 620);
+            // ── FORM ────────────────────────────────────────────────────
+            this.Text            = "Estado de Cuenta Proveedor";
+            this.ClientSize      = new System.Drawing.Size(1020, 640);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.StartPosition   = System.Windows.Forms.FormStartPosition.CenterParent;
             this.MaximizeBox     = false;
@@ -73,7 +80,7 @@ namespace SistemaPOS.Forms.Contactos
             this.BackColor       = System.Drawing.Color.FromArgb(245, 247, 250);
             this.Font            = new System.Drawing.Font("Segoe UI", 9F);
 
-            // ─── pnlHeader (48 px) ──────────────────────────────────
+            // ── pnlHeader (48 px) ────────────────────────────────────────
             this.pnlHeader.Dock      = System.Windows.Forms.DockStyle.Top;
             this.pnlHeader.Height    = 48;
             this.pnlHeader.BackColor = System.Drawing.Color.FromArgb(44, 62, 80);
@@ -84,104 +91,32 @@ namespace SistemaPOS.Forms.Contactos
             this.lblTitulo.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.lblTitulo.ForeColor = System.Drawing.Color.White;
             this.lblTitulo.Font      = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            this.lblTitulo.Text      = "Estado de Cuenta";
+            this.lblTitulo.Text      = "Estado de Cuenta — Proveedor";
 
             this.pnlHeader.Controls.Add(this.lblTitulo);
 
-            // ─── pnlInfo (48 px) ────────────────────────────────────
+            // ── pnlInfo (42 px) ──────────────────────────────────────────
             this.pnlInfo.Dock      = System.Windows.Forms.DockStyle.Top;
-            this.pnlInfo.Height    = 48;
+            this.pnlInfo.Height    = 42;
             this.pnlInfo.BackColor = System.Drawing.Color.FromArgb(52, 73, 94);
 
-            int iy = 7;
+            this.lblProveedorLbl.AutoSize  = true;
+            this.lblProveedorLbl.Location  = new System.Drawing.Point(14, 6);
+            this.lblProveedorLbl.ForeColor = System.Drawing.Color.FromArgb(149, 165, 166);
+            this.lblProveedorLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
+            this.lblProveedorLbl.Text      = "PROVEEDOR";
 
-            this.lblNombreLbl.AutoSize  = true;
-            this.lblNombreLbl.Location  = new System.Drawing.Point(14, iy);
-            this.lblNombreLbl.ForeColor = System.Drawing.Color.FromArgb(149, 165, 166);
-            this.lblNombreLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
-            this.lblNombreLbl.Text      = "CLIENTE";
-
-            this.lblNombreVal.AutoSize  = true;
-            this.lblNombreVal.Location  = new System.Drawing.Point(14, iy + 13);
-            this.lblNombreVal.ForeColor = System.Drawing.Color.White;
-            this.lblNombreVal.Font      = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.lblNombreVal.Text      = "—";
-
-            this.lblDocLbl.AutoSize  = true;
-            this.lblDocLbl.Location  = new System.Drawing.Point(210, iy);
-            this.lblDocLbl.ForeColor = System.Drawing.Color.FromArgb(149, 165, 166);
-            this.lblDocLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
-            this.lblDocLbl.Text      = "DOCUMENTO";
-
-            this.lblDocVal.AutoSize  = true;
-            this.lblDocVal.Location  = new System.Drawing.Point(210, iy + 13);
-            this.lblDocVal.ForeColor = System.Drawing.Color.White;
-            this.lblDocVal.Font      = new System.Drawing.Font("Segoe UI", 9F);
-            this.lblDocVal.Text      = "—";
-
-            this.lblEstadoBadge.AutoSize  = false;
-            this.lblEstadoBadge.Size      = new System.Drawing.Size(66, 20);
-            this.lblEstadoBadge.Location  = new System.Drawing.Point(360, iy + 5);
-            this.lblEstadoBadge.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.lblEstadoBadge.ForeColor = System.Drawing.Color.White;
-            this.lblEstadoBadge.Font      = new System.Drawing.Font("Segoe UI", 7.5F, System.Drawing.FontStyle.Bold);
-            this.lblEstadoBadge.BackColor = System.Drawing.Color.FromArgb(39, 174, 96);
-            this.lblEstadoBadge.Text      = "ACTIVO";
-
-            this.lblSep1.AutoSize  = false;
-            this.lblSep1.Size      = new System.Drawing.Size(1, 32);
-            this.lblSep1.Location  = new System.Drawing.Point(450, 8);
-            this.lblSep1.BackColor = System.Drawing.Color.FromArgb(80, 100, 115);
-
-            int cx = 464;
-            this.lblLimCredLbl.AutoSize  = true;
-            this.lblLimCredLbl.Location  = new System.Drawing.Point(cx, iy);
-            this.lblLimCredLbl.ForeColor = System.Drawing.Color.FromArgb(149, 165, 166);
-            this.lblLimCredLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
-            this.lblLimCredLbl.Text      = "LÍM. CRÉDITO";
-
-            this.lblLimCredVal.AutoSize  = true;
-            this.lblLimCredVal.Location  = new System.Drawing.Point(cx, iy + 13);
-            this.lblLimCredVal.ForeColor = System.Drawing.Color.White;
-            this.lblLimCredVal.Font      = new System.Drawing.Font("Segoe UI", 9F);
-            this.lblLimCredVal.Text      = "S/ 0.00";
-
-            cx += 120;
-            this.lblCredUsadoLbl.AutoSize  = true;
-            this.lblCredUsadoLbl.Location  = new System.Drawing.Point(cx, iy);
-            this.lblCredUsadoLbl.ForeColor = System.Drawing.Color.FromArgb(149, 165, 166);
-            this.lblCredUsadoLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
-            this.lblCredUsadoLbl.Text      = "USADO";
-
-            this.lblCredUsadoVal.AutoSize  = true;
-            this.lblCredUsadoVal.Location  = new System.Drawing.Point(cx, iy + 13);
-            this.lblCredUsadoVal.ForeColor = System.Drawing.Color.White;
-            this.lblCredUsadoVal.Font      = new System.Drawing.Font("Segoe UI", 9F);
-            this.lblCredUsadoVal.Text      = "S/ 0.00";
-
-            cx += 100;
-            this.lblDisponibleLbl.AutoSize  = true;
-            this.lblDisponibleLbl.Location  = new System.Drawing.Point(cx, iy);
-            this.lblDisponibleLbl.ForeColor = System.Drawing.Color.FromArgb(149, 165, 166);
-            this.lblDisponibleLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
-            this.lblDisponibleLbl.Text      = "DISPONIBLE";
-
-            this.lblDisponibleVal.AutoSize  = true;
-            this.lblDisponibleVal.Location  = new System.Drawing.Point(cx, iy + 13);
-            this.lblDisponibleVal.ForeColor = System.Drawing.Color.FromArgb(39, 174, 96);
-            this.lblDisponibleVal.Font      = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.lblDisponibleVal.Text      = "S/ 0.00";
+            this.lblProveedorVal.AutoSize  = true;
+            this.lblProveedorVal.Location  = new System.Drawing.Point(14, 19);
+            this.lblProveedorVal.ForeColor = System.Drawing.Color.White;
+            this.lblProveedorVal.Font      = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.lblProveedorVal.Text      = "—";
 
             this.pnlInfo.Controls.AddRange(new System.Windows.Forms.Control[] {
-                lblNombreLbl, lblNombreVal,
-                lblDocLbl, lblDocVal,
-                lblEstadoBadge, lblSep1,
-                lblLimCredLbl, lblLimCredVal,
-                lblCredUsadoLbl, lblCredUsadoVal,
-                lblDisponibleLbl, lblDisponibleVal
+                lblProveedorLbl, lblProveedorVal
             });
 
-            // ─── pnlFiltros (40 px) ─────────────────────────────────
+            // ── pnlFiltros (40 px) ───────────────────────────────────────
             this.pnlFiltros.Dock      = System.Windows.Forms.DockStyle.Top;
             this.pnlFiltros.Height    = 40;
             this.pnlFiltros.BackColor = System.Drawing.Color.FromArgb(236, 240, 243);
@@ -228,7 +163,27 @@ namespace SistemaPOS.Forms.Contactos
                 lblBuscar, txtBuscar, btnFiltrar
             });
 
-            // ─── pnlBotones (44 px) — anclado al fondo ──────────────
+            // ── pnlResumen (64 px) — 4 tarjetas ──────────────────────────
+            this.pnlResumen.Dock      = System.Windows.Forms.DockStyle.Top;
+            this.pnlResumen.Height    = 64;
+            this.pnlResumen.BackColor = System.Drawing.Color.FromArgb(245, 247, 250);
+            this.pnlResumen.Padding   = new System.Windows.Forms.Padding(10, 6, 10, 6);
+
+            _cardNextX = 10;
+            InicializarCard(this.pnlCardCompras, this.lblComprasLbl, this.lblComprasVal,
+                "TOTAL COMPRAS",    System.Drawing.Color.FromArgb(214, 48, 49));
+            InicializarCard(this.pnlCardPagos,   this.lblPagosLbl,   this.lblPagosVal,
+                "TOTAL PAGADO",     System.Drawing.Color.FromArgb(39, 174, 96));
+            InicializarCard(this.pnlCardAnul,    this.lblAnulLbl,    this.lblAnulVal,
+                "ANULACIONES",      System.Drawing.Color.FromArgb(149, 165, 166));
+            InicializarCard(this.pnlCardSaldo,   this.lblSaldoLbl,   this.lblSaldoVal,
+                "SALDO ACTUAL",     System.Drawing.Color.FromArgb(52, 152, 219));
+
+            this.pnlResumen.Controls.AddRange(new System.Windows.Forms.Control[] {
+                pnlCardCompras, pnlCardPagos, pnlCardAnul, pnlCardSaldo
+            });
+
+            // ── pnlBotones (44 px) — base ─────────────────────────────────
             this.pnlBotones.Dock      = System.Windows.Forms.DockStyle.Bottom;
             this.pnlBotones.Height    = 44;
             this.pnlBotones.BackColor = System.Drawing.Color.FromArgb(236, 240, 243);
@@ -241,32 +196,25 @@ namespace SistemaPOS.Forms.Contactos
             this.btnRegistrarPago.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnRegistrarPago.FlatAppearance.BorderSize = 0;
             this.btnRegistrarPago.Font      = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-
-            this.btnImprimir.Location  = new System.Drawing.Point(152, 8);
-            this.btnImprimir.Size      = new System.Drawing.Size(108, 28);
-            this.btnImprimir.Text      = "Imprimir / PDF";
-            this.btnImprimir.BackColor = System.Drawing.Color.FromArgb(52, 73, 94);
-            this.btnImprimir.ForeColor = System.Drawing.Color.White;
-            this.btnImprimir.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnImprimir.FlatAppearance.BorderSize = 0;
-            this.btnImprimir.Font      = new System.Drawing.Font("Segoe UI", 9F);
+            this.btnRegistrarPago.Cursor    = System.Windows.Forms.Cursors.Hand;
 
             this.btnCerrar.Anchor    = System.Windows.Forms.AnchorStyles.Top
                                      | System.Windows.Forms.AnchorStyles.Right;
             this.btnCerrar.Size      = new System.Drawing.Size(80, 28);
-            this.btnCerrar.Location  = new System.Drawing.Point(890, 8);
+            this.btnCerrar.Location  = new System.Drawing.Point(930, 8);
             this.btnCerrar.Text      = "Cerrar";
             this.btnCerrar.BackColor = System.Drawing.Color.FromArgb(189, 195, 199);
             this.btnCerrar.ForeColor = System.Drawing.Color.FromArgb(44, 62, 80);
             this.btnCerrar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCerrar.FlatAppearance.BorderSize = 0;
             this.btnCerrar.Font      = new System.Drawing.Font("Segoe UI", 9F);
+            this.btnCerrar.Cursor    = System.Windows.Forms.Cursors.Hand;
 
             this.pnlBotones.Controls.AddRange(new System.Windows.Forms.Control[] {
-                btnRegistrarPago, btnImprimir, btnCerrar
+                btnRegistrarPago, btnCerrar
             });
 
-            // ─── DGV — Fill sin espacio muerto ───────────────────────
+            // ── DGV ──────────────────────────────────────────────────────
             this.dgvMovimientos.Dock                  = System.Windows.Forms.DockStyle.Fill;
             this.dgvMovimientos.BackgroundColor        = System.Drawing.Color.White;
             this.dgvMovimientos.BorderStyle            = System.Windows.Forms.BorderStyle.None;
@@ -285,11 +233,10 @@ namespace SistemaPOS.Forms.Contactos
             hStyle.ForeColor = System.Drawing.Color.White;
             hStyle.Font      = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
             hStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            this.dgvMovimientos.ColumnHeadersHeight          = 30;
-            this.dgvMovimientos.ColumnHeadersHeightSizeMode  =
+            this.dgvMovimientos.ColumnHeadersHeight         = 30;
+            this.dgvMovimientos.ColumnHeadersHeightSizeMode =
                 System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            this.dgvMovimientos.EnableHeadersVisualStyles    = false;
-
+            this.dgvMovimientos.EnableHeadersVisualStyles   = false;
             this.dgvMovimientos.AlternatingRowsDefaultCellStyle.BackColor =
                 System.Drawing.Color.FromArgb(248, 250, 252);
 
@@ -301,7 +248,7 @@ namespace SistemaPOS.Forms.Contactos
 
             this.colTipo.Name       = "colTipo";
             this.colTipo.HeaderText = "Tipo";
-            this.colTipo.Width      = 86;
+            this.colTipo.Width      = 100;
             this.colTipo.ReadOnly   = true;
 
             this.colDocumento.Name        = "colDocumento";
@@ -315,16 +262,16 @@ namespace SistemaPOS.Forms.Contactos
             this.colMetodo.Width      = 105;
             this.colMetodo.ReadOnly   = true;
 
-            this.colCargo.Name      = "colCargo";
+            this.colCargo.Name       = "colCargo";
             this.colCargo.HeaderText = "Cargo";
-            this.colCargo.Width     = 98;
-            this.colCargo.ReadOnly  = true;
+            this.colCargo.Width      = 100;
+            this.colCargo.ReadOnly   = true;
             this.colCargo.DefaultCellStyle.Alignment =
                 System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
 
             this.colAbono.Name       = "colAbono";
             this.colAbono.HeaderText = "Abono";
-            this.colAbono.Width      = 98;
+            this.colAbono.Width      = 100;
             this.colAbono.ReadOnly   = true;
             this.colAbono.DefaultCellStyle.Alignment =
                 System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
@@ -338,7 +285,7 @@ namespace SistemaPOS.Forms.Contactos
 
             this.colAccion.Name       = "colAccion";
             this.colAccion.HeaderText = "Acción";
-            this.colAccion.Width      = 68;
+            this.colAccion.Width      = 72;
             this.colAccion.ReadOnly   = false;
             this.colAccion.DefaultCellStyle.Alignment =
                 System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
@@ -350,35 +297,70 @@ namespace SistemaPOS.Forms.Contactos
 
             this.dgvMovimientos.CellClick += DgvMovimientos_CellClick;
 
-            // ─── Orden de controles (Dock apila de abajo a arriba) ───
-            // Bottom → pnlBotones  |  Top (primero que se apila)  → pnlHeader
-            // Fill → dgvMovimientos (queda en el espacio central)
-            this.Controls.Add(this.dgvMovimientos);   // Fill → primero en Add
+            // ── Orden de Add (Dock apila de abajo a arriba) ───────────────
+            this.Controls.Add(this.dgvMovimientos);   // Fill
+            this.Controls.Add(this.pnlResumen);       // Top
             this.Controls.Add(this.pnlFiltros);       // Top
             this.Controls.Add(this.pnlInfo);          // Top
-            this.Controls.Add(this.pnlHeader);        // Top (más arriba de todo)
+            this.Controls.Add(this.pnlHeader);        // Top (más arriba)
             this.Controls.Add(this.pnlBotones);       // Bottom
 
             this.pnlHeader.ResumeLayout(false);
             this.pnlInfo.ResumeLayout(false);
             this.pnlFiltros.ResumeLayout(false);
+            this.pnlResumen.ResumeLayout(false);
+            this.pnlCardCompras.ResumeLayout(false);
+            this.pnlCardPagos.ResumeLayout(false);
+            this.pnlCardAnul.ResumeLayout(false);
+            this.pnlCardSaldo.ResumeLayout(false);
             this.pnlBotones.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)this.dgvMovimientos).EndInit();
             this.ResumeLayout(false);
         }
 
-        // ─── Declaración de controles ────────────────────────────────
+        // ── Helper tarjetas ─────────────────────────────────────────────
+        private static int _cardNextX;
+
+        private void InicializarCard(
+            System.Windows.Forms.Panel panel,
+            System.Windows.Forms.Label lblTit,
+            System.Windows.Forms.Label lblVal,
+            string titulo,
+            System.Drawing.Color acento)
+        {
+            panel.Size        = new System.Drawing.Size(236, 52);
+            panel.Location    = new System.Drawing.Point(_cardNextX, 6);
+            panel.BackColor   = System.Drawing.Color.White;
+            panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            _cardNextX += 244;
+
+            lblTit.AutoSize  = false;
+            lblTit.Dock      = System.Windows.Forms.DockStyle.Top;
+            lblTit.Height    = 17;
+            lblTit.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
+            lblTit.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            lblTit.Font      = new System.Drawing.Font("Segoe UI", 7F);
+            lblTit.ForeColor = System.Drawing.Color.FromArgb(120, 130, 140);
+            lblTit.Text      = titulo;
+
+            lblVal.AutoSize  = false;
+            lblVal.Dock      = System.Windows.Forms.DockStyle.Fill;
+            lblVal.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            lblVal.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            lblVal.Font      = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            lblVal.ForeColor = acento;
+            lblVal.Text      = "S/ 0.00";
+
+            panel.Controls.Add(lblVal);
+            panel.Controls.Add(lblTit);
+        }
+
+        // ── Declaración de controles ─────────────────────────────────────
         private System.Windows.Forms.Panel  pnlHeader;
         private System.Windows.Forms.Label  lblTitulo;
 
         private System.Windows.Forms.Panel  pnlInfo;
-        private System.Windows.Forms.Label  lblNombreLbl, lblNombreVal;
-        private System.Windows.Forms.Label  lblDocLbl, lblDocVal;
-        private System.Windows.Forms.Label  lblEstadoBadge;
-        private System.Windows.Forms.Label  lblSep1;
-        private System.Windows.Forms.Label  lblLimCredLbl, lblLimCredVal;
-        private System.Windows.Forms.Label  lblCredUsadoLbl, lblCredUsadoVal;
-        private System.Windows.Forms.Label  lblDisponibleLbl, lblDisponibleVal;
+        private System.Windows.Forms.Label  lblProveedorLbl, lblProveedorVal;
 
         private System.Windows.Forms.Panel           pnlFiltros;
         private System.Windows.Forms.Label           lblDesde, lblHasta, lblBuscar;
@@ -386,9 +368,15 @@ namespace SistemaPOS.Forms.Contactos
         private System.Windows.Forms.TextBox         txtBuscar;
         private System.Windows.Forms.Button          btnFiltrar;
 
+        private System.Windows.Forms.Panel pnlResumen;
+        private System.Windows.Forms.Panel pnlCardCompras, pnlCardPagos, pnlCardAnul, pnlCardSaldo;
+        private System.Windows.Forms.Label lblComprasLbl, lblComprasVal;
+        private System.Windows.Forms.Label lblPagosLbl,   lblPagosVal;
+        private System.Windows.Forms.Label lblAnulLbl,    lblAnulVal;
+        private System.Windows.Forms.Label lblSaldoLbl,   lblSaldoVal;
+
         private System.Windows.Forms.Panel  pnlBotones;
         private System.Windows.Forms.Button btnRegistrarPago;
-        private System.Windows.Forms.Button btnImprimir;
         private System.Windows.Forms.Button btnCerrar;
 
         private System.Windows.Forms.DataGridView            dgvMovimientos;

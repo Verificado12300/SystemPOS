@@ -5,7 +5,6 @@ using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using SistemaPOS.Controls;
 using SistemaPOS.Data;
-using SistemaPOS.Models;
 
 namespace SistemaPOS.Forms.Principal
 {
@@ -137,11 +136,11 @@ namespace SistemaPOS.Forms.Principal
                 lblTopTitulo.Text = $"TOP PRODUCTOS {tituloPeriodo}";
                 lblOperacionesTitulo.Text = $"OPERACIONES {tituloPeriodo}";
 
-                var (desde, hasta) = ObtenerRangoDates(periodo);
-                var er = ContabilidadService.ObtenerEstadoResultados(desde, hasta);
+                var util = DashboardRepository.ObtenerUtilidadReal(periodo);
+                var (_, cantidad) = DashboardRepository.ObtenerVentasPorPeriodo(periodo);
 
-                CargarKPIVentas(periodo, er);
-                CargarKPIUtilidad(er);
+                CargarKPIVentas(util.Ventas, cantidad);
+                CargarKPIUtilidad(util);
                 CargarKPIAlertas();
                 CargarGrafico(periodo);
                 CargarTopProductos(periodo);
@@ -155,23 +154,23 @@ namespace SistemaPOS.Forms.Principal
             }
         }
 
-        private void CargarKPIVentas(string periodo, EstadoResultadosDTO er)
+        private void CargarKPIVentas(decimal totalVentas, int cantidad)
         {
-            var (_, cantidad) = DashboardRepository.ObtenerVentasPorPeriodo(periodo);
             lblKPIVentasTitulo.Text = $"VENTAS {ObtenerTituloPeriodo()}";
-            lblKPIVentasValor.Text  = $"S/ {er.Ventas:N2}";
+            lblKPIVentasValor.Text  = $"S/ {totalVentas:N2}";
             lblKPIVentasCant.Text   = $"{cantidad} operaciones";
         }
 
-        private void CargarKPIUtilidad(EstadoResultadosDTO er)
+        private void CargarKPIUtilidad((decimal Ventas, decimal CostoVentas, decimal Gastos, decimal Utilidad) util)
         {
-            decimal margen = er.Ventas > 0
-                ? er.UtilidadOperativa / er.Ventas * 100m
+            decimal margen = util.Ventas > 0
+                ? util.Utilidad / util.Ventas * 100m
                 : 0m;
-            lblKPIUtilidadTitulo.Text     = $"UTILIDAD {ObtenerTituloPeriodo()}";
-            lblKPIUtilidadValor.Text      = $"S/ {er.UtilidadOperativa:N2}";
-            lblKPIUtilidadPorcentaje.Text = $"Margen: {margen:N1}%";
-            lblKPIUtilidadValor.ForeColor = er.UtilidadOperativa >= 0
+            lblKPIUtilidadTitulo.Text     = $"UTILIDAD NETA {ObtenerTituloPeriodo()}";
+            lblKPIUtilidadValor.Text      = $"S/ {util.Utilidad:N2}";
+            lblKPIUtilidadPorcentaje.Text =
+                $"Costo: S/ {util.CostoVentas:N2}  |  Gastos: S/ {util.Gastos:N2}  |  Margen: {margen:N1}%";
+            lblKPIUtilidadValor.ForeColor = util.Utilidad >= 0
                 ? Color.FromArgb(39, 174, 96)
                 : Color.FromArgb(231, 76, 60);
         }

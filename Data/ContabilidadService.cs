@@ -1512,7 +1512,7 @@ namespace SistemaPOS.Data
         ///   Cr 120 Cuentas por Cobrar   = monto cobrado
         /// Se genera por cada venta que recibe un pago (parcial o total).
         /// </summary>
-        public static void RegistrarCobroCxC(
+        public static int RegistrarCobroCxC(
             int ventaID, string numeroVenta, decimal monto,
             string metodoPago,
             decimal montoEfectivo, decimal montoYape, decimal montoTransferencia,
@@ -1520,7 +1520,7 @@ namespace SistemaPOS.Data
             DateTime fecha, int usuarioID,
             SQLiteConnection conn, SQLiteTransaction tx)
         {
-            if (monto <= 0m) return;
+            if (monto <= 0m) return 0;
 
             PeriodosContablesRepository.ValidarFechaNoBloqueada(fecha, conn, tx);
 
@@ -1552,7 +1552,7 @@ namespace SistemaPOS.Data
             var c120 = GetCuenta("120", conn, tx);
             AddLine(asiento, c120.CuentaID, 0m, monto, $"Cancelación CxC {numeroVenta}");
 
-            ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
+            return ContabilidadRepository.CrearAsientoCompleto(asiento, conn, tx);
         }
 
         /// <summary>
