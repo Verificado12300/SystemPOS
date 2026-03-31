@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
@@ -10,40 +11,59 @@ using SistemaPOS.Models;
 namespace SistemaPOS.Controls
 {
     /// <summary>
-    /// PLANTILLA MAESTRA ÚNICA del ticket de venta.
-    /// Hereda de TicketDesignPanel para reutilizar RenderForPrint (celda-a-celda DGV).
+    /// Vista previa del ticket de venta como papel térmico monoespaciado.
+    /// Usa un único RichTextBox (Consolas 8.25F) con la misma lógica de columnas
+    /// que TicketESCPOS (w1=21, w2=5 centrado, w3=6, w4=10).
     ///
     /// Usuarios:
     ///   - FormPreviewTicket  → LlenarDatos(dt, parametros)
     ///   - FormImpresoras     → LlenarDatosDemo(config)
-    ///   - Impresión real     → RenderForPrint(g, dest, h)   (heredado)
-    ///   - Historial/reimpres → LlenarDatos(dt, parametros)
+    ///   - TicketPrinter      → RenderForPrint(g, dest, h)
+    ///   - Historial/reimpres → RenderToBitmap()
     /// </summary>
     public partial class TicketPreviewControl : TicketDesignPanel
     {
-        // ── Snapshot posiciones Designer (inmutables) ─────────────────────────
-        private readonly Dictionary<Control, int> _designerTop = new Dictionary<Control, int>();
-        private int _designerDgvH;
+        // Ancho de línea en caracteres (papel 80mm ≈ 42 chars Courier New 8.25F)
+        private const int W = 42;
 
-        // ── Configuración centralizada del ticket ─────────────────────────────
         private TicketConfig _config;
-
-        // ── Columnas DGV (creadas en código para evitar conflictos Designer) ──
-        private DataGridViewTextBoxColumn colDescripcion;
-        private DataGridViewTextBoxColumn colUnidad;
-        private DataGridViewTextBoxColumn colCantidad;
-        private DataGridViewTextBoxColumn colTotal;
 
         public TicketPreviewControl()
         {
             InitializeComponent();
+            AjustarAncho();
+        }
 
-            // Capturar posiciones del Designer antes de cualquier reflow
-            foreach (Control c in Controls)
-                _designerTop[c] = c.Top;
-            _designerDgvH = dgvItems.Height;
+        // Mide el ancho real del carácter Consolas 8.25F y ajusta el control.
+        // Se llama en el constructor y al inicio de Renderizar (por si el caller
+        // sobrescribió Width después de construir el control).
+        //
+        // IMPORTANTE: usar TextRenderer (GDI) en lugar de Graphics.MeasureString (GDI+).
+        // El RichTextBox renderiza con GDI; GDI+ puede subestimar el ancho unos píxeles,
+        // dejando el control demasiado estrecho → el RichEdit hace wrap de la última
+        // letra al inicio de la siguiente línea (ej. "EFECTIV" + "O" en líneas distintas).
+        private void AjustarAncho()
+        {
+            // TextRenderer.MeasureText usa GDI, igual que el RichTextBox.
+            // NoPadding elimina el holgado extra que GDI añade por defecto.
+            Size sz = TextRenderer.MeasureText(
+                new string('M', W),
+                rtbTicket.Font,
+                new Size(99999, 99999),
+                TextFormatFlags.NoPadding);
 
-            ConfigurarColumnasDgv();
+            // Usar el ancho medido exacto para Consolas (no el piso W*7 que era para Courier New).
+            // +4 = pequeño margen para evitar wrap accidental de la última letra.
+            int rtbWidth  = sz.Width + 3;
+            int ctrlWidth = rtbWidth + 4;  // 2px izq + 2px der
+
+            rtbTicket.Width  = rtbWidth;
+            rtbTicket.Left   = 3;
+            pbLogo.Left      = 0;
+            pbLogo.Width     = ctrlWidth;
+            lblEmpresa.Left  = 0;
+            lblEmpresa.Width = ctrlWidth;
+            this.Width       = ctrlWidth;
         }
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -55,7 +75,7 @@ namespace SistemaPOS.Controls
         {
             _config = config ?? TicketConfig.CargarDesdeDB();
             CompletarEmpresa(p);
-            Llenar(detalle, p);
+            Renderizar(detalle, p);
         }
 
         /// <summary>Llena con datos de demo usando la configuración provista. No lee BD. Para FormImpresoras.</summary>
@@ -69,8 +89,8 @@ namespace SistemaPOS.Controls
             dt.Columns.Add("Presentacion", typeof(string));
             dt.Columns.Add("Cantidad",     typeof(decimal));
             dt.Columns.Add("SubTotal",     typeof(decimal));
-            dt.Rows.Add(1, "Crecimiento Pollo", "Saco",   2m,  240.00m);
-            dt.Rows.Add(2, "Pienso Engorde",    "Granel", 10m, 280.00m);
+            dt.Rows.Add(1, "CRECIMIENTO DE POLLO",  "kg", 100.00m, 240.00m);
+            dt.Rows.Add(2, "MAIZ INTEGRAL GRUESO", "kg",  42.50m,  85.00m);
 
             var p = new Dictionary<string, string>
             {
@@ -80,21 +100,35 @@ namespace SistemaPOS.Controls
                 ["pHora"]            = DateTime.Now.ToString("HH:mm"),
                 ["pCliente"]         = "Cliente Demo",
                 ["pDocCliente"]      = _config.MostrarDNI ? "12345678" : "",
-                ["pSubTotal"]        = "508.47",
-                ["pIGV"]             = "91.53",
-                ["pTotal"]           = "600.00",
+                ["pSubTotal"]        = "325.00",
+                ["pIGV"]             = "0.00",
+                ["pTotal"]           = "325.00",
                 ["pMetodoPago"]      = "EFECTIVO",
-                ["pMontoRecibido"]   = "600.00",
+                ["pMontoRecibido"]   = "325.00",
                 ["pVuelto"]          = "0.00",
             };
             CompletarEmpresa(p);
-            Llenar(dt, p);
+            // Fallback: nombre empresa siempre visible en demo
+            if (!p.ContainsKey("pEmpresaNombre") || string.IsNullOrWhiteSpace(p["pEmpresaNombre"]))
+                p["pEmpresaNombre"] = "MI EMPRESA S.A.C.";
+            // Fallback: si la dirección de BD está vacía o es placeholder, usar ficticia
+            if (string.IsNullOrWhiteSpace(p.ContainsKey("pEmpresaDireccion") ? p["pEmpresaDireccion"] : "")
+                || (p.ContainsKey("pEmpresaDireccion") && p["pEmpresaDireccion"].Contains("*")))
+                p["pEmpresaDireccion"] = "Av. Los Pinos 234, Lima";
+            Renderizar(dt, p);
         }
 
-        /// <summary>Re-aplica el reflow (útil tras OnShown cuando el DGV ya calculó alturas de fila).</summary>
-        public void Reflow() => ReflowTicket();
+        /// <summary>Re-mide el ancho con DPI real y reposiciona hijos. Llamado por FormPreviewTicket.OnShown.</summary>
+        public void Reflow()
+        {
+            AjustarAncho();
+            int topY = 3;
+            if (pbLogo.Visible)    { pbLogo.Top    = topY; topY = pbLogo.Bottom    + 2; }
+            if (lblEmpresa.Visible){ lblEmpresa.Top = topY; topY = lblEmpresa.Bottom + 2; }
+            rtbTicket.Location = new System.Drawing.Point(2, topY);
+        }
 
-        /// <summary>Alto del contenido tras el último reflow.</summary>
+        /// <summary>Alto del control tras el último Renderizar.</summary>
         public int ContentHeight => Height;
 
         /// <summary>Ancho lógico del ticket.</summary>
@@ -105,108 +139,327 @@ namespace SistemaPOS.Controls
         {
             int w = Math.Max(1, Width);
             int h = Math.Max(1, Height);
+            CreateControl(); // garantiza que el HWND exista antes de DrawToBitmap
             var bmp = new Bitmap(w, h);
-            using (var g = Graphics.FromImage(bmp))
-                RenderForPrint(g, new Rectangle(0, 0, w, h), h);
+            DrawToBitmap(bmp, new Rectangle(0, 0, w, h));
             return bmp;
         }
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // PRIVADOS
-        // ═══════════════════════════════════════════════════════════════════════
-
-        private void ConfigurarColumnasDgv()
+        /// <summary>Renderiza el control escalado en el rectángulo destino (para TicketPrinter).</summary>
+        public new void RenderForPrint(Graphics g, Rectangle destino, int sourceHeight)
         {
-            var estiloIzq = new DataGridViewCellStyle
+            int logH = sourceHeight > 0 ? Math.Min(sourceHeight, Height) : Height;
+            logH = Math.Max(1, logH);
+            CreateControl();
+            using (var bmp = new Bitmap(Math.Max(1, Width), logH))
             {
-                BackColor          = Color.White,
-                Font               = new Font("Segoe UI", 9F),
-                ForeColor          = Color.Black,
-                SelectionBackColor = Color.White,
-                SelectionForeColor = Color.Black,
-                Alignment          = DataGridViewContentAlignment.MiddleLeft,
-                WrapMode           = DataGridViewTriState.True
-            };
-            var estiloDer = new DataGridViewCellStyle
-            {
-                BackColor          = Color.White,
-                Font               = new Font("Segoe UI", 9F),
-                ForeColor          = Color.Black,
-                SelectionBackColor = Color.White,
-                SelectionForeColor = Color.Black,
-                Alignment          = DataGridViewContentAlignment.MiddleRight
-            };
-
-            // Col 1: Descripción (producto) — peso 122
-            colDescripcion = new DataGridViewTextBoxColumn
-            {
-                AutoSizeMode     = DataGridViewAutoSizeColumnMode.Fill,
-                DataPropertyName = "Producto",
-                DefaultCellStyle = estiloIzq,
-                FillWeight       = 122F,
-                HeaderText       = "Descripcion",
-                MinimumWidth     = 40,
-                Name             = "colDescripcion",
-                ReadOnly         = true,
-                SortMode         = DataGridViewColumnSortMode.NotSortable
-            };
-            // Col 2: Unid. (presentación) — peso 22
-            colUnidad = new DataGridViewTextBoxColumn
-            {
-                AutoSizeMode     = DataGridViewAutoSizeColumnMode.Fill,
-                DataPropertyName = "Presentacion",
-                DefaultCellStyle = estiloIzq,
-                FillWeight       = 22F,
-                HeaderText       = "Unid.",
-                MinimumWidth     = 20,
-                Name             = "colUnidad",
-                ReadOnly         = true,
-                SortMode         = DataGridViewColumnSortMode.NotSortable
-            };
-            // Col 3: Cant. — peso 38
-            colCantidad = new DataGridViewTextBoxColumn
-            {
-                AutoSizeMode     = DataGridViewAutoSizeColumnMode.Fill,
-                DataPropertyName = "Cantidad",
-                DefaultCellStyle = estiloDer,
-                FillWeight       = 38F,
-                HeaderText       = "Cant.",
-                MinimumWidth     = 22,
-                Name             = "colCantidad",
-                ReadOnly         = true,
-                SortMode         = DataGridViewColumnSortMode.NotSortable
-            };
-            // Col 4: Total — peso 75
-            colTotal = new DataGridViewTextBoxColumn
-            {
-                AutoSizeMode     = DataGridViewAutoSizeColumnMode.Fill,
-                DataPropertyName = "SubTotal",
-                DefaultCellStyle = estiloDer,
-                FillWeight       = 75F,
-                HeaderText       = "Total",
-                MinimumWidth     = 70,
-                Name             = "colTotal",
-                ReadOnly         = true,
-                SortMode         = DataGridViewColumnSortMode.NotSortable
-            };
-
-            dgvItems.AutoGenerateColumns = false;
-            dgvItems.AutoSizeRowsMode    = DataGridViewAutoSizeRowsMode.AllCells;
-            dgvItems.Columns.AddRange(new DataGridViewColumn[]
-            {
-                colDescripcion, colUnidad, colCantidad, colTotal
-            });
+                DrawToBitmap(bmp, new Rectangle(0, 0, Math.Max(1, Width), logH));
+                g.DrawImage(bmp, destino);
+            }
         }
 
-        // ── Completar parámetros de empresa desde BD si faltan ────────────────
+        // ═══════════════════════════════════════════════════════════════════════
+        // RENDERIZADO MONOESPACIADO
+        // ═══════════════════════════════════════════════════════════════════════
+
+        private void Renderizar(DataTable detalle, Dictionary<string, string> p)
+        {
+            // ── Logo (opcional) ────────────────────────────────────────────────
+            pbLogo.Visible = false;
+            if (_config.MostrarLogo)
+            {
+                try
+                {
+                    byte[] bytes = EmpresaRepository.ObtenerEmpresa()?.Logo;
+                    if (bytes != null && bytes.Length > 0)
+                    {
+                        pbLogo.Image   = Image.FromStream(new MemoryStream(bytes));
+                        pbLogo.Visible = true;
+                    }
+                }
+                catch { }
+            }
+
+            // Re-medir por si el caller sobrescribió Width después del constructor
+            AjustarAncho();
+
+            // ── Nombre de empresa: Label independiente (centrado automático) ──
+            string empresa = Get(p, "pEmpresaNombre", "").ToUpper();
+            lblEmpresa.Text    = empresa;
+            lblEmpresa.Height  = lblEmpresa.Font.Height + 6;
+            lblEmpresa.Visible = !string.IsNullOrWhiteSpace(empresa);
+
+            // ── Apilar controles: 3px arriba, logo → nombre → cuerpo ──────────
+            int topY = 3;
+            if (pbLogo.Visible)    { pbLogo.Top    = topY; topY = pbLogo.Bottom    + 2; }
+            if (lblEmpresa.Visible){ lblEmpresa.Top = topY; topY = lblEmpresa.Bottom + 2; }
+            rtbTicket.Location = new Point(2, topY);
+
+            // ── Construir texto del ticket (empresa va en el Label, no aquí) ──
+            var sb = new StringBuilder();
+
+            if (_config.MostrarRUC)
+            {
+                string ruc = Get(p, "pEmpresaRUC");
+                if (!string.IsNullOrWhiteSpace(ruc))
+                    sb.AppendLine(Center("RUC: " + ruc, W));
+            }
+
+            if (_config.MostrarDireccion)
+            {
+                string dir = Get(p, "pEmpresaDireccion");
+                if (!string.IsNullOrWhiteSpace(dir))
+                    sb.AppendLine(Center(dir, W));
+            }
+
+            if (_config.MostrarTelefono)
+            {
+                string tel = Get(p, "pEmpresaTelefono");
+                if (!string.IsNullOrWhiteSpace(tel))
+                    sb.AppendLine(Center("Tel: " + tel, W));
+            }
+
+            if (_config.MostrarEmail)
+            {
+                string email = Get(p, "pEmpresaEmail");
+                if (!string.IsNullOrWhiteSpace(email))
+                    sb.AppendLine(Center(email, W));
+            }
+
+            // Separador → Tipo comprobante + número (centrados)
+            sb.AppendLine(Sep());
+            string comprobante = Get(p, "pTipoComprobante", "NOTA DE VENTA").ToUpper();
+            sb.AppendLine(Center(comprobante, W));
+            string numero = Get(p, "pNumeroVenta");
+            if (!string.IsNullOrWhiteSpace(numero))
+                sb.AppendLine(Center(numero, W));
+
+            // Separador → Fecha, Cliente, DNI
+            sb.AppendLine(Sep());
+            sb.AppendLine(TruncLeft("Fecha   : " + Get(p, "pFecha", DateTime.Now.ToString("dd/MM/yyyy"))
+                                    + "  " + Get(p, "pHora", DateTime.Now.ToString("HH:mm")), W));
+
+            string cliente = Get(p, "pCliente");
+            if (string.IsNullOrWhiteSpace(cliente)) cliente = "CLIENTE GENERAL";
+            sb.AppendLine(TruncLeft("Cliente : " + cliente, W));
+
+            if (_config.MostrarDNI)
+            {
+                string doc   = Get(p, "pDocCliente");
+                bool   esGen = string.IsNullOrWhiteSpace(Get(p, "pCliente"))
+                               || Get(p, "pCliente").IndexOf("GENERAL", StringComparison.OrdinalIgnoreCase) >= 0
+                               || Get(p, "pCliente").IndexOf("VARIOS",  StringComparison.OrdinalIgnoreCase) >= 0;
+                bool   docOK = !string.IsNullOrWhiteSpace(doc) && doc != "00000000" && doc != "0";
+                if (docOK && !esGen)
+                    sb.AppendLine(TruncLeft("DNI     : " + doc, W));
+            }
+
+            // Separador → Encabezado columnas
+            sb.AppendLine(Sep());
+            sb.AppendLine(FormatColumns("Descripcion", "Ud.", "Cant.", "Total"));
+            sb.AppendLine(Sep());
+
+            // Filas de producto
+            if (detalle != null)
+            {
+                foreach (DataRow row in detalle.Rows)
+                {
+                    string prod = row["Producto"]?.ToString()     ?? "";
+                    string pres = row["Presentacion"]?.ToString() ?? "";
+                    string cant = decimal.TryParse(row["Cantidad"]?.ToString(), out decimal c)
+                                  ? c.ToString("N2") : "0.00";
+                    string sub  = decimal.TryParse(row["SubTotal"]?.ToString(), out decimal s)
+                                  ? "S/" + s.ToString("N2") : "S/0.00";
+                    FormatProductRow(sb, prod, pres, cant, sub);
+                }
+            }
+
+            // Separador → Totales alineados a la derecha
+            sb.AppendLine(Sep());
+            sb.AppendLine(TwoColumns("SUBTOTAL:", FormatMoney(Get(p, "pSubTotal", "0.00"))));
+            decimal igvPreview = decimal.TryParse(Get(p, "pIGV", "0"), out decimal igvPv) ? igvPv : 0m;
+            if (igvPreview > 0m)
+                sb.AppendLine(TwoColumns("IGV:", FormatMoney(Get(p, "pIGV", "0.00"))));
+            sb.AppendLine(TwoColumns("TOTAL:", FormatMoney(Get(p, "pTotal", "0.00"))));
+
+            // Info de pago
+            if (_config.MostrarInfoPago)
+            {
+                decimal.TryParse(Get(p, "pMontoRecibido"), out decimal recibido);
+                decimal.TryParse(Get(p, "pVuelto"),        out decimal vuelto);
+                sb.AppendLine(Sep());
+                sb.AppendLine(TwoColumns("Metodo de Pago:", Get(p, "pMetodoPago")));
+                if (recibido > 0)
+                    sb.AppendLine(TwoColumns("Recibido:", "S/" + recibido.ToString("N2")));
+                if (vuelto > 0)
+                    sb.AppendLine(TwoColumns("Vuelto:", "S/" + vuelto.ToString("N2")));
+            }
+
+            // Pie de página (centrado)
+            if (_config.MostrarPie && !string.IsNullOrWhiteSpace(_config.MensajePie))
+            {
+                sb.AppendLine(Sep());
+                foreach (string linea in _config.MensajePie.Split(new[] { '\n', '|' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string l = linea.Trim();
+                    if (!string.IsNullOrEmpty(l))
+                        sb.AppendLine(Center(l, W));
+                }
+            }
+
+            // Asignar texto (sin \r\n final para no contar línea vacía extra)
+            rtbTicket.Text = sb.ToString().TrimEnd('\r', '\n');
+            rtbTicket.SelectionStart  = 0;
+            rtbTicket.SelectionLength = 0;
+
+            // Aplicar negrita (comprobante, encabezado columnas, TOTAL)
+            AplicarNegritaTicket(rtbTicket, comprobante);
+
+            // Ajustar altura: todo el RichTextBox usa 8.25F uniforme → cálculo simple
+            int lh     = rtbTicket.Font.Height + 1;
+            int nLines = rtbTicket.Lines.Length;
+            rtbTicket.Height = Math.Max(1, nLines * lh + 4);
+            this.Height      = rtbTicket.Bottom + 3;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // NEGRITA — replica exactamente los BOLD_ON del ESC/POS
+        // ═══════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Aplica negrita a las mismas líneas que TicketESCPOS marca con BOLD_ON:
+        ///   • Nombre de empresa  (1ª línea del encabezado)
+        ///   • Tipo de comprobante (ej. "NOTA DE VENTA")
+        ///   • Encabezado de columnas ("Descripcion  Ud.  Cant.  Total")
+        ///   • Línea TOTAL (no coincide con SUBTOTAL porque empieza por "S")
+        /// </summary>
+        /// <summary>
+        /// Aplica negrita en el RichTextBox a las líneas que ESC/POS marca con BOLD_ON:
+        /// tipo de comprobante, encabezado de columnas y línea TOTAL.
+        /// El nombre de empresa ya no vive aquí — lo muestra lblEmpresa (Label centrado).
+        /// </summary>
+        private static void AplicarNegritaTicket(RichTextBox rtb, string comprobante)
+        {
+            var boldFont = new Font(rtb.Font, FontStyle.Bold);
+            try
+            {
+                for (int i = 0; i < rtb.Lines.Length; i++)
+                {
+                    string line = rtb.Lines[i];
+                    string t    = line.Trim();
+                    bool   bold =
+                        (!string.IsNullOrWhiteSpace(comprobante) && t == comprobante.Trim()) ||
+                        t.StartsWith("Descripci") ||   // encabezado columnas
+                        t.StartsWith("TOTAL:");        // "SUBTOTAL:" empieza por S → no coincide
+                    if (!bold) continue;
+                    int start = rtb.GetFirstCharIndexFromLine(i);
+                    if (start < 0) continue;
+                    rtb.Select(start, line.Length);
+                    rtb.SelectionFont = boldFont;
+                }
+            }
+            finally
+            {
+                rtb.Select(0, 0);
+                boldFont.Dispose();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // HELPERS DE FORMATO (mismo algoritmo que TicketESCPOS)
+        // ═══════════════════════════════════════════════════════════════════════
+
+        private static string Sep() => new string('-', W);
+
+        // Centra el texto en w caracteres con padding simétrico izq+der
+        // → la línea siempre mide exactamente w chars, sin espacio vacío al final
+        private static string Center(string s, int w)
+        {
+            if (s == null) s = "";
+            if (s.Length >= w) return s.Substring(0, w);
+            int total    = w - s.Length;
+            int leftPad  = total / 2;
+            int rightPad = total - leftPad;
+            return new string(' ', leftPad) + s + new string(' ', rightPad);
+        }
+
+        // Rellena con espacios a la derecha hasta w (para líneas Fecha/Cliente)
+        // → la línea siempre mide exactamente w chars
+        private static string TruncLeft(string s, int w)
+        {
+            if (s == null) s = "";
+            if (s.Length > w) return s.Substring(0, w);
+            return s.PadRight(w);
+        }
+
+        // Dos columnas: izquierda + espacios + derecha = W chars.
+        // Si no cabe, trunca left para dar espacio a right (evita corte de right).
+        private static string TwoColumns(string left, string right)
+        {
+            if (left  == null) left  = "";
+            if (right == null) right = "";
+            int spaces = W - left.Length - right.Length;
+            if (spaces < 1)
+            {
+                int maxLeft = W - right.Length - 1;
+                if (maxLeft < 0) maxLeft = 0;
+                left   = left.Length > maxLeft ? left.Substring(0, maxLeft) : left;
+                spaces = 1;
+            }
+            return left + new string(' ', spaces) + right;
+        }
+
+        // 4 columnas: Desc(21,izq) | Ud.(5,centrado) | Cant.(6,der) | Total(10,der) = 42
+        // SIEMPRE UNA LÍNEA: descripción se trunca a 21 si es más larga.
+        // Ud. y datos van siempre en la misma línea → nunca se desplazan a una segunda fila.
+        // CenterPad en Ud.: "Ud." y "kg" ambos arrancan en pos 1 del slot → alineados.
+        private static string FormatColumns(string col1, string col2, string col3, string col4)
+        {
+            return PadRight(col1, 21) + CenterPad(col2, 5) + PadLeft(col3, 6) + PadLeft(col4, 10);
+        }
+
+        // Fila de producto: siempre una sola línea.
+        // PadRight trunca descripción a 21 si supera ese ancho.
+        private static void FormatProductRow(StringBuilder sb, string producto, string presentacion, string cantidad, string subtotal)
+        {
+            if (producto     == null) producto     = "";
+            if (presentacion == null) presentacion = "";
+            sb.AppendLine(PadRight(producto, 21) + CenterPad(presentacion, 5) + PadLeft(cantidad, 6) + PadLeft(subtotal, 10));
+        }
+
+        private static string PadRight(string s, int w)
+        {
+            if (s == null) s = "";
+            return s.Length >= w ? s.Substring(0, w) : s + new string(' ', w - s.Length);
+        }
+
+        private static string PadLeft(string s, int w)
+        {
+            if (s == null) s = "";
+            return s.Length >= w ? s.Substring(0, w) : new string(' ', w - s.Length) + s;
+        }
+
+        // Centra s en un campo de w chars; el centro del texto queda siempre alineado
+        // independientemente del largo de s (e.g. "Ud." y "kg" comparten el mismo centro).
+        private static string CenterPad(string s, int w)
+        {
+            if (s == null) s = "";
+            if (s.Length >= w) return s.Substring(0, w);
+            int pad   = w - s.Length;
+            int left  = pad / 2;
+            int right = pad - left;
+            return new string(' ', left) + s + new string(' ', right);
+        }
+
+        // ── Completar parámetros de empresa desde BD si faltan ─────────────────
         private static void CompletarEmpresa(Dictionary<string, string> p)
         {
             if (p == null) return;
             bool fN = !p.ContainsKey("pEmpresaNombre")   || string.IsNullOrWhiteSpace(p["pEmpresaNombre"]);
-            bool fR = !p.ContainsKey("pEmpresaRUC");
-            bool fD = !p.ContainsKey("pEmpresaDireccion");
-            bool fT = !p.ContainsKey("pEmpresaTelefono");
-            bool fE = !p.ContainsKey("pEmpresaEmail");
+            bool fR = !p.ContainsKey("pEmpresaRUC")       || string.IsNullOrWhiteSpace(p["pEmpresaRUC"]);
+            bool fD = !p.ContainsKey("pEmpresaDireccion") || string.IsNullOrWhiteSpace(p["pEmpresaDireccion"]);
+            bool fT = !p.ContainsKey("pEmpresaTelefono")  || string.IsNullOrWhiteSpace(p["pEmpresaTelefono"]);
+            bool fE = !p.ContainsKey("pEmpresaEmail")     || string.IsNullOrWhiteSpace(p["pEmpresaEmail"]);
             if (!fN && !fR && !fD && !fT && !fE) return;
             try
             {
@@ -223,231 +476,17 @@ namespace SistemaPOS.Controls
             catch { }
         }
 
-        // ── Llenar controles con datos ────────────────────────────────────────
-        private void Llenar(DataTable detalle, Dictionary<string, string> p)
-        {
-            // Logo
-            pbLogo.Visible = false;
-            if (_config.MostrarLogo)
-            {
-                try
-                {
-                    byte[] bytes = EmpresaRepository.ObtenerEmpresa()?.Logo;
-                    if (bytes != null && bytes.Length > 0)
-                    {
-                        pbLogo.Image   = Image.FromStream(new MemoryStream(bytes));
-                        pbLogo.Visible = true;
-                    }
-                }
-                catch { }
-            }
-
-            // Empresa
-            lblNombreNegocio.Visible = true;
-            lblNombreNegocio.Text    = Get(p, "pEmpresaNombre", "").ToUpper();
-
-            lblRuc.Visible = _config.MostrarRUC;
-            lblRuc.Text    = string.IsNullOrWhiteSpace(Get(p, "pEmpresaRUC")) ? "" : "RUC: " + Get(p, "pEmpresaRUC");
-
-            lblDireccion.Visible = _config.MostrarDireccion;
-            lblDireccion.Text    = Get(p, "pEmpresaDireccion");
-
-            lblTelfono.Visible = _config.MostrarTelefono;
-            lblTelfono.Text    = string.IsNullOrWhiteSpace(Get(p, "pEmpresaTelefono")) ? "" : "Tel: " + Get(p, "pEmpresaTelefono");
-
-            lblEmail.Visible = _config.MostrarEmail;
-            lblEmail.Text    = Get(p, "pEmpresaEmail");
-
-            // Comprobante
-            lblComprobante.Visible = true;
-            lblComprobante.Text    = Get(p, "pTipoComprobante", "NOTA DE VENTA").ToUpper();
-
-            lblnumSerie.Visible = true;
-            lblnumSerie.Text    = Get(p, "pNumeroVenta");
-
-            // Fecha y hora
-            lblFecha.Visible = true;
-            lblFecha.Text    = "Fecha : " + Get(p, "pFecha", DateTime.Now.ToString("dd/MM/yyyy"))
-                             + "  " + Get(p, "pHora", DateTime.Now.ToString("HH:mm"));
-
-            // Cliente
-            string cliente = Get(p, "pCliente");
-            if (string.IsNullOrWhiteSpace(cliente)) cliente = "CLIENTE GENERAL";
-            lblCliente.Visible = true;
-            lblCliente.Text    = "Cliente : " + cliente;
-
-            // DNI — solo si tiene valor real y no es cliente general
-            string doc    = Get(p, "pDocCliente");
-            bool   esGen  = string.IsNullOrWhiteSpace(Get(p, "pCliente"))
-                            || Get(p, "pCliente").IndexOf("GENERAL", StringComparison.OrdinalIgnoreCase) >= 0
-                            || Get(p, "pCliente").IndexOf("VARIOS",  StringComparison.OrdinalIgnoreCase) >= 0;
-            bool   docOK  = !string.IsNullOrWhiteSpace(doc) && doc != "00000000" && doc != "0";
-            lblDNI.Visible = _config.MostrarDNI && docOK && !esGen;
-            lblDNI.Text    = "DNI : " + doc;
-
-            // Detalle (única lógica: Descripcion | Unid | Cant | Total)
-            dgvItems.DataSource = detalle;
-            dgvItems.AutoResizeRows(DataGridViewAutoSizeRowsMode.AllCells);
-
-            // Totales
-            lblSubTotal.Visible         = true;
-            lblSubTotalCantidad.Visible = true;
-            lblSubTotalCantidad.Text    = Fmt(Get(p, "pSubTotal", "0.00"));
-
-            lblIGV.Visible         = true;
-            lblIGVCantidad.Visible = true;
-            lblIGVCantidad.Text    = Fmt(Get(p, "pIGV", "0.00"));
-
-            lblTotal.Visible         = true;
-            lblTotalCantidad.Visible = true;
-            lblTotalCantidad.Text    = Fmt(Get(p, "pTotal", "0.00"));
-
-            // Info de pago
-            decimal.TryParse(Get(p, "pMontoRecibido"), out decimal recibido);
-            decimal.TryParse(Get(p, "pVuelto"),        out decimal vuelto);
-
-            label35.Visible                = _config.MostrarInfoPago;
-            lblMetodoPago.Visible          = _config.MostrarInfoPago;
-            lblMetodoPagoSeleccion.Visible = _config.MostrarInfoPago;
-            lblMetodoPagoSeleccion.Text    = Get(p, "pMetodoPago");
-
-            label31.Visible             = _config.MostrarInfoPago && recibido > 0;
-            lblRecibidoCantidad.Visible = _config.MostrarInfoPago && recibido > 0;
-            if (_config.MostrarInfoPago && recibido > 0)
-                lblRecibidoCantidad.Text = Fmt(recibido.ToString("N2"));
-
-            label33.Visible           = _config.MostrarInfoPago && vuelto > 0;
-            lblVueltoCantidad.Visible = _config.MostrarInfoPago && vuelto > 0;
-            if (_config.MostrarInfoPago && vuelto > 0)
-                lblVueltoCantidad.Text = Fmt(vuelto.ToString("N2"));
-
-            // Pie de página
-            bool mostrarPie = _config.MostrarPie && !string.IsNullOrWhiteSpace(_config.MensajePie);
-            label37.Visible      = mostrarPie;
-            lblPiePagina.Visible = mostrarPie;
-            lblPiePagina.Text    = _config.MensajePie ?? "";
-
-            // QR
-            pbQR.Visible = _config.MostrarQR;
-
-            ReflowTicket();
-        }
-
-        // ── Reflow: reposicionar controles colapsando los ocultos ─────────────
-        private void ReflowTicket()
-        {
-            int offset = 0;
-
-            // Delta entre dos controles en el Designer
-            int D(Control a, Control b) => _designerTop[b] - _designerTop[a];
-
-            // Si está oculto: acumula el hueco. Si está visible: coloca en posición diseño - offset.
-            void CP(Control c, int slot)
-            {
-                if (c.Visible) c.Top = _designerTop[c] - offset;
-                else           offset += slot;
-            }
-
-            // ── Cabecera empresa ──────────────────────────────────────────────
-            CP(pbLogo, D(pbLogo, lblNombreNegocio));
-
-            lblNombreNegocio.Height = lblNombreNegocio.PreferredHeight;
-            lblNombreNegocio.Top    = _designerTop[lblNombreNegocio] - offset;
-
-            CP(lblRuc,       D(lblRuc,       lblDireccion));
-            CP(lblDireccion, D(lblDireccion, lblTelfono));
-            CP(lblTelfono,   D(lblTelfono,   lblEmail));
-            CP(lblEmail,     D(lblEmail,     label3));
-
-            // ── Fijos: separador, comprobante, número, fecha, cliente ─────────
-            foreach (var c in new Control[] { label3, lblComprobante, lblnumSerie, lblFecha, lblCliente })
-                c.Top = _designerTop[c] - offset;
-
-            // ── DNI (opcional) ────────────────────────────────────────────────
-            CP(lblDNI, D(lblDNI, label11));
-
-            // ── Cabecera detalle + DGV ────────────────────────────────────────
-            foreach (var c in new Control[] { label11, lblDescripcion, lblUnidad, lblCantidad, lblCosto, pnlLineaDivisora })
-                c.Top = _designerTop[c] - offset;
-
-            dgvItems.Top = _designerTop[dgvItems] - offset;
-
-            // Ajustar altura del DGV a las filas reales
-            if (dgvItems.Rows.Count > 0)
-            {
-                int h = 0;
-                foreach (DataGridViewRow row in dgvItems.Rows) h += row.Height;
-                if (h > 0) dgvItems.Height = h;
-            }
-
-            // ── Footer: relativo al fondo del DGV ────────────────────────────
-            // gap Designer entre fondo-DGV y label22
-            int y = dgvItems.Bottom + (_designerTop[label22] - (_designerTop[dgvItems] + _designerDgvH));
-
-            label22.Top = y;
-            y += D(label22, lblSubTotal);
-
-            lblSubTotal.Top = lblSubTotalCantidad.Top = y;
-            if (lblIGV.Visible)
-            {
-                y += D(lblSubTotal, lblIGV);
-                lblIGV.Top = lblIGVCantidad.Top = y;
-                y += D(lblIGV, lblTotal);
-            }
-            else
-                y += lblSubTotal.Height + 4;
-
-            lblTotal.Top = lblTotalCantidad.Top = y;
-            y += D(lblTotal, label35);
-
-            if (label35.Visible) { label35.Top = y; y += D(label35, lblMetodoPago); }
-            if (lblMetodoPago.Visible)
-            {
-                lblMetodoPago.Top = lblMetodoPagoSeleccion.Top = y;
-                y += D(lblMetodoPago, label31);
-                if (label31.Visible) { label31.Top = lblRecibidoCantidad.Top = y; y += D(label31, label33); }
-                if (label33.Visible) { label33.Top = lblVueltoCantidad.Top   = y; y += D(label33, label37); }
-            }
-
-            if (label37.Visible)      { label37.Top      = y; y += D(label37, lblPiePagina); }
-            if (lblPiePagina.Visible) { lblPiePagina.Top = y; y += D(lblPiePagina, pbQR); }
-            if (pbQR.Visible)         { pbQR.Top         = y; y += pbQR.Height + 5; }
-
-            // El control ajusta su propia altura
-            this.Height = y + 13;
-        }
-
-        // ── Formato de celdas DGV ─────────────────────────────────────────────
-        private void DgvItems_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
-        {
-            if (e.Value == null || e.Value == DBNull.Value) return;
-            string col = dgvItems.Columns[e.ColumnIndex].Name;
-            if (col == "colCantidad")
-            {
-                if (decimal.TryParse(e.Value.ToString(), out decimal d))
-                    e.Value = d.ToString("N2");
-                e.FormattingApplied = true;
-            }
-            else if (col == "colTotal")
-            {
-                if (decimal.TryParse(e.Value.ToString(), out decimal d))
-                    e.Value = "S/ " + d.ToString("N2");
-                e.FormattingApplied = true;
-            }
-        }
-
-        // ── Helpers ───────────────────────────────────────────────────────────
         private static string Get(Dictionary<string, string> p, string k, string def = "")
         {
             string v;
             return p != null && p.TryGetValue(k, out v) && v != null ? v : def;
         }
 
-        private static string Fmt(string raw)
+        private static string FormatMoney(string raw)
         {
             raw = raw?.Trim() ?? "0.00";
-            if (raw == "" || raw == "0" || raw == "0.00") return "S/ 0.00";
-            return raw.StartsWith("S/") ? raw : "S/ " + raw;
+            if (raw == "" || raw == "0" || raw == "0.00") return "S/0.00";
+            return raw.StartsWith("S/") ? raw : "S/" + raw;
         }
     }
 }

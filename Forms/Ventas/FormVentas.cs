@@ -23,7 +23,7 @@ namespace SistemaPOS.Forms.Ventas
         private bool _actualizandoDesdeEdicion;
         private decimal _tasaIGV = 0.18m;
         private decimal _rawCartTotal = 0m;
-        private bool _vistaCards = true;
+        private bool _vistaCards = false;
         private int _ultimaVentaID = 0;
 
         // placeholder
@@ -39,7 +39,7 @@ namespace SistemaPOS.Forms.Ventas
             ConfigurarComboClientes();
             InicializarVenta();
             CargarCategorias();
-            CargarCards();
+            MostrarVistaLista();
             CargarClientes();
 
             // Restringir descuentos
@@ -1031,7 +1031,7 @@ namespace SistemaPOS.Forms.Ventas
                 if (!decimal.TryParse(txtTotalPagar.Text, out decimal total))   total   = 0;
 
                 var parametros = ReportHelper.GetCompanyParameters();
-                parametros["pTipoComprobante"] = cmbTipoComprobante.Text;
+                parametros["pTipoComprobante"] = cmbTipoComprobante.Text.Replace("_", " ");
                 parametros["pNumeroVenta"]     = "";
                 parametros["pFecha"]           = DateTime.Now.ToString("dd/MM/yyyy");
                 parametros["pHora"]            = DateTime.Now.ToString("HH:mm");

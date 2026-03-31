@@ -127,7 +127,10 @@ namespace SistemaPOS.Data
                                 Concepto TEXT(300) NOT NULL,
                                 Monto REAL NOT NULL CHECK(Monto > 0),
                                 Categoria TEXT(50) NOT NULL,
-                                MetodoPago TEXT(20) NOT NULL CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA')),
+                                MetodoPago TEXT(20) NOT NULL CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA','CREDITO')),
+                                TipoIGV INTEGER NOT NULL DEFAULT 0,
+                                BaseImponible REAL NOT NULL DEFAULT 0,
+                                ProveedorID INTEGER NULL,
                                 Comprobante TEXT(100),
                                 Observaciones TEXT(500),
                                 CajaID INTEGER,
@@ -143,14 +146,23 @@ namespace SistemaPOS.Data
                         cmd.CommandText = @"
                             CREATE TABLE IF NOT EXISTS CuentasPorPagar (
                                 CuentaPorPagarID INTEGER PRIMARY KEY AUTOINCREMENT,
-                                CompraID INTEGER NOT NULL,
-                                ProveedorID INTEGER NOT NULL,
-                                MontoTotal REAL NOT NULL CHECK(MontoTotal >= 0),
-                                MontoPagado REAL DEFAULT 0 CHECK(MontoPagado >= 0),
-                                MontoPendiente REAL NOT NULL CHECK(MontoPendiente >= 0),
-                                FechaVencimiento TEXT,
-                                Estado TEXT(20) NOT NULL DEFAULT 'PENDIENTE' CHECK(Estado IN ('PENDIENTE','PARCIAL','PAGADO')),
-                                FOREIGN KEY (CompraID) REFERENCES Compras(CompraID),
+                                TipoOrigen       TEXT    NOT NULL DEFAULT 'COMPRA',
+                                IdOrigen         INTEGER NOT NULL DEFAULT 0,
+                                CompraID         INTEGER NULL,
+                                ProveedorID      INTEGER NULL,
+                                ProveedorNombre  TEXT    NULL,
+                                MontoTotal       REAL    NOT NULL CHECK(MontoTotal >= 0),
+                                MontoPagado      REAL    DEFAULT 0 CHECK(MontoPagado >= 0),
+                                MontoPendiente   REAL    NOT NULL CHECK(MontoPendiente >= 0),
+                                FechaEmision     TEXT    NOT NULL DEFAULT '',
+                                FechaVencimiento TEXT    NULL,
+                                Estado           TEXT(20) NOT NULL DEFAULT 'PENDIENTE'
+                                    CHECK(Estado IN ('PENDIENTE','PARCIAL','PAGADO','ANULADO')),
+                                Observacion      TEXT    NULL,
+                                Eliminado        INTEGER NOT NULL DEFAULT 0,
+                                FechaEliminado   TEXT    NULL,
+                                CreatedAt        TEXT    NOT NULL DEFAULT '',
+                                UpdatedAt        TEXT    NOT NULL DEFAULT '',
                                 FOREIGN KEY (ProveedorID) REFERENCES Proveedores(ProveedorID)
                             );";
                         cmd.ExecuteNonQuery();
@@ -160,15 +172,18 @@ namespace SistemaPOS.Data
                     {
                         cmd.CommandText = @"
                             CREATE TABLE IF NOT EXISTS PagosProveedores (
-                                PagoProveedorID INTEGER PRIMARY KEY AUTOINCREMENT,
+                                PagoProveedorID  INTEGER PRIMARY KEY AUTOINCREMENT,
                                 CuentaPorPagarID INTEGER NOT NULL,
-                                Fecha TEXT NOT NULL,
-                                Hora TEXT NOT NULL,
-                                Monto REAL NOT NULL CHECK(Monto > 0),
-                                MetodoPago TEXT(20) NOT NULL CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA')),
-                                Comprobante TEXT(100),
-                                Observaciones TEXT(500),
-                                UsuarioID INTEGER NOT NULL,
+                                Fecha            TEXT    NOT NULL,
+                                Hora             TEXT    NOT NULL,
+                                Monto            REAL    NOT NULL CHECK(Monto > 0),
+                                MetodoPago       TEXT(20) NOT NULL CHECK(MetodoPago IN ('EFECTIVO','YAPE','TARJETA','TRANSFERENCIA')),
+                                Referencia       TEXT    NULL,
+                                AsientoId        INTEGER NULL,
+                                Anulado          INTEGER NOT NULL DEFAULT 0,
+                                Comprobante      TEXT(100),
+                                Observaciones    TEXT(500),
+                                UsuarioID        INTEGER NOT NULL,
                                 FOREIGN KEY (CuentaPorPagarID) REFERENCES CuentasPorPagar(CuentaPorPagarID),
                                 FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
                             );";

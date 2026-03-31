@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Configuracion
 {
@@ -117,10 +119,12 @@ namespace SistemaPOS.Forms.Configuracion
 
             _ticketPreview = new SistemaPOS.Controls.TicketPreviewControl
             {
-                Location = new Point(0, 0)
+                Location = new Point(0, 0),
+                Width    = 288
             };
             pnlVistaTicket.Controls.Add(_ticketPreview);
-            pnlVistaTicket.AutoScroll = true;
+            pnlVistaTicket.AutoScroll  = false;
+            pnlVistaTicket.AutoSize    = false;
         }
 
         private void ConfigurarEventos()
@@ -308,8 +312,7 @@ namespace SistemaPOS.Forms.Configuracion
                 }
                 CmbAnchoPapel_SelectedIndexChanged(null, EventArgs.Empty);
 
-                int densidad = int.Parse(EmpresaRepository.ObtenerConfiguracion("TICKET_DENSIDAD", "5"));
-                tbDensidad.Value = Math.Max(tbDensidad.Minimum, Math.Min(tbDensidad.Maximum, densidad));
+                tbDensidad.Value = LeerEnteroConfig("TICKET_DENSIDAD", 5, tbDensidad.Minimum, tbDensidad.Maximum);
 
                 chkCortaPapel.Checked = EmpresaRepository.ObtenerConfiguracion("TICKET_CORTAR_PAPEL", "true") == "true";
                 chkSonidoImprimir.Checked = EmpresaRepository.ObtenerConfiguracion("TICKET_SONIDO", "true") == "true";
@@ -355,6 +358,9 @@ namespace SistemaPOS.Forms.Configuracion
         {
             if (_cargandoDatos) return;
             bool hasPie = chkMostrarPie.Checked && !string.IsNullOrWhiteSpace(txtMensajePie1.Text);
+            string mensajePie = string.IsNullOrWhiteSpace(txtMensajePie2.Text)
+                ? txtMensajePie1.Text
+                : txtMensajePie1.Text + "|" + txtMensajePie2.Text;
             var config = new TicketConfig
             {
                 MostrarLogo      = chkMostrarLogo.Checked,
@@ -366,9 +372,23 @@ namespace SistemaPOS.Forms.Configuracion
                 MostrarInfoPago  = chkMostrarInfoPago.Checked,
                 MostrarPie       = hasPie,
                 MostrarQR        = chkMostrarQR.Checked,
-                MensajePie       = txtMensajePie1.Text,
+                MensajePie       = mensajePie,
             };
             _ticketPreview.LlenarDatosDemo(config);
+
+            // Ajustar ancho del panel al ticket + 20px de margen (10 cada lado)
+            int disponible  = ClientSize.Width - pnlVistaTicket.Left - 8;
+            int panelTarget = Math.Min(disponible, _ticketPreview.Width + 20);
+            if (panelTarget != pnlVistaTicket.Width)
+                pnlVistaTicket.Width = panelTarget;
+
+            // Centrar usando ClientSize.Width (descuenta el borde FixedSingle del panel)
+            int clientW  = pnlVistaTicket.ClientSize.Width;
+            int ticketW  = _ticketPreview.Width;
+            _ticketPreview.Left = Math.Max(0, (clientW - ticketW) / 2);
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[Preview] pnlVistaTicket.ClientSize.Width={clientW}  _ticketPreview.Width={ticketW}  Left={_ticketPreview.Left}");
         }
 
 
@@ -414,9 +434,10 @@ namespace SistemaPOS.Forms.Configuracion
                 EmpresaRepository.GuardarConfiguracion("TICKET_MARGEN_SUP_MM", nudMargenSuperior.Value.ToString(), "INTEGER", "Impresion", "Margen superior en mm");
                 EmpresaRepository.GuardarConfiguracion("TICKET_MARGEN_INF_MM", nudMargenInferior.Value.ToString(), "INTEGER", "Impresion", "Margen inferior en mm");
             }
-            catch
+            catch (Exception ex)
             {
-                // Silenciar errores de guardado automatico
+                MessageBox.Show($"Error al guardar la configuración: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -454,84 +475,92 @@ namespace SistemaPOS.Forms.Configuracion
         {
             if (cmbImpresoraPredeterminada.SelectedItem == null)
             {
-                MessageBox.Show("Seleccione una impresora primero", "Informacion",
+                MessageBox.Show("Seleccione una impresora primero", "Información",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             try
             {
-                var printDocument = new PrintDocument();
-                printDocument.PrinterSettings.PrinterName = cmbImpresoraPredeterminada.SelectedItem.ToString();
-
-                int copias = int.Parse(cmbNumeroCopias.SelectedItem?.ToString() ?? "1");
-                printDocument.PrinterSettings.Copies = (short)copias;
-                printDocument.OriginAtMargins = false;
-                printDocument.DefaultPageSettings.Landscape = false;
-
+                string impresora = cmbImpresoraPredeterminada.SelectedItem.ToString();
                 int anchoMm = ObtenerAnchoPapelMm();
-                int anchoPapel = MmAHundredthsInch(anchoMm);
-                int ajusteEscala = (int)nudEscalaAjuste.Value;
-                double factorEscala = Math.Max(0.5d, 1d + (ajusteEscala / 100d));
-                int margenIzq = MmAHundredthsInch((int)nudMargenIzquierdo.Value);
-                int margenDer = MmAHundredthsInch((int)nudMargenDerecho.Value);
-                int margenSup = MmAHundredthsInch((int)nudMargenSuperior.Value);
-                int margenInf = MmAHundredthsInch((int)nudMargenInferior.Value);
 
-                int altoContenidoVista = _ticketPreview?.ContentHeight ?? 500;
-                int anchoVista         = _ticketPreview?.ContentWidth  ?? 288;
-
-                int anchoBase = Math.Max(1, anchoPapel - margenIzq - margenDer);
-                int anchoContenido = Math.Max(1, (int)Math.Round(anchoBase * factorEscala));
-                anchoContenido = Math.Min(anchoBase, anchoContenido);
-                double relacionVista = (double)altoContenidoVista / Math.Max(1, anchoVista);
-                int altoContenido = (int)Math.Ceiling(anchoContenido * relacionVista);
-                int altoPapel = Math.Max(200, altoContenido + margenSup + margenInf);
-
-                printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-                printDocument.DefaultPageSettings.PaperSize = new PaperSize("TicketPersonalizado", anchoPapel, altoPapel);
-
-                printDocument.PrintPage += (s, ev) =>
+                string mensajePiePrueba = string.IsNullOrWhiteSpace(txtMensajePie2.Text)
+                    ? txtMensajePie1.Text
+                    : txtMensajePie1.Text + "|" + txtMensajePie2.Text;
+                var config = new TicketConfig
                 {
-                    ev.Graphics.Clear(Color.White);
-                    ev.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-                    ev.Graphics.InterpolationMode  = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    ev.Graphics.SmoothingMode      = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                    ev.Graphics.PixelOffsetMode    = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-                    ev.Graphics.TextRenderingHint  = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-
-                    ev.Graphics.TranslateTransform(-ev.PageSettings.HardMarginX, -ev.PageSettings.HardMarginY);
-
-                    int anchoDriver = Math.Max(1, ev.PageBounds.Width);
-                    int diferenciaAncho = Math.Abs(anchoDriver - anchoPapel);
-                    int anchoBaseReal = diferenciaAncho > (anchoPapel / 4) ? anchoDriver : anchoPapel;
-                    int anchoImprimibleReal = Math.Max(1, anchoBaseReal - margenIzq - margenDer);
-                    int anchoDestino = Math.Max(1, (int)Math.Round(anchoImprimibleReal * factorEscala));
-                    anchoDestino = Math.Min(anchoImprimibleReal, anchoDestino);
-
-                    Rectangle destino = new Rectangle
-                    {
-                        X      = margenIzq,
-                        Y      = margenSup,
-                        Width  = anchoDestino,
-                        Height = (int)Math.Round(anchoDestino * relacionVista)
-                    };
-                    int altoMaximo = Math.Max(1, ev.PageBounds.Height - margenSup - margenInf);
-                    destino.Height = Math.Min(destino.Height, altoMaximo);
-
-                    _ticketPreview?.RenderForPrint(ev.Graphics, destino, altoContenidoVista);
-                    ev.HasMorePages = false;
+                    MostrarLogo      = chkMostrarLogo.Checked,
+                    MostrarRUC       = chkMostrarRUC.Checked,
+                    MostrarDireccion = chkMostrarDireccion.Checked,
+                    MostrarTelefono  = chkMostrarTelefono.Checked,
+                    MostrarEmail     = chkMostrarEmail.Checked,
+                    MostrarDNI       = chkMostrarDNI.Checked,
+                    MostrarInfoPago  = chkMostrarInfoPago.Checked,
+                    MostrarPie       = chkMostrarPie.Checked,
+                    MostrarQR        = chkMostrarQR.Checked,
+                    MensajePie       = mensajePiePrueba,
                 };
 
-                printDocument.Print();
+                // Build demo data (same as LlenarDatosDemo)
+                var dt = new System.Data.DataTable();
+                dt.Columns.Add("Numero", typeof(int));
+                dt.Columns.Add("Producto", typeof(string));
+                dt.Columns.Add("Presentacion", typeof(string));
+                dt.Columns.Add("Cantidad", typeof(decimal));
+                dt.Columns.Add("SubTotal", typeof(decimal));
+                dt.Rows.Add(1, "CRECIMIENTO DE POLLO",  "kg", 100.00m, 240.00m);
+                dt.Rows.Add(2, "MAIZ INTEGRAL GRUESO", "kg",  42.50m,  85.00m);
+
+                var p = new Dictionary<string, string>
+                {
+                    ["pTipoComprobante"] = "NOTA DE VENTA",
+                    ["pNumeroVenta"]     = "N001-00000001",
+                    ["pFecha"]           = DateTime.Now.ToString("dd/MM/yyyy"),
+                    ["pHora"]            = DateTime.Now.ToString("HH:mm"),
+                    ["pCliente"]         = "Cliente Demo",
+                    ["pDocCliente"]      = config.MostrarDNI ? "12345678" : "",
+                    ["pSubTotal"]        = "325.00",
+                    ["pIGV"]             = "0.00",
+                    ["pTotal"]           = "325.00",
+                    ["pMetodoPago"]      = "EFECTIVO",
+                    ["pMontoRecibido"]   = "325.00",
+                    ["pVuelto"]          = "0.00",
+                };
+
+                // Add company params
+                try
+                {
+                    var emp = EmpresaRepository.ObtenerEmpresa();
+                    if (emp != null)
+                    {
+                        p["pEmpresaNombre"]    = !string.IsNullOrWhiteSpace(emp.NombreComercial) ? emp.NombreComercial : (emp.RazonSocial ?? "");
+                        p["pEmpresaRUC"]       = emp.RUC ?? "";
+                        p["pEmpresaDireccion"] = emp.Direccion ?? "";
+                        p["pEmpresaTelefono"]  = emp.Telefono ?? "";
+                        p["pEmpresaEmail"]     = emp.Email ?? "";
+                    }
+                }
+                catch { }
+
+                // Fallback: si la dirección está vacía o es placeholder, usar ficticia
+                if (string.IsNullOrWhiteSpace(p.ContainsKey("pEmpresaDireccion") ? p["pEmpresaDireccion"] : "")
+                    || (p.ContainsKey("pEmpresaDireccion") && p["pEmpresaDireccion"].Contains("*")))
+                    p["pEmpresaDireccion"] = "Av. Los Pinos 234, Lima";
+
+                var escpos = new TicketESCPOS(anchoMm);
+                byte[] data = escpos.GenerarTicket(dt, p, config);
+                bool ok = RawPrinterHelper.SendBytesToPrinter(impresora, data);
 
                 if (chkSonidoImprimir.Checked)
-                {
                     System.Media.SystemSounds.Beep.Play();
-                }
 
-                MessageBox.Show("Ticket de prueba enviado a la impresora", "Informacion",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (ok)
+                    MessageBox.Show("Ticket de prueba enviado a la impresora", "Información",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                else
+                    MessageBox.Show("Error al enviar datos a la impresora", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
@@ -539,12 +568,6 @@ namespace SistemaPOS.Forms.Configuracion
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
-        private static int MmAHundredthsInch(int mm)
-        {
-            return (int)Math.Round(mm * 3.937d);
-        }
-
 
         private int ObtenerAnchoPapelMm()
         {

@@ -42,8 +42,7 @@ namespace SistemaPOS.Models
                 cfg.MostrarDNI       = Leer("TICKET_MOSTRAR_DNI",        true);
                 cfg.MostrarPie       = Leer("TICKET_MOSTRAR_PIE",        true);
                 cfg.MostrarInfoPago  = Leer("TICKET_MOSTRAR_INFO_PAGO",  true);
-                cfg.MensajePie       = EmpresaRepository.ObtenerConfiguracion(
-                                           "TICKET_PIE_LINEA1", "Gracias por su compra!");
+                cfg.MensajePie = BuildMensajePie();
                 // TICKET_MOSTRAR_NOMBRE no se lee: siempre true
             }
             catch (Exception)
@@ -79,6 +78,19 @@ namespace SistemaPOS.Models
         {
             string raw = EmpresaRepository.ObtenerConfiguracion(clave, valorDefault ? "1" : "0");
             return raw == "1" || string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Lee TICKET_PIE_LINEA1 y TICKET_PIE_LINEA2 desde la BD y las combina con '|'.
+        /// TicketESCPOS las divide y las imprime línea por línea.
+        /// </summary>
+        private static string BuildMensajePie()
+        {
+            string l1 = EmpresaRepository.ObtenerConfiguracion("TICKET_PIE_LINEA1", "Gracias por su compra!");
+            string l2 = EmpresaRepository.ObtenerConfiguracion("TICKET_PIE_LINEA2", "");
+            if (!string.IsNullOrWhiteSpace(l2))
+                return l1 + "|" + l2;
+            return l1;
         }
     }
 }

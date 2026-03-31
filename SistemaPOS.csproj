@@ -360,6 +360,12 @@
     <Compile Include="Forms\Shared\FormMotivoAnulacion.Designer.cs">
       <DependentUpon>FormMotivoAnulacion.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\Shared\FormStockInsuficiente.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Shared\FormStockInsuficiente.Designer.cs">
+      <DependentUpon>FormStockInsuficiente.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\Ventas\FormDetalleVenta.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -431,6 +437,10 @@
     <Compile Include="Models\MovimientoCuenta.cs" />
     <Compile Include="Models\TicketConfig.cs" />
     <Compile Include="Models\PapeleraEntrada.cs" />
+    <Compile Include="Models\StockInsuficienteException.cs" />
+    <Compile Include="Models\Permiso.cs" />
+    <Compile Include="Models\RolPermiso.cs" />
+    <Compile Include="Models\LogAuditoria.cs" />
     <Compile Include="Models\AsientoDetalleContable.cs" />
     <Compile Include="Models\CuentaContable.cs" />
     <Compile Include="Models\Ajuste.cs" />
@@ -475,8 +485,11 @@
     </Compile>
     <Compile Include="SqlServerTypes\Loader.cs" />
     <Compile Include="Utils\PasswordHelper.cs" />
+    <Compile Include="Utils\RawPrinterHelper.cs" />
     <Compile Include="Utils\ReportHelper.cs" />
     <Compile Include="Utils\SesionActual.cs" />
+    <Compile Include="Utils\TicketESCPOS.cs" />
+    <Compile Include="Utils\TicketPrinter.cs" />
     <Compile Include="Utils\UiUnitsHelper.cs" />
     <Compile Include="Reports\DataSources\ReportDataSourceHelper.cs" />
     <EmbeddedResource Include="Forms\Compras\FormCompras.resx">

@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
-using System.Drawing.Printing;
 using System.Windows.Forms;
 using SistemaPOS.Controls;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Ventas
 {
@@ -17,6 +17,8 @@ namespace SistemaPOS.Forms.Ventas
     public partial class FormPreviewTicket : Form
     {
         private TicketPreviewControl _ticketPreview;
+        private DataTable _detalle;
+        private Dictionary<string, string> _parametros;
 
         // ── Constructores ─────────────────────────────────────────────────────
 
@@ -30,7 +32,7 @@ namespace SistemaPOS.Forms.Ventas
         private void CrearTicketPreview()
         {
             _ticketPreview = new TicketPreviewControl();
-            _ticketPreview.Dock = DockStyle.Fill;
+            _ticketPreview.Location = new Point(0, 0);
             pnlVistaTicket.Controls.Add(_ticketPreview);
         }
 
@@ -39,6 +41,8 @@ namespace SistemaPOS.Forms.Ventas
         {
             InitializeComponent();
             CrearTicketPreview();
+            _detalle    = detalle;
+            _parametros = parametros;
             _ticketPreview.LlenarDatos(detalle, parametros);
         }
 
@@ -72,10 +76,23 @@ namespace SistemaPOS.Forms.Ventas
 
         private void AjustarForm()
         {
-            pnlVistaTicket.Height = _ticketPreview.Top + _ticketPreview.Height + 4;
-            int maxH = Screen.PrimaryScreen.WorkingArea.Height - 50;
-            ClientSize = new Size(ClientSize.Width,
-                Math.Min(pnlVistaTicket.Height + pnlBottom.Height + 24, maxH));
+            pnlVistaTicket.Width     = _ticketPreview.Width;
+            pnlVistaTicket.Height    = _ticketPreview.Height + 4;
+            pnlVistaTicket.BackColor = Color.White;
+
+            int formWidth = _ticketPreview.Width + 50;
+            formWidth = Math.Max(formWidth, 320);
+            formWidth = Math.Min(formWidth, 420);
+            // Si el ticket es más ancho que el form (ej: DPI alto), ampliar el form
+            if (pnlVistaTicket.Width + 20 > formWidth)
+                formWidth = pnlVistaTicket.Width + 20;
+            pnlVistaTicket.Left = Math.Max(0, (formWidth - pnlVistaTicket.Width) / 2);
+            pnlVistaTicket.Top  = 12;
+
+            int maxH = Screen.PrimaryScreen.WorkingArea.Height - 100;
+            ClientSize = new Size(
+                formWidth,
+                Math.Min(pnlVistaTicket.Top + pnlVistaTicket.Height + pnlBottom.Height + 20, maxH));
         }
 
         // ── Botones ───────────────────────────────────────────────────────────
@@ -84,33 +101,34 @@ namespace SistemaPOS.Forms.Ventas
 
         private void BtnImprimir_Click(object sender, EventArgs e)
         {
-            string impresora = EmpresaRepository.ObtenerConfiguracion("IMPRESORA_PREDETERMINADA", "");
-
-            using (var pd = new PrintDocument())
+            try
             {
-                if (!string.IsNullOrWhiteSpace(impresora))
-                    pd.PrinterSettings.PrinterName = impresora;
-
-                int h = _ticketPreview.ContentHeight;
-                int w = _ticketPreview.ContentWidth;
-
-                pd.DefaultPageSettings.PaperSize = new PaperSize("Ticket",
-                    (int)(w / 96f * 100), (int)(h / 96f * 100));
-                pd.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-
-                pd.PrintPage += (s2, ev) =>
+                string impresora = EmpresaRepository.ObtenerConfiguracion("IMPRESORA_PREDETERMINADA", "");
+                if (string.IsNullOrWhiteSpace(impresora))
                 {
-                    _ticketPreview.RenderForPrint(ev.Graphics,
-                        new Rectangle(0, 0, ev.PageBounds.Width, ev.PageBounds.Height), h);
-                    ev.HasMorePages = false;
-                };
-
-                try   { pd.Print(); Close(); }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error al imprimir: " + ex.Message, "Imprimir",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("No hay impresora configurada. Configure una en Impresión de Comprobantes.",
+                        "Imprimir", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
+
+                int anchoMm = 88;
+                int.TryParse(EmpresaRepository.ObtenerConfiguracion("ANCHO_PAPEL_TICKET", "88"), out anchoMm);
+
+                var config = TicketConfig.CargarDesdeDB();
+                var escpos = new TicketESCPOS(anchoMm);
+                byte[] data = escpos.GenerarTicket(_detalle, _parametros, config);
+
+                bool ok = RawPrinterHelper.SendBytesToPrinter(impresora, data);
+                if (ok)
+                    Close();
+                else
+                    MessageBox.Show("Error al enviar datos a la impresora.", "Imprimir",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al imprimir: " + ex.Message, "Imprimir",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

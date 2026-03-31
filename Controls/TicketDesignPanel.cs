@@ -37,7 +37,7 @@ namespace SistemaPOS.Controls
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.SmoothingMode = SmoothingMode.HighQuality;
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+                g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
                 using (var bg = new SolidBrush(Color.White))
                 {
@@ -57,10 +57,7 @@ namespace SistemaPOS.Controls
             for (int i = parent.Controls.Count - 1; i >= 0; i--)
             {
                 Control c = parent.Controls[i];
-                if (!c.Visible)
-                {
-                    continue;
-                }
+                if (!c.Visible) continue;
 
                 Rectangle rect = new Rectangle(offset.X + c.Left, offset.Y + c.Top, c.Width, c.Height);
 
@@ -69,25 +66,20 @@ namespace SistemaPOS.Controls
                     if (p.BackColor.A > 0 && p.BackColor != Color.Transparent)
                     {
                         using (var b = new SolidBrush(p.BackColor))
-                        {
                             g.FillRectangle(b, rect);
-                        }
                     }
                 }
                 else if (c is Label lbl)
                 {
+                    string lblText = lbl.Text ?? string.Empty;
                     using (var b = new SolidBrush(lbl.ForeColor))
                     {
                         if (lbl.AutoSize)
-                        {
-                            g.DrawString(lbl.Text ?? string.Empty, lbl.Font, b, new PointF(rect.X, rect.Y));
-                        }
+                            g.DrawString(lblText, lbl.Font, b, new PointF(rect.X, rect.Y));
                         else
                         {
                             using (var sf = CreateStringFormat(lbl.TextAlign))
-                            {
-                                g.DrawString(lbl.Text ?? string.Empty, lbl.Font, b, rect, sf);
-                            }
+                                g.DrawString(lblText, lbl.Font, b, rect, sf);
                         }
                     }
                 }
@@ -104,27 +96,75 @@ namespace SistemaPOS.Controls
                         g.FillRectangle(wb, rect);
 
                     int rowY = rect.Y;
+
+                    // ── ISSUE 1: encabezados de columna ───────────────────────────
+                    if (dgv.ColumnHeadersVisible)
+                    {
+                        int hH     = dgv.ColumnHeadersHeight;
+                        var hStyle = dgv.ColumnHeadersDefaultCellStyle;
+                        var hFont  = hStyle.Font     ?? dgv.Font;
+                        var hFc    = hStyle.ForeColor != Color.Empty ? hStyle.ForeColor : Color.Black;
+
+                        g.FillRectangle(Brushes.White, rect.X, rowY, rect.Width, hH);
+
+                        // Clip strictly to header band so no glyph anti-aliasing bleeds below.
+                        var headerClipRegion = new System.Drawing.Region(new RectangleF(rect.X, rowY, rect.Width, hH));
+                        var savedClip = g.Clip;
+                        g.Clip = headerClipRegion;
+
+                        int colX = rect.X;
+                        foreach (DataGridViewColumn col in dgv.Columns)
+                        {
+                            if (!col.Visible) { colX += col.Width; continue; }
+                            var chStyle = col.HeaderCell.InheritedStyle;
+                            var chFont  = chStyle.Font     ?? hFont;
+                            var chFc    = chStyle.ForeColor != Color.Empty ? chStyle.ForeColor : hFc;
+                            var chAlignDgv = chStyle.Alignment != DataGridViewContentAlignment.NotSet
+                                            ? chStyle.Alignment
+                                            : DataGridViewContentAlignment.MiddleLeft;
+                            var chAlign = DgvAlignToContent(chAlignDgv);
+                            var hRect   = new Rectangle(colX, rowY, col.Width, hH);
+                            var inner   = Rectangle.Inflate(hRect, 0, 0);
+                            if (inner.Width > 0 && inner.Height > 0)
+                            {
+                                using (var b  = new SolidBrush(chFc))
+                                using (var sf = CreateStringFormat(chAlign))
+                                {
+                                    sf.FormatFlags &= ~StringFormatFlags.NoWrap;
+                                    sf.Trimming     = StringTrimming.None;
+                                    g.DrawString(col.HeaderText, chFont, b, inner, sf);
+                                }
+                            }
+                            colX += col.Width;
+                        }
+
+                        g.Clip = savedClip;
+                        headerClipRegion.Dispose();
+                        rowY += hH;
+                    }
+
+                    // ── Filas de datos ─────────────────────────────────────────
                     foreach (DataGridViewRow row in dgv.Rows)
                     {
                         int colX = rect.X;
                         foreach (DataGridViewColumn col in dgv.Columns)
                         {
                             if (!col.Visible) { colX += col.Width; continue; }
-                            var cell      = row.Cells[col.Index];
-                            string txt    = cell.FormattedValue?.ToString() ?? "";
-                            var cellRect  = new Rectangle(colX, rowY, col.Width, row.Height);
-                            var style     = cell.InheritedStyle;
-                            var font      = style.Font   ?? dgv.Font;
-                            var fc        = style.ForeColor != Color.Empty ? style.ForeColor : Color.Black;
-                            var align     = DgvAlignToContent(style.Alignment);
-                            var inner     = Rectangle.Inflate(cellRect, -2, -1);
+                            var cell     = row.Cells[col.Index];
+                            string txt   = cell.FormattedValue?.ToString() ?? "";
+                            var cellRect = new Rectangle(colX, rowY, col.Width, row.Height);
+                            var style    = cell.InheritedStyle;
+                            var font     = style.Font ?? dgv.Font;
+                            var fc       = style.ForeColor != Color.Empty ? style.ForeColor : Color.Black;
+                            var align    = DgvAlignToContent(style.Alignment);
+                            var inner    = Rectangle.Inflate(cellRect, -2, -1);
                             if (inner.Width > 0 && inner.Height > 0)
                             {
                                 using (var b  = new SolidBrush(fc))
                                 using (var sf = CreateStringFormat(align))
                                 {
-                                    sf.FormatFlags  &= ~StringFormatFlags.NoWrap;
-                                    sf.Trimming      = StringTrimming.None;
+                                    sf.FormatFlags &= ~StringFormatFlags.NoWrap;
+                                    sf.Trimming     = StringTrimming.None;
                                     g.DrawString(txt, font, b, inner, sf);
                                 }
                             }
@@ -136,9 +176,7 @@ namespace SistemaPOS.Controls
                 }
 
                 if (c.HasChildren)
-                {
                     DrawChildrenRecursive(c, g, new Point(rect.X, rect.Y));
-                }
             }
         }
 
@@ -171,7 +209,7 @@ namespace SistemaPOS.Controls
 
         private static StringFormat CreateStringFormat(ContentAlignment align)
         {
-            var sf = new StringFormat(StringFormatFlags.NoClip)
+            var sf = new StringFormat(StringFormatFlags.NoClip | StringFormatFlags.NoWrap)
             {
                 Trimming = StringTrimming.None
             };

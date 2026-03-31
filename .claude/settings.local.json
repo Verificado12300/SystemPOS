@@ -80,7 +80,19 @@
       "Bash(cmd.exe /c \"\\\\\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\\\\\" \\\\\"E:\\\\SistemaPOS\\\\SistemaPOS.csproj\\\\\" /p:Configuration=Debug /verbosity:minimal /t:Rebuild > E:\\\\SistemaPOS\\\\build_out.txt 2>&1\" && echo DONE)",
       "Bash(cmd /c \"\\\\\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\\\\\" \\\\\"E:\\\\SistemaPOS\\\\SistemaPOS.csproj\\\\\" /p:Configuration=Debug /verbosity:minimal > E:\\\\SistemaPOS\\\\build_out.txt 2> E:\\\\SistemaPOS\\\\build_err.txt\" && cat E:\\\\SistemaPOS\\\\build_out.txt && cat E:\\\\SistemaPOS\\\\build_err.txt)",
       "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"E:\\\\SistemaPOS\\\\SistemaPOS.csproj\" /p:Configuration=Debug /verbosity:minimal)",
-      "Bash(Select-String -Pattern 'warning|error|Warning|Error|SistemaPOS ->')"
+      "Bash(Select-String -Pattern 'warning|error|Warning|Error|SistemaPOS ->')",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"E:\\\\SistemaPOS\\\\SistemaPOS.csproj\" /p:Configuration=Debug /verbosity:minimal)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" \"E:/SistemaPOS/SistemaPOS.csproj\" /p:Configuration=Debug /verbosity:minimal)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" \"E:\\\\SistemaPOS\\\\SistemaPOS.csproj\" /p:Configuration=Debug /verbosity:minimal)",
+      "Bash(powershell.exe -Command \"& ''''C:\\\\Program Files\\\\Microsoft Visual Studio\\\\18\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe'''' ''''E:\\\\SistemaPOS\\\\SistemaPOS.csproj'''' /p:Configuration=Debug /verbosity:minimal\")",
+      "Bash(\"/mnt/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" \"E:/SistemaPOS/SistemaPOS.csproj\" /p:Configuration=Debug /verbosity:minimal)",
+      "Read(//mnt/c/Program Files \\(x86\\)/Microsoft Visual Studio/2019/Community/MSBuild/Current/**)",
+      "Read(//mnt/c/**)",
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" \"E:/SistemaPOS/SistemaPOS.csproj\" /p:Configuration=Debug /verbosity:minimal)",
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" SistemaPOS.csproj /p:Configuration=Debug /verbosity:minimal)",
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" SistemaPOS.csproj -p:Configuration=Debug -verbosity:minimal)",
+      "Bash(powershell.exe -Command \"Test-Path ''''C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe''''\")",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"SistemaPOS.csproj\" /p:Configuration=Debug /verbosity:minimal)"
     ]
   }
 }

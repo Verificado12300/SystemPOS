@@ -43,7 +43,6 @@ namespace SistemaPOS.Forms.Ventas
             this.dgvCarritoVenta = new System.Windows.Forms.DataGridView();
             this.colProductoDV = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colPresentacionDV = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.colCantPres = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colDisminuir = new System.Windows.Forms.DataGridViewImageColumn();
             this.colCantidad = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colAumentar = new System.Windows.Forms.DataGridViewImageColumn();
@@ -409,7 +408,6 @@ namespace SistemaPOS.Forms.Ventas
             this.dgvCarritoVenta.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.colProductoDV,
             this.colPresentacionDV,
-            this.colCantPres,
             this.colDisminuir,
             this.colCantidad,
             this.colAumentar,
@@ -448,14 +446,7 @@ namespace SistemaPOS.Forms.Ventas
             this.colPresentacionDV.ReadOnly = true;
             this.colPresentacionDV.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             this.colPresentacionDV.Width = 60;
-            // 
-            // colCantPres
-            // 
-            this.colCantPres.HeaderText = "Ref.";
-            this.colCantPres.Name = "colCantPres";
-            this.colCantPres.ReadOnly = true;
-            this.colCantPres.Width = 50;
-            // 
+            //
             // colDisminuir
             // 
             this.colDisminuir.HeaderText = "";
@@ -858,7 +849,6 @@ namespace SistemaPOS.Forms.Ventas
         private System.Windows.Forms.DataGridView     dgvCarritoVenta;
         private System.Windows.Forms.DataGridViewTextBoxColumn   colProductoDV;
         private System.Windows.Forms.DataGridViewTextBoxColumn   colPresentacionDV;
-        private System.Windows.Forms.DataGridViewTextBoxColumn   colCantPres;
         private System.Windows.Forms.DataGridViewImageColumn     colDisminuir;
         private System.Windows.Forms.DataGridViewTextBoxColumn   colCantidad;
         private System.Windows.Forms.DataGridViewImageColumn     colAumentar;
