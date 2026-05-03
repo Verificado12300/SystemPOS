@@ -1,3 +1,0 @@
-Versión de MSBuild 18.3.0-release-26070-10+3972042b7 para .NET Framework
-
-  SistemaPOS -> E:\SistemaPOS\bin\Debug\SistemaPOS.exe
