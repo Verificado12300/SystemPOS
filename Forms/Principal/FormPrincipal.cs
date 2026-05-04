@@ -529,32 +529,43 @@ namespace SistemaPOS.Forms.Principal
         private void ReconfigurarMenuContextual()
         {
             cmsUsuarioConfig.Items.Clear();
+            cmsUsuarioConfig.Renderer        = new ModernContextMenuRenderer();
+            cmsUsuarioConfig.ShowImageMargin = false;
+            cmsUsuarioConfig.MinimumSize     = new Size(230, 0);
+            cmsUsuarioConfig.BackColor       = Color.FromArgb(15, 23, 42);
+            cmsUsuarioConfig.ForeColor       = Color.FromArgb(203, 213, 225);
 
-            // Grupo: CONFIGURACIÓN DEL NEGOCIO
-            var hdrNegocio = new ToolStripMenuItem("— NEGOCIO —") { Enabled = false };
-            hdrNegocio.Font = new System.Drawing.Font(hdrNegocio.Font, System.Drawing.FontStyle.Bold);
-            cmsUsuarioConfig.Items.Add(hdrNegocio);
-            cmsUsuarioConfig.Items.Add(mnuEmpresa);
-            cmsUsuarioConfig.Items.Add(mnuGeneral);
-            cmsUsuarioConfig.Items.Add(mnuImpresoras);
-            cmsUsuarioConfig.Items.Add(mnuCategorias);
-            cmsUsuarioConfig.Items.Add(mnuPresentaciones);
-            cmsUsuarioConfig.Items.Add(mnuUnidades);
+            var font = new Font("Segoe UI", 9F, FontStyle.Regular);
+
+            void AddItem(ToolStripMenuItem item, string text)
+            {
+                item.Text    = text;
+                item.Font    = font;
+                item.Padding = new Padding(8, 4, 8, 4);
+                cmsUsuarioConfig.Items.Add(item);
+            }
+
+            // Grupo 1: Negocio
+            AddItem(mnuEmpresa,       "Datos de la Empresa");
+            AddItem(mnuGeneral,       "Configuración General");
+            AddItem(mnuImpresoras,    "Impresoras");
             cmsUsuarioConfig.Items.Add(new ToolStripSeparator());
 
-            // Grupo: ADMINISTRACIÓN DEL SISTEMA
-            var hdrAdmin = new ToolStripMenuItem("— ADMINISTRACIÓN —") { Enabled = false };
-            hdrAdmin.Font = new System.Drawing.Font(hdrAdmin.Font, System.Drawing.FontStyle.Bold);
-            cmsUsuarioConfig.Items.Add(hdrAdmin);
-            cmsUsuarioConfig.Items.Add(mnuUsuarios);
-            mnuRespaldo.Text = "⚠ Respaldo de Datos";
-            cmsUsuarioConfig.Items.Add(mnuRespaldo);
-            cmsUsuarioConfig.Items.Add(mnuLicencia);
-            cmsUsuarioConfig.Items.Add(mnuReportes);
+            // Grupo 2: Catálogo
+            AddItem(mnuCategorias,    "Categorías");
+            AddItem(mnuPresentaciones,"Presentaciones");
+            AddItem(mnuUnidades,      "Unidades de Medida");
             cmsUsuarioConfig.Items.Add(new ToolStripSeparator());
 
-            // Otros
-            cmsUsuarioConfig.Items.Add(mnuPapelera);
+            // Grupo 3: Administración
+            AddItem(mnuUsuarios, "Usuarios y Roles");
+            AddItem(mnuReportes, "Reportes");
+            cmsUsuarioConfig.Items.Add(new ToolStripSeparator());
+
+            // Grupo 4: Sistema
+            AddItem(mnuRespaldo, "Respaldo de Datos");
+            AddItem(mnuLicencia, "Licencia");
+            AddItem(mnuPapelera, "Papelera");
         }
 
         // ─── Mostrar sección CONFIGURACIÓN en sidebar ──────────────────
@@ -792,6 +803,91 @@ namespace SistemaPOS.Forms.Principal
 
         /// <summary>Actualiza el nombre del chip tras guardar en FormEmpresa.</summary>
         public void ActualizarChipEmpresa() => CargarNombreEmpresa();
+
+        // ─── Renderer oscuro moderno para cmsUsuarioConfig ───────────────────
+        private sealed class ModernContextMenuRenderer : ToolStripProfessionalRenderer
+        {
+            private static readonly Color BgColor   = Color.FromArgb(15,  23,  42);
+            private static readonly Color HoverBg   = Color.FromArgb(49,  46, 129);
+            private static readonly Color HoverBdr  = Color.FromArgb(99, 102, 241);
+            private static readonly Color TextColor = Color.FromArgb(203, 213, 225);
+            private static readonly Color TextDim   = Color.FromArgb(100, 116, 139);
+            private static readonly Color SepColor  = Color.FromArgb(51,  65,  85);
+
+            public ModernContextMenuRenderer() : base(new ModernColorTable()) { }
+
+            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+            {
+                using (var br = new SolidBrush(BgColor))
+                    e.Graphics.FillRectangle(br, e.AffectedBounds);
+            }
+
+            protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+            {
+                if (!e.Item.Selected || !e.Item.Enabled) return;
+                var g    = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(4, 1, e.Item.Width - 8, e.Item.Height - 2);
+                using (var path = RoundedPath(rect, 5))
+                using (var fill = new SolidBrush(HoverBg))
+                using (var pen  = new Pen(HoverBdr))
+                {
+                    g.FillPath(fill, path);
+                    g.DrawPath(pen, path);
+                }
+            }
+
+            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+            {
+                e.TextColor = e.Item.Enabled ? TextColor : TextDim;
+                base.OnRenderItemText(e);
+            }
+
+            protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+            {
+                int y = e.Item.Height / 2;
+                using (var pen = new Pen(SepColor))
+                    e.Graphics.DrawLine(pen, 12, y, e.Item.Width - 12, y);
+            }
+
+            protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
+            {
+                var rect = e.AffectedBounds;
+                rect.Width--; rect.Height--;
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var pen  = new Pen(SepColor))
+                using (var path = RoundedPath(rect, 6))
+                    e.Graphics.DrawPath(pen, path);
+            }
+
+            private static GraphicsPath RoundedPath(Rectangle r, int radius)
+            {
+                int d    = radius * 2;
+                var path = new GraphicsPath();
+                path.AddArc(r.X,          r.Y,           d, d, 180, 90);
+                path.AddArc(r.Right - d,  r.Y,           d, d, 270, 90);
+                path.AddArc(r.Right - d,  r.Bottom - d,  d, d,   0, 90);
+                path.AddArc(r.X,          r.Bottom - d,  d, d,  90, 90);
+                path.CloseFigure();
+                return path;
+            }
+
+            private sealed class ModernColorTable : ProfessionalColorTable
+            {
+                public override Color ToolStripDropDownBackground        => Color.FromArgb(15, 23, 42);
+                public override Color MenuBorder                         => Color.FromArgb(51, 65, 85);
+                public override Color MenuItemBorder                     => Color.FromArgb(99, 102, 241);
+                public override Color MenuItemSelected                   => Color.FromArgb(49, 46, 129);
+                public override Color MenuItemSelectedGradientBegin      => Color.FromArgb(49, 46, 129);
+                public override Color MenuItemSelectedGradientEnd        => Color.FromArgb(49, 46, 129);
+                public override Color MenuItemPressedGradientBegin       => Color.FromArgb(67, 56, 202);
+                public override Color MenuItemPressedGradientEnd         => Color.FromArgb(67, 56, 202);
+                public override Color MenuItemPressedGradientMiddle      => Color.FromArgb(67, 56, 202);
+                public override Color ImageMarginGradientBegin           => Color.FromArgb(15, 23, 42);
+                public override Color ImageMarginGradientMiddle          => Color.FromArgb(15, 23, 42);
+                public override Color ImageMarginGradientEnd             => Color.FromArgb(15, 23, 42);
+            }
+        }
     }
 
     // ─── Filtro global de mensajes para detectar actividad ───────────
