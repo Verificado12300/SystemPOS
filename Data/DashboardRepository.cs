@@ -8,20 +8,21 @@ namespace SistemaPOS.Data
     {
         private static void ObtenerRangoFechas(string periodo, out string fechaInicio, out string fechaFin)
         {
-            fechaFin = DateTime.Now.ToString("yyyy-MM-dd");
+            DateTime hoy = DateTime.Today;
+            fechaFin = hoy.ToString("yyyy-MM-dd");
 
             switch (periodo)
             {
                 case "semana":
-                    int diasDesdeInicio = (int)DateTime.Now.DayOfWeek;
-                    if (diasDesdeInicio == 0) diasDesdeInicio = 7;
-                    fechaInicio = DateTime.Now.AddDays(-(diasDesdeInicio - 1)).ToString("yyyy-MM-dd");
+                    // Últimos 7 días (hoy inclusive) para que el sábado siempre sea visible
+                    // aunque hoy sea lunes o martes de la semana siguiente.
+                    fechaInicio = hoy.AddDays(-6).ToString("yyyy-MM-dd");
                     break;
                 case "mes":
-                    fechaInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd");
+                    fechaInicio = new DateTime(hoy.Year, hoy.Month, 1).ToString("yyyy-MM-dd");
                     break;
                 default: // "dia"
-                    fechaInicio = DateTime.Now.ToString("yyyy-MM-dd");
+                    fechaInicio = fechaFin;
                     break;
             }
         }
@@ -163,12 +164,9 @@ namespace SistemaPOS.Data
             {
                 case "semana":
                 {
-                    int diasDesdeInicio = (int)DateTime.Now.DayOfWeek;
-                    if (diasDesdeInicio == 0) diasDesdeInicio = 7;
-                    DateTime lunes = DateTime.Now.AddDays(-(diasDesdeInicio - 1)).Date;
-                    DateTime domingo = lunes.AddDays(6);
+                    DateTime hoy = DateTime.Today;
+                    DateTime hace6 = hoy.AddDays(-6);
 
-                    // Dom=0, Lun=1 ... Sáb=6 en DayOfWeek
                     string[] etiqDias = { "Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb" };
                     var ventasPorFecha = new Dictionary<string, decimal>();
 
@@ -177,8 +175,8 @@ namespace SistemaPOS.Data
                         "SELECT Fecha, COALESCE(SUM(Total),0) FROM Ventas " +
                         "WHERE Fecha >= @I AND Fecha <= @F AND Estado != 'ANULADA' GROUP BY Fecha", conn))
                     {
-                        cmd.Parameters.AddWithValue("@I", lunes.ToString("yyyy-MM-dd"));
-                        cmd.Parameters.AddWithValue("@F", domingo.ToString("yyyy-MM-dd"));
+                        cmd.Parameters.AddWithValue("@I", hace6.ToString("yyyy-MM-dd"));
+                        cmd.Parameters.AddWithValue("@F", hoy.ToString("yyyy-MM-dd"));
                         using (var r = cmd.ExecuteReader())
                             while (r.Read())
                                 ventasPorFecha[r[0]?.ToString() ?? ""] =
@@ -188,7 +186,7 @@ namespace SistemaPOS.Data
                     var resultado = new List<(string, decimal)>();
                     for (int i = 0; i < 7; i++)
                     {
-                        DateTime dia = lunes.AddDays(i);
+                        DateTime dia = hace6.AddDays(i);
                         string etiqueta = etiqDias[(int)dia.DayOfWeek];
                         decimal valor = ventasPorFecha.TryGetValue(dia.ToString("yyyy-MM-dd"), out var v) ? v : 0;
                         resultado.Add((etiqueta, valor));

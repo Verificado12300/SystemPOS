@@ -490,6 +490,9 @@
     <Compile Include="Controls\ModernProgressBar.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controls\RoundedComboBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Controls\TicketDesignPanel.cs">
       <SubType>Component</SubType>
     </Compile>

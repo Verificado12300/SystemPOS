@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -16,6 +17,7 @@ namespace SistemaPOS.Forms.Configuracion
         private ConfiguracionFacturacion _configFacturacion;
         private byte[] _logoActual;
         private bool _claveVisible = false;
+        private bool _chipHovered  = false;
 
         public FormEmpresa()
         {
@@ -58,6 +60,7 @@ namespace SistemaPOS.Forms.Configuracion
             lblPreviewRUC.Text = string.IsNullOrWhiteSpace(txtRUC.Text)
                 ? "RUC: —"
                 : $"RUC: {txtRUC.Text.Trim()}";
+            pnlCompanyChip?.Invalidate();
         }
 
         private void ConfigurarControles()
@@ -513,6 +516,120 @@ namespace SistemaPOS.Forms.Configuracion
             pe.Graphics.DrawRectangle(
                 new System.Drawing.Pen(System.Drawing.Color.FromArgb(196, 181, 253)),
                 0, 0, p.Width - 1, p.Height - 1);
+        }
+
+        // ── Company Avatar Chip ───────────────────────────────────────────────
+
+        private void PnlCompanyChip_MouseEnter(object sender, EventArgs e)
+        {
+            _chipHovered = true;
+            pnlCompanyChip.Invalidate();
+        }
+
+        private void PnlCompanyChip_MouseLeave(object sender, EventArgs e)
+        {
+            _chipHovered = false;
+            pnlCompanyChip.Invalidate();
+        }
+
+        private void PnlCompanyChip_Paint(object sender, System.Windows.Forms.PaintEventArgs e)
+        {
+            var p = (System.Windows.Forms.Panel)sender;
+            var g = e.Graphics;
+            g.SmoothingMode   = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            var rect   = new Rectangle(0, 0, p.Width - 1, p.Height - 1);
+            int radius = p.Height / 2;
+
+            // ── Pill background ──────────────────────────────────────────────
+            var bgColor     = _chipHovered ? Color.FromArgb(45, 55, 72) : Color.FromArgb(28, 38, 58);
+            var borderColor = _chipHovered ? Color.FromArgb(99, 102, 241) : Color.FromArgb(51, 65, 85);
+
+            using (var path = ChipRoundedPath(rect, radius))
+            {
+                using (var br = new SolidBrush(bgColor))
+                    g.FillPath(br, path);
+                using (var pen = new Pen(borderColor, _chipHovered ? 1.5f : 1f))
+                    g.DrawPath(pen, path);
+            }
+
+            // ── Avatar circle (izquierda) ────────────────────────────────────
+            int circleSize = 28;
+            int circleX    = 6;
+            int circleY    = (p.Height - circleSize) / 2;
+
+            // Sombra sutil del círculo
+            using (var shadowBr = new SolidBrush(Color.FromArgb(30, 0, 0, 0)))
+                g.FillEllipse(shadowBr, circleX + 1, circleY + 1, circleSize, circleSize);
+
+            // Fondo del círculo (índigo)
+            using (var circleBr = new SolidBrush(_chipHovered
+                ? Color.FromArgb(124, 58, 237)
+                : Color.FromArgb(99, 102, 241)))
+                g.FillEllipse(circleBr, circleX, circleY, circleSize, circleSize);
+
+            // Borde del círculo
+            using (var borderPen = new Pen(Color.FromArgb(255, 255, 255, 30), 1f))
+                g.DrawEllipse(borderPen, circleX, circleY, circleSize - 1, circleSize - 1);
+
+            // Inicial de la empresa dentro del círculo
+            string initial = ObtenerInicialEmpresa();
+            using (var f  = new Font("Segoe UI", 11f, FontStyle.Bold))
+            using (var br = new SolidBrush(Color.White))
+            {
+                var sf = new StringFormat
+                {
+                    Alignment     = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center
+                };
+                g.DrawString(initial, f, br,
+                    new RectangleF(circleX, circleY, circleSize, circleSize), sf);
+            }
+
+            // ── Nombre de la empresa ─────────────────────────────────────────
+            string name = txtNombre?.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(name)) name = "Mi Empresa";
+            if (name.Length > 17) name = name.Substring(0, 15) + "…";
+
+            using (var nameFt = new Font("Segoe UI", 8.5f, FontStyle.Regular))
+            using (var nameBr = new SolidBrush(Color.FromArgb(226, 232, 240)))
+            {
+                var sf = new StringFormat { LineAlignment = StringAlignment.Center };
+                float textX = circleX + circleSize + 8;
+                float textW = p.Width - textX - 22;
+                g.DrawString(name, nameFt, nameBr,
+                    new RectangleF(textX, 0, textW, p.Height), sf);
+            }
+
+            // ── Chevron ▾ ────────────────────────────────────────────────────
+            int cx = p.Width - 13;
+            int cy = p.Height / 2;
+            using (var chevronPen = new Pen(Color.FromArgb(148, 163, 184), 1.5f)
+                { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            {
+                g.DrawLine(chevronPen, cx - 4, cy - 2, cx, cy + 3);
+                g.DrawLine(chevronPen, cx,     cy + 3, cx + 4, cy - 2);
+            }
+        }
+
+        private string ObtenerInicialEmpresa()
+        {
+            string name = txtNombre?.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(name)) return "E";
+            return name[0].ToString().ToUpper();
+        }
+
+        private static GraphicsPath ChipRoundedPath(Rectangle rect, int radius)
+        {
+            int d = Math.Min(radius * 2, Math.Min(rect.Width, rect.Height));
+            var path = new GraphicsPath();
+            path.AddArc(rect.X,           rect.Y,           d, d, 180, 90);
+            path.AddArc(rect.Right - d,   rect.Y,           d, d, 270, 90);
+            path.AddArc(rect.Right - d,   rect.Bottom - d,  d, d,   0, 90);
+            path.AddArc(rect.X,           rect.Bottom - d,  d, d,  90, 90);
+            path.CloseFigure();
+            return path;
         }
     }
 }

@@ -11,6 +11,7 @@ namespace SistemaPOS.Forms.Ventas
     {
         private readonly decimal _total;
         private bool _soloVista;
+        private bool _actualizando;
         private TicketPreviewControl _ticketPreview;
         private DataTable _detalle;
         private Dictionary<string, string> _parametros;
@@ -181,10 +182,19 @@ namespace SistemaPOS.Forms.Ventas
                     }
                     else
                     {
-                        // Efectivo: el usuario ingresa cuánto entrega (puede dar más y recibe vuelto)
-                        // Yape/Tarjeta/Transferencia: monto exacto → auto-rellenar con lo pendiente
-                        if (rdb != rdbEfectivo)
+                        if (rdb == rdbEfectivo)
                         {
+                            // Efectivo activado: limpiar otros métodos para que el usuario
+                            // ingrese cuánto da en efectivo y los demás se auto-complementen.
+                            _actualizando = true;
+                            txtMontoYape.Text          = "";
+                            txtMontoTransferencia.Text = "";
+                            txtMontoTarjeta.Text       = "";
+                            _actualizando = false;
+                        }
+                        else
+                        {
+                            // Yape/Tarjeta/Transferencia: auto-rellenar con el monto pendiente
                             decimal restante = _total - ObtenerSuma();
                             if (restante > 0)
                                 txt.Text = restante.ToString("N2");
@@ -195,6 +205,7 @@ namespace SistemaPOS.Forms.Ventas
             }
 
             ActualizarColorRdb();
+            ActualizarResumen();
             ActualizarTicketPago();
         }
 
@@ -219,8 +230,33 @@ namespace SistemaPOS.Forms.Ventas
 
         private void Txt_TextChanged(object sender, EventArgs e)
         {
+            if (_actualizando) return;
+
+            // Al escribir en Efectivo y haber exactamente un otro método activo, auto-complementar ese método
+            if (sender == txtMontoEfectivo && rdbEfectivo.Checked)
+            {
+                var otros = ObtenerOtrosActivosNoEfectivo();
+                if (otros.Count == 1)
+                {
+                    decimal ef = decimal.TryParse(txtMontoEfectivo.Text, out decimal v) ? v : 0;
+                    decimal restante = Math.Max(0, _total - ef);
+                    _actualizando = true;
+                    otros[0].Text = restante > 0 ? restante.ToString("N2") : "";
+                    _actualizando = false;
+                }
+            }
+
             ActualizarResumen();
             ActualizarTicketPago();
+        }
+
+        private List<TextBox> ObtenerOtrosActivosNoEfectivo()
+        {
+            var lista = new List<TextBox>();
+            if (rdbYape.Checked)          lista.Add(txtMontoYape);
+            if (rdbTransferencia.Checked) lista.Add(txtMontoTransferencia);
+            if (rdbTarjeta.Checked)       lista.Add(txtMontoTarjeta);
+            return lista;
         }
 
         private void TxtSoloNumeros_KeyPress(object sender, KeyPressEventArgs e)

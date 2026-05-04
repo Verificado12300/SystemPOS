@@ -14,6 +14,7 @@ namespace SistemaPOS.Forms.Configuracion
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormEmpresa));
             this.pnlHeader = new System.Windows.Forms.Panel();
+            this.pnlCompanyChip = new System.Windows.Forms.Panel();
             this.lblTitleH = new System.Windows.Forms.Label();
             this.lblSubH = new System.Windows.Forms.Label();
             this.btnGuardar = new System.Windows.Forms.Button();
@@ -103,7 +104,7 @@ namespace SistemaPOS.Forms.Configuracion
             this.lblPreviewNombre = new System.Windows.Forms.Label();
             this.lblPreviewRUC = new System.Windows.Forms.Label();
             this.lblMonLbl = new System.Windows.Forms.Label();
-            this.cmbMoneda = new System.Windows.Forms.ComboBox();
+            this.cmbMoneda = new SistemaPOS.Controls.RoundedComboBox();
             this.txtSimbolo = new System.Windows.Forms.TextBox();
             this.lblMonHint = new System.Windows.Forms.Label();
             this.pnlHeader.SuspendLayout();
@@ -132,6 +133,7 @@ namespace SistemaPOS.Forms.Configuracion
             // pnlHeader
             // 
             this.pnlHeader.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(15)))), ((int)(((byte)(23)))), ((int)(((byte)(42)))));
+            this.pnlHeader.Controls.Add(this.pnlCompanyChip);
             this.pnlHeader.Controls.Add(this.lblTitleH);
             this.pnlHeader.Controls.Add(this.lblSubH);
             this.pnlHeader.Controls.Add(this.btnGuardar);
@@ -141,9 +143,22 @@ namespace SistemaPOS.Forms.Configuracion
             this.pnlHeader.Name = "pnlHeader";
             this.pnlHeader.Size = new System.Drawing.Size(1623, 64);
             this.pnlHeader.TabIndex = 2;
-            // 
+            //
+            // pnlCompanyChip
+            //
+            this.pnlCompanyChip.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.pnlCompanyChip.BackColor = System.Drawing.Color.Transparent;
+            this.pnlCompanyChip.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.pnlCompanyChip.Location = new System.Drawing.Point(1088, 13);
+            this.pnlCompanyChip.Name = "pnlCompanyChip";
+            this.pnlCompanyChip.Size = new System.Drawing.Size(234, 38);
+            this.pnlCompanyChip.TabIndex = 10;
+            this.pnlCompanyChip.Paint += new System.Windows.Forms.PaintEventHandler(this.PnlCompanyChip_Paint);
+            this.pnlCompanyChip.MouseEnter += new System.EventHandler(this.PnlCompanyChip_MouseEnter);
+            this.pnlCompanyChip.MouseLeave += new System.EventHandler(this.PnlCompanyChip_MouseLeave);
+            //
             // lblTitleH
-            // 
+            //
             this.lblTitleH.Font = new System.Drawing.Font("Segoe UI", 13F, System.Drawing.FontStyle.Bold);
             this.lblTitleH.ForeColor = System.Drawing.Color.White;
             this.lblTitleH.Location = new System.Drawing.Point(24, 10);
@@ -1155,16 +1170,16 @@ namespace SistemaPOS.Forms.Configuracion
             this.lblMonLbl.Size = new System.Drawing.Size(200, 13);
             this.lblMonLbl.TabIndex = 7;
             this.lblMonLbl.Text = "MONEDA";
-            // 
+            //
             // cmbMoneda
-            // 
-            this.cmbMoneda.BackColor = System.Drawing.SystemColors.Window;
+            //
+            this.cmbMoneda.BackColor = System.Drawing.Color.White;
             this.cmbMoneda.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbMoneda.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.cmbMoneda.Font = new System.Drawing.Font("Segoe UI", 9.5F);
             this.cmbMoneda.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(15)))), ((int)(((byte)(23)))), ((int)(((byte)(42)))));
-            this.cmbMoneda.Location = new System.Drawing.Point(206, 173);
+            this.cmbMoneda.Location = new System.Drawing.Point(206, 171);
             this.cmbMoneda.Name = "cmbMoneda";
-            this.cmbMoneda.Size = new System.Drawing.Size(186, 23);
+            this.cmbMoneda.Size = new System.Drawing.Size(186, 30);
             this.cmbMoneda.TabIndex = 5;
             // 
             // txtSimbolo
@@ -1173,9 +1188,9 @@ namespace SistemaPOS.Forms.Configuracion
             this.txtSimbolo.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtSimbolo.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.txtSimbolo.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(79)))), ((int)(((byte)(70)))), ((int)(((byte)(229)))));
-            this.txtSimbolo.Location = new System.Drawing.Point(398, 169);
+            this.txtSimbolo.Location = new System.Drawing.Point(398, 171);
             this.txtSimbolo.Name = "txtSimbolo";
-            this.txtSimbolo.Size = new System.Drawing.Size(56, 27);
+            this.txtSimbolo.Size = new System.Drawing.Size(56, 30);
             this.txtSimbolo.TabIndex = 6;
             this.txtSimbolo.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
@@ -1240,6 +1255,7 @@ namespace SistemaPOS.Forms.Configuracion
 
         // ── Campos ────────────────────────────────────────────────────────────
         private System.Windows.Forms.Panel   pnlHeader;
+        private System.Windows.Forms.Panel   pnlCompanyChip;
         private System.Windows.Forms.Label   lblTitleH;
         private System.Windows.Forms.Label   lblSubH;
         private System.Windows.Forms.Button  btnGuardar;
@@ -1262,10 +1278,10 @@ namespace SistemaPOS.Forms.Configuracion
         private System.Windows.Forms.Panel      pnlPreview;
         private System.Windows.Forms.Label      lblPreviewNombre;
         private System.Windows.Forms.Label      lblPreviewRUC;
-        private System.Windows.Forms.Label      lblMonLbl;
-        private System.Windows.Forms.ComboBox   cmbMoneda;
-        private System.Windows.Forms.TextBox    txtSimbolo;
-        private System.Windows.Forms.Label      lblMonHint;
+        private System.Windows.Forms.Label          lblMonLbl;
+        private SistemaPOS.Controls.RoundedComboBox cmbMoneda;
+        private System.Windows.Forms.TextBox        txtSimbolo;
+        private System.Windows.Forms.Label          lblMonHint;
 
         private System.Windows.Forms.Panel      pnlCard2;
         private System.Windows.Forms.Panel      pnlC2Hdr;
