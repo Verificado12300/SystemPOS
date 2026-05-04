@@ -186,19 +186,19 @@ namespace SistemaPOS.Forms.Principal
             this.btnUsuarioConfig.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnUsuarioConfig.BackColor = System.Drawing.Color.White;
             this.btnUsuarioConfig.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnUsuarioConfig.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(210)))), ((int)(((byte)(215)))), ((int)(((byte)(220)))));
-            this.btnUsuarioConfig.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnUsuarioConfig.FlatAppearance.BorderSize = 0;
+            this.btnUsuarioConfig.FlatAppearance.MouseOverBackColor = System.Drawing.Color.White;
             this.btnUsuarioConfig.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnUsuarioConfig.Font = new System.Drawing.Font("Inter V", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnUsuarioConfig.ForeColor = System.Drawing.Color.Black;
-            this.btnUsuarioConfig.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnUsuarioConfig.Location = new System.Drawing.Point(1019, 7);
+            this.btnUsuarioConfig.Location = new System.Drawing.Point(900, 4);
             this.btnUsuarioConfig.Name = "btnUsuarioConfig";
-            this.btnUsuarioConfig.Size = new System.Drawing.Size(121, 25);
+            this.btnUsuarioConfig.Size = new System.Drawing.Size(242, 32);
             this.btnUsuarioConfig.TabIndex = 4;
-            this.btnUsuarioConfig.Text = "Mi Empresa  ▾";
+            this.btnUsuarioConfig.Text = "";
             this.btnUsuarioConfig.UseVisualStyleBackColor = false;
             this.btnUsuarioConfig.Click += new System.EventHandler(this.BtnUsuarioConfig_Click);
+            this.btnUsuarioConfig.Paint += new System.Windows.Forms.PaintEventHandler(this.BtnUsuarioConfig_Paint);
+            this.btnUsuarioConfig.MouseEnter += new System.EventHandler(this.BtnUsuarioConfig_MouseEnter);
+            this.btnUsuarioConfig.MouseLeave += new System.EventHandler(this.BtnUsuarioConfig_MouseLeave);
             // 
             // pnlMenu
             // 

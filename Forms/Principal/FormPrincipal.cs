@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -14,6 +16,11 @@ namespace SistemaPOS.Forms.Principal
         private Form formActivo;
         private Button _botonSeleccionado;
         private ContextMenuStrip _menuUsuario;
+
+        // Company chip
+        private bool   _chipHovered     = false;
+        private string _empresaNombre   = "Mi Empresa";
+        private string _empresaInicial  = "E";
 
         // Inactividad
         private Timer _timerInactividad;
@@ -33,6 +40,7 @@ namespace SistemaPOS.Forms.Principal
             ActualizarBarraEstado();
             btnUsuarioConfig.BringToFront();
             InicializarInactividad();
+            CargarNombreEmpresa();
         }
 
         private bool TienePermiso(Func<SistemaPOS.Models.Usuario, bool> evaluador, string modulo)
@@ -414,6 +422,7 @@ namespace SistemaPOS.Forms.Principal
         {
             if (!TienePermiso(u => u.PermisoConfiguracion, "Empresa")) return;
             AbrirFormEnPanel(new Configuracion.FormEmpresa(), btnEmpresa);
+            CargarNombreEmpresa(); // refresca el chip si el usuario guardó cambios
         }
 
 
@@ -649,6 +658,140 @@ namespace SistemaPOS.Forms.Principal
         {
             AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormContabilidad(), btnContabilidad);
         }
+
+        // ─── Company Avatar Chip ─────────────────────────────────────────────
+
+        private void CargarNombreEmpresa()
+        {
+            try
+            {
+                var emp = EmpresaRepository.ObtenerEmpresa();
+                if (emp != null)
+                {
+                    string nombre = !string.IsNullOrWhiteSpace(emp.NombreComercial)
+                        ? emp.NombreComercial
+                        : (emp.RazonSocial ?? "Mi Empresa");
+                    _empresaNombre  = nombre;
+                    _empresaInicial = nombre.Trim().Length > 0
+                        ? nombre.Trim()[0].ToString().ToUpper()
+                        : "E";
+                }
+            }
+            catch { }
+            btnUsuarioConfig.Invalidate();
+        }
+
+        private void BtnUsuarioConfig_MouseEnter(object sender, EventArgs e)
+        {
+            _chipHovered = true;
+            btnUsuarioConfig.Invalidate();
+        }
+
+        private void BtnUsuarioConfig_MouseLeave(object sender, EventArgs e)
+        {
+            _chipHovered = false;
+            btnUsuarioConfig.Invalidate();
+        }
+
+        private void BtnUsuarioConfig_Paint(object sender, PaintEventArgs e)
+        {
+            var btn = (Button)sender;
+            var g   = e.Graphics;
+            g.SmoothingMode     = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+            var rect   = new Rectangle(0, 0, btn.Width - 1, btn.Height - 1);
+            int radius = btn.Height / 2;
+
+            // ── Pill background ──────────────────────────────────────────────
+            var bgColor = _chipHovered
+                ? Color.FromArgb(224, 231, 255)   // indigo-100 en hover
+                : Color.FromArgb(238, 242, 255);   // indigo-50 en reposo
+            var borderColor = _chipHovered
+                ? Color.FromArgb(99, 102, 241)     // indigo-500 en hover
+                : Color.FromArgb(199, 210, 254);   // indigo-200 en reposo
+
+            using (var path = ChipPath(rect, radius))
+            {
+                using (var bgBr = new SolidBrush(bgColor))
+                    g.FillPath(bgBr, path);
+                using (var pen = new Pen(borderColor, _chipHovered ? 1.5f : 1f))
+                    g.DrawPath(pen, path);
+            }
+
+            // ── Avatar circle ────────────────────────────────────────────────
+            const int circleSize = 24;
+            int circleX = 6;
+            int circleY = (btn.Height - circleSize) / 2;
+
+            var circleColor = _chipHovered
+                ? Color.FromArgb(79, 70, 229)   // indigo-600
+                : Color.FromArgb(99, 102, 241);  // indigo-500
+
+            using (var circleBr = new SolidBrush(circleColor))
+                g.FillEllipse(circleBr, circleX, circleY, circleSize, circleSize);
+
+            // Inicial centrada en el círculo
+            using (var f  = new Font("Segoe UI", 9f, FontStyle.Bold))
+            using (var br = new SolidBrush(Color.White))
+            {
+                var sf = new StringFormat
+                {
+                    Alignment     = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center
+                };
+                g.DrawString(_empresaInicial, f, br,
+                    new RectangleF(circleX, circleY, circleSize, circleSize), sf);
+            }
+
+            // ── Nombre de la empresa ─────────────────────────────────────────
+            string displayName = _empresaNombre;
+            if (displayName.Length > 18) displayName = displayName.Substring(0, 16) + "…";
+
+            var textColor = _chipHovered
+                ? Color.FromArgb(67, 56, 202)   // indigo-700
+                : Color.FromArgb(55, 48, 163);  // indigo-800
+
+            float textX = circleX + circleSize + 7;
+            float textW = btn.Width - textX - 20;
+
+            using (var nameFt = new Font("Segoe UI", 8.5f, FontStyle.Regular))
+            using (var nameBr = new SolidBrush(textColor))
+            {
+                var sf = new StringFormat { LineAlignment = StringAlignment.Center };
+                g.DrawString(displayName, nameFt, nameBr,
+                    new RectangleF(textX, 0, textW, btn.Height), sf);
+            }
+
+            // ── Chevron ▾ ────────────────────────────────────────────────────
+            int cx = btn.Width - 14;
+            int cy = btn.Height / 2;
+            var chevronColor = _chipHovered
+                ? Color.FromArgb(99, 102, 241)
+                : Color.FromArgb(148, 160, 232);
+
+            using (var pen = new Pen(chevronColor, 1.5f)
+                { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+            {
+                g.DrawLine(pen, cx - 4, cy - 2, cx, cy + 3);
+                g.DrawLine(pen, cx,     cy + 3, cx + 4, cy - 2);
+            }
+        }
+
+        private static GraphicsPath ChipPath(Rectangle rect, int radius)
+        {
+            int d = Math.Min(radius * 2, Math.Min(rect.Width, rect.Height));
+            var path = new GraphicsPath();
+            path.AddArc(rect.X,          rect.Y,          d, d, 180, 90);
+            path.AddArc(rect.Right - d,  rect.Y,          d, d, 270, 90);
+            path.AddArc(rect.Right - d,  rect.Bottom - d, d, d,   0, 90);
+            path.AddArc(rect.X,          rect.Bottom - d, d, d,  90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        /// <summary>Actualiza el nombre del chip tras guardar en FormEmpresa.</summary>
+        public void ActualizarChipEmpresa() => CargarNombreEmpresa();
     }
 
     // ─── Filtro global de mensajes para detectar actividad ───────────
