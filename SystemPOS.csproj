@@ -106,6 +106,7 @@
     <Compile Include="Data\GastoRepository.cs" />
     <Compile Include="Data\TokenRecuperacionRepository.cs" />
     <Compile Include="Services\EmailService.cs" />
+    <Compile Include="Services\UpdateChecker.cs" />
     <Compile Include="Data\LibroDiarioRepository.cs" />
     <Compile Include="Data\KardexRepository.cs" />
     <Compile Include="Data\CuentaPorPagarRepository.cs" />
@@ -370,6 +371,12 @@
     </Compile>
     <Compile Include="Forms\Principal\FormPrincipal.Designer.cs">
       <DependentUpon>FormPrincipal.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\Principal\FormActualizacion.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\Principal\FormActualizacion.Designer.cs">
+      <DependentUpon>FormActualizacion.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\Ventas\FormDetalleVenta.cs">
       <SubType>Form</SubType>

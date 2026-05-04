@@ -8,6 +8,23 @@ namespace SistemaPOS
 {
     static class Program
     {
+        private static void VerificarActualizaciones()
+        {
+            try
+            {
+                var (hay, version, url) = Services.UpdateChecker.CheckForUpdates();
+                if (hay && !string.IsNullOrEmpty(url))
+                {
+                    using (var form = new Forms.Principal.FormActualizacion(version, url))
+                        form.ShowDialog();
+                }
+            }
+            catch
+            {
+                // GitHub no responde → continúa inicio normal sin bloquear
+            }
+        }
+
         [STAThread]
         static void Main(string[] cmdArgs)
         {
@@ -55,6 +72,7 @@ namespace SistemaPOS
             try
             {
                 DatabaseConnection.Initialize();
+                VerificarActualizaciones();
 
                 if (!DatabaseConnection.ExistenUsuarios())
                 {

@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
 using SistemaPOS.Data;
+using SistemaPOS.Services;
 
 namespace SistemaPOS.Forms.Configuracion
 {
@@ -23,6 +24,62 @@ namespace SistemaPOS.Forms.Configuracion
         {
             btnActivar.Click += BtnActivar_Click;
             txtCodigoLicencia.TextChanged += TxtCodigoLicencia_TextChanged;
+
+            var btn = new Button
+            {
+                Name      = "btnVerificarActualizaciones",
+                Text      = "  Verificar Actualizaciones",
+                Size      = new Size(224, 30),
+                Anchor    = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(52, 152, 219),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor    = Cursors.Hand,
+                Font      = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.Location = new Point(pnlFooterBar.ClientSize.Width - 242, 7);
+            btn.Click   += BtnVerificarActualizaciones_Click;
+            pnlFooterBar.Controls.Add(btn);
+            btn.BringToFront();
+        }
+
+        private void BtnVerificarActualizaciones_Click(object sender, EventArgs e)
+        {
+            var btn = (Button)sender;
+            btn.Enabled = false;
+            btn.Text    = "  Verificando...";
+            Application.DoEvents();
+
+            try
+            {
+                var (hay, version, url) = UpdateChecker.CheckForUpdates();
+                if (hay && !string.IsNullOrEmpty(url))
+                {
+                    using (var form = new Principal.FormActualizacion(version, url))
+                        form.ShowDialog(this);
+                }
+                else
+                {
+                    var local = Assembly.GetExecutingAssembly().GetName().Version;
+                    string ver = $"{local?.Major}.{local?.Minor}.{local?.Build}";
+                    MessageBox.Show($"Sistema actualizado (v{ver})\n\nEstá usando la versión más reciente.",
+                        "Sin actualizaciones", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"No se pudo verificar actualizaciones.\n\n" +
+                    $"Por favor verifique su conexión a internet e intente nuevamente.\n\n" +
+                    $"Detalle: {ex.Message}",
+                    "Error de conexión", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                btn.Enabled = true;
+                btn.Text    = "  Verificar Actualizaciones";
+            }
         }
 
         private void CargarDatos()
