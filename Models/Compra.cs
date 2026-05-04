@@ -21,6 +21,7 @@ namespace SistemaPOS.Models
         public string MetodoPago { get; set; } // EFECTIVO, TRANSFERENCIA, CREDITO
         public string Estado { get; set; } // COMPLETADA, ANULADA, CREDITO
         public int UsuarioID { get; set; }
+        public decimal Flete { get; set; }
         public string Observaciones { get; set; }
         public DateTime? FechaAnulacion { get; set; }
         public string MotivoAnulacion { get; set; }

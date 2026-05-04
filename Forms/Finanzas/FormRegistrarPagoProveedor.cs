@@ -11,6 +11,8 @@ namespace SistemaPOS.Forms.Finanzas
         private int _cuentaID;
         private decimal _montoPendiente;
 
+        public FormRegistrarPagoProveedor() { InitializeComponent(); }
+
         public FormRegistrarPagoProveedor(int cuentaID)
         {
             InitializeComponent();

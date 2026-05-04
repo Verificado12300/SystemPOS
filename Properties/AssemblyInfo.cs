@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // La información general de un ensamblado se controla mediante el siguiente 
 // conjunto de atributos. Cambie estos valores de atributo para modificar la información
 // asociada con un ensamblado.
-[assembly: AssemblyTitle("SistemaPOS")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("SystemPOS")]
+[assembly: AssemblyDescription("Sistema de Punto de Venta")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("SistemaPOS")]
+[assembly: AssemblyProduct("SystemPOS")]
 [assembly: AssemblyCopyright("Copyright ©  2026")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

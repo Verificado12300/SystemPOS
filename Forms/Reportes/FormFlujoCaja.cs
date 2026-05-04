@@ -21,6 +21,7 @@ namespace SistemaPOS.Forms.Reportes
             dtpDesde.Value = DateTime.Now.AddMonths(-1);
             dtpHasta.Value = DateTime.Now;
             dgvFlujoCaja.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvFlujoCaja);
             dgvFlujoCaja.AllowUserToAddRows = false;
             dgvFlujoCaja.ReadOnly = true;
             btnExportar.Click += BtnExportar_Click;

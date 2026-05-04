@@ -118,136 +118,55 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="Icono-Boton-Clientes-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Clientes-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-tools-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-tools-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Productos" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Productos.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-proveedor-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-proveedor-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-LibroDiario-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-LibroDiario-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-clientes-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-clientes-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Clientes" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Clientes.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-copybook-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-copybook-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-EstadoDeResultado-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-EstadoDeResultado-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-ventas-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-ventas-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-FlujoDeCaja-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-FlujoDeCaja-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-casa-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-casa-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Empresa-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Empresa-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-transaction-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-transaction-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Usuarios" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Usuarios.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-salida-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-salida-251.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Compras" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Compras.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-caja-registradora-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-caja-registradora-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-ReportesGenerales" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-ReportesGenerales.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-ledger-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-ledger-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-HistorialVentas" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-HistorialVentas.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-compras-1-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-compras-1-252.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Compras-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Compras-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-product-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-product-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Ventas-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Ventas-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-payment-history-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-payment-history-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Dashboard" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Dashboard.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-general-ledger-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-general-ledger-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Configuraciones-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Configuraciones-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-pagar-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-pagar-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-HistorialVentas-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-HistorialVentas-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-contabilidad-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-contabilidad-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Icono-Boton-Gastos-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Gastos-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-BalanceGeneral" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-BalanceGeneral.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Empresa" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Empresa.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Caja" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Caja.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Caja-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Caja-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-CuentasPorPagar" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-CuentasPorPagar.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-HistorialCompras-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-HistorialCompras-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Productos-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Productos-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-ReportesGenerales-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-ReportesGenerales-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-HistorialCompras" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-HistorialCompras.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-LibroDiario" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-LibroDiario.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-AlertaStock-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-AlertaStock-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Dashboard-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Dashboard-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Proveedores-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Proveedores-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Gastos" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Gastos.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-CuentasPorPagar-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-CuentasPorPagar-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-EstadoDeResultado" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-EstadoDeResultado.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Usuarios-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Usuarios-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-AlertaStock" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-AlertaStock.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Proveedores" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Proveedores.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-BalanceGeneral-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-BalanceGeneral-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Ajustes-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Ajustes-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-FlujoDeCaja" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-FlujoDeCaja.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Configuracion" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Configuracion.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Ventas" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Ventas.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Ajustes" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Ajustes.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Cerrar" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Cerrar.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="Icono-Boton-Cerrar-hover" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Icons\Icono-Boton-Cerrar-hover.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="icons8-menú-25" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\icons8-menú-25.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

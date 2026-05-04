@@ -23,10 +23,10 @@ namespace SistemaPOS.Data
 
         /// <summary>
         /// Asiento de INGRESO (solo). Costo de Ventas → segunda etapa.
-        ///   EFECTIVO / YAPE          : Dr 101 Caja   = Total
-        ///   TARJETA / TRANSFERENCIA  : Dr 102 Bancos  = Total
+        ///   EFECTIVO                 : Dr 101 Caja   = Total
+        ///   YAPE / TARJETA / TRANSF  : Dr 102 Bancos  = Total
         ///   CREDITO                  : Dr 120 CxC     = Total
-        ///   MIXTO                    : Dr 101 = (Efectivo+Yape), Dr 102 = (Tarjeta+Transf)
+        ///   MIXTO                    : Dr 101 = Efectivo, Dr 102 = (Yape+Tarjeta+Transf)
         ///                              Cr 400 Ventas  = Total
         /// </summary>
         public static void RegistrarVenta(
@@ -664,7 +664,7 @@ namespace SistemaPOS.Data
         /// Asiento al registrar un gasto operativo.
         ///   Dr 600 Gastos Operativos = Monto
         ///   Cr 101 Caja / 102 Bancos / 200 CxP  (según MetodoPago)
-        /// EFECTIVO/YAPE → 101;  TARJETA/TRANSFERENCIA → 102;  CREDITO → 200
+        /// EFECTIVO → 101;  YAPE/TARJETA/TRANSFERENCIA → 102;  CREDITO → 200
         /// </summary>
         public static void RegistrarGasto(
             long gastoID, string concepto, DateTime fecha, TimeSpan hora,
@@ -965,24 +965,24 @@ namespace SistemaPOS.Data
             }
             else if (mp == "MIXTO")
             {
-                decimal cash = montoEfectivo + montoYape;
-                decimal bank = montoTarjeta + montoTransferencia;
+                decimal cash = montoEfectivo;
+                decimal bank = montoYape + montoTarjeta + montoTransferencia;
 
                 if (cash > 0m)
                 {
                     var caja = GetCuenta("101", conn, tx);
                     if (invertir)
-                        AddLine(asiento, caja.CuentaID, 0m, cash, "Anulación caja (efectivo/Yape)");
+                        AddLine(asiento, caja.CuentaID, 0m, cash, "Anulación caja (efectivo)");
                     else
-                        AddLine(asiento, caja.CuentaID, cash, 0m, "Cobro efectivo/Yape");
+                        AddLine(asiento, caja.CuentaID, cash, 0m, "Cobro efectivo");
                 }
                 if (bank > 0m)
                 {
                     var bancos = GetCuenta("102", conn, tx);
                     if (invertir)
-                        AddLine(asiento, bancos.CuentaID, 0m, bank, "Anulación bancos (tarjeta/transf.)");
+                        AddLine(asiento, bancos.CuentaID, 0m, bank, "Anulación bancos (Yape/tarjeta/transf.)");
                     else
-                        AddLine(asiento, bancos.CuentaID, bank, 0m, "Cobro tarjeta/transferencia");
+                        AddLine(asiento, bancos.CuentaID, bank, 0m, "Cobro Yape/tarjeta/transferencia");
                 }
             }
             else
@@ -1002,9 +1002,11 @@ namespace SistemaPOS.Data
         {
             switch (metodoPago?.ToUpper())
             {
-                case "CREDITO": return "200"; // Cuentas por Pagar
-                case "TRANSFERENCIA": return "102"; // Bancos
-                default: return "101"; // Caja (EFECTIVO)
+                case "CREDITO":      return "200"; // Cuentas por Pagar
+                case "TRANSFERENCIA":
+                case "TARJETA":
+                case "YAPE":         return "102"; // Bancos / medios digitales
+                default:             return "101"; // Caja (solo EFECTIVO)
             }
         }
 
@@ -1238,72 +1240,6 @@ namespace SistemaPOS.Data
         }
 
         // ==================================================================
-        // BALANCE DE COMPROBACIÓN (solo lectura desde asientos)
-        // ==================================================================
-
-        /// <summary>
-        /// Devuelve una fila por cuenta con los movimientos Debe/Haber
-        /// acumulados en el rango de fechas. Saldo = Debe - Haber.
-        /// Ordenado por cc.Codigo. Lista vacía si no hay movimientos.
-        ///
-        /// Verificación SQL directa equivalente:
-        ///   SELECT cc.Codigo, cc.Nombre, cc.Tipo,
-        ///          COALESCE(SUM(ad.Debe),0)  AS Debe,
-        ///          COALESCE(SUM(ad.Haber),0) AS Haber,
-        ///          COALESCE(SUM(ad.Debe),0) - COALESCE(SUM(ad.Haber),0) AS Saldo
-        ///   FROM   AsientosDetalle ad
-        ///   JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
-        ///   JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
-        ///   WHERE  a.Fecha &gt;= '@Desde' AND a.Fecha &lt;= '@Hasta'
-        ///   GROUP  BY cc.CuentaID, cc.Codigo, cc.Nombre, cc.Tipo
-        ///   ORDER  BY cc.Codigo;
-        ///   -- En partida doble perfecta: SUM(Debe) == SUM(Haber)
-        /// </summary>
-        public static List<BalanceComprobacionItemDTO> ObtenerBalanceComprobacion(
-            DateTime desde, DateTime hasta)
-        {
-            const string sql = @"
-                SELECT
-                    cc.Codigo,
-                    cc.Nombre,
-                    cc.Tipo,
-                    COALESCE(SUM(ad.Debe),  0) AS Debe,
-                    COALESCE(SUM(ad.Haber), 0) AS Haber
-                FROM   AsientosDetalle ad
-                JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
-                JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
-                WHERE  a.Fecha >= @Desde AND a.Fecha <= @Hasta
-                GROUP  BY cc.CuentaID, cc.Codigo, cc.Nombre, cc.Tipo
-                ORDER  BY cc.Codigo";
-
-            var lista = new List<BalanceComprobacionItemDTO>();
-
-            using (var conn = DatabaseConnection.GetConnection())
-            using (var cmd  = new SQLiteCommand(sql, conn))
-            {
-                cmd.Parameters.AddWithValue("@Desde", desde.ToString("yyyy-MM-dd"));
-                cmd.Parameters.AddWithValue("@Hasta", hasta.ToString("yyyy-MM-dd"));
-
-                using (var r = cmd.ExecuteReader())
-                {
-                    while (r.Read())
-                    {
-                        lista.Add(new BalanceComprobacionItemDTO
-                        {
-                            Codigo = r.GetString(0),
-                            Nombre = r.GetString(1),
-                            Tipo   = r.GetString(2),
-                            Debe   = r.IsDBNull(3) ? 0m : r.GetDecimal(3),
-                            Haber  = r.IsDBNull(4) ? 0m : r.GetDecimal(4)
-                        });
-                    }
-                }
-            }
-
-            return lista;
-        }
-
-        // ==================================================================
         // BALANCE GENERAL (solo lectura desde asientos — acumulado)
         // ==================================================================
 
@@ -1456,7 +1392,8 @@ namespace SistemaPOS.Data
 
             // Cr 101 Caja o 102 Bancos según método
             string codigoCr = (metodoPago?.ToUpper() == "TRANSFERENCIA" ||
-                               metodoPago?.ToUpper() == "TARJETA") ? "102" : "101";
+                               metodoPago?.ToUpper() == "TARJETA"       ||
+                               metodoPago?.ToUpper() == "YAPE") ? "102" : "101";
             var cuentaCr = GetCuenta(codigoCr, conn, tx);
             AddLine(asiento, cuentaCr.CuentaID, 0m, monto,
                 $"Pago a proveedor ({metodoPago})");
@@ -1491,7 +1428,8 @@ namespace SistemaPOS.Data
 
             // Dr 101 Caja o 102 Bancos (inverso del Cr original)
             string codigoDr = (metodoPago?.ToUpper() == "TRANSFERENCIA" ||
-                               metodoPago?.ToUpper() == "TARJETA") ? "102" : "101";
+                               metodoPago?.ToUpper() == "TARJETA"       ||
+                               metodoPago?.ToUpper() == "YAPE") ? "102" : "101";
             var cuentaDr = GetCuenta(codigoDr, conn, tx);
             AddLine(asiento, cuentaDr.CuentaID, monto, 0m, $"Devolución pago ({metodoPago})");
 
@@ -1533,17 +1471,18 @@ namespace SistemaPOS.Data
             // Dr 101/102 según método de pago (proporcional cuando MIXTO)
             if (metodoPago?.ToUpper() == "MIXTO" && totalPago > 0)
             {
-                decimal ef  = Math.Round((montoEfectivo + montoYape) * monto / totalPago, 2);
-                decimal tr  = Math.Round(montoTransferencia           * monto / totalPago, 2);
-                decimal adj = monto - ef - tr;   // absorbe diferencia de redondeo
-                ef += adj;
-                if (ef > 0) { var c101 = GetCuenta("101", conn, tx); AddLine(asiento, c101.CuentaID, ef, 0m, "Cobro efectivo/Yape"); }
-                if (tr > 0) { var c102 = GetCuenta("102", conn, tx); AddLine(asiento, c102.CuentaID, tr, 0m, "Cobro transferencia"); }
+                decimal ef   = Math.Round(montoEfectivo                      * monto / totalPago, 2);
+                decimal bank = Math.Round((montoYape + montoTransferencia)   * monto / totalPago, 2);
+                decimal adj  = monto - ef - bank;   // absorbe diferencia de redondeo
+                bank += adj;
+                if (ef   > 0) { var c101 = GetCuenta("101", conn, tx); AddLine(asiento, c101.CuentaID, ef,   0m, "Cobro efectivo"); }
+                if (bank > 0) { var c102 = GetCuenta("102", conn, tx); AddLine(asiento, c102.CuentaID, bank, 0m, "Cobro Yape/transferencia"); }
             }
             else
             {
                 string cod = (metodoPago?.ToUpper() == "TRANSFERENCIA" ||
-                              metodoPago?.ToUpper() == "TARJETA") ? "102" : "101";
+                              metodoPago?.ToUpper() == "TARJETA"       ||
+                              metodoPago?.ToUpper() == "YAPE") ? "102" : "101";
                 var cDr = GetCuenta(cod, conn, tx);
                 AddLine(asiento, cDr.CuentaID, monto, 0m, $"Cobro crédito ({metodoPago})");
             }
@@ -1585,17 +1524,18 @@ namespace SistemaPOS.Data
             // Cr 101/102 (proporcional si MIXTO)
             if (metodoPago?.ToUpper() == "MIXTO" && totalPago > 0)
             {
-                decimal ef  = Math.Round((montoEfectivo + montoYape) * monto / totalPago, 2);
-                decimal tr  = Math.Round(montoTransferencia           * monto / totalPago, 2);
-                decimal adj = monto - ef - tr;
-                ef += adj;
-                if (ef > 0) { var c101 = GetCuenta("101", conn, tx); AddLine(asiento, c101.CuentaID, 0m, ef, "Devolución efectivo/Yape"); }
-                if (tr > 0) { var c102 = GetCuenta("102", conn, tx); AddLine(asiento, c102.CuentaID, 0m, tr, "Devolución transferencia"); }
+                decimal ef   = Math.Round(montoEfectivo                    * monto / totalPago, 2);
+                decimal bank = Math.Round((montoYape + montoTransferencia) * monto / totalPago, 2);
+                decimal adj  = monto - ef - bank;
+                bank += adj;
+                if (ef   > 0) { var c101 = GetCuenta("101", conn, tx); AddLine(asiento, c101.CuentaID, 0m, ef,   "Devolución efectivo"); }
+                if (bank > 0) { var c102 = GetCuenta("102", conn, tx); AddLine(asiento, c102.CuentaID, 0m, bank, "Devolución Yape/transferencia"); }
             }
             else
             {
                 string cod = (metodoPago?.ToUpper() == "TRANSFERENCIA" ||
-                              metodoPago?.ToUpper() == "TARJETA") ? "102" : "101";
+                              metodoPago?.ToUpper() == "TARJETA"       ||
+                              metodoPago?.ToUpper() == "YAPE") ? "102" : "101";
                 var cCr = GetCuenta(cod, conn, tx);
                 AddLine(asiento, cCr.CuentaID, 0m, monto, $"Devolución cobro ({metodoPago})");
             }

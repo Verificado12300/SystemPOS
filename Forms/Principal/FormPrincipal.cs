@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using SistemaPOS.Data;
 using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Principal
@@ -12,24 +13,26 @@ namespace SistemaPOS.Forms.Principal
     {
         private Form formActivo;
         private Button _botonSeleccionado;
-        private Dictionary<Button, Image> _iconosNormal;
-        private Dictionary<Button, Image> _iconosHover;
-        private Dictionary<Button, Color> _coloresIcono;
-
-        private readonly Color _colorTextoNormal = Color.Black;
-        private readonly Color _bgSeleccionado = Color.FromArgb(232, 245, 253);
         private ContextMenuStrip _menuUsuario;
+
+        // Inactividad
+        private Timer _timerInactividad;
+        private DateTime _ultimaActividad = DateTime.Now;
+        private bool _avisoMostrado = false;
+        private int _minutosInactividad = 30;
 
         public FormPrincipal()
         {
             InitializeComponent();
-            ConfigurarIconosMenu();
+            MostrarSeccionConfiguracion();
+            ReconfigurarMenuContextual();
             AplicarPermisosUI();
             ConfigurarMenuUsuario();
             ConfigurarMenuUsuarioConfig();
             ActualizarPermisosMenuUsuario();
             ActualizarBarraEstado();
             btnUsuarioConfig.BringToFront();
+            InicializarInactividad();
         }
 
         private bool TienePermiso(Func<SistemaPOS.Models.Usuario, bool> evaluador, string modulo)
@@ -78,7 +81,7 @@ namespace SistemaPOS.Forms.Principal
                 btnCuentasPagar.Enabled = true;
                 btnUsuarios.Enabled = true;
                 btnEmpresa.Enabled = true;
-                btnConfiguracion.Enabled = true;
+
                 ActualizarPermisosMenuUsuario();
                 return;
             }
@@ -103,7 +106,7 @@ namespace SistemaPOS.Forms.Principal
 
             btnUsuarios.Enabled = u.PermisoConfiguracion;
             btnEmpresa.Enabled = u.PermisoConfiguracion;
-            btnConfiguracion.Enabled = u.PermisoConfiguracion;
+
 
             ActualizarPermisosMenuUsuario();
         }
@@ -147,6 +150,9 @@ namespace SistemaPOS.Forms.Principal
             _menuUsuario.Items[3].Enabled = permisoReportes;
             _menuUsuario.Items[4].Enabled = permisoConfig;
 
+            // cmsUsuarioConfig — permisos por ítem
+            bool soloAdmin = usuario != null && usuario.RolID == 1;
+
             mnuEmpresa.Visible        = permisoConfig;
             mnuUsuarios.Visible       = permisoConfig;
             mnuCategorias.Visible     = permisoConfig;
@@ -157,9 +163,9 @@ namespace SistemaPOS.Forms.Principal
             mnuGeneral.Visible        = permisoConfig;
             mnuPapelera.Visible       = permisoConfig;
             mnuLicencia.Visible       = permisoConfig;
-            mnuSep.Visible            = permisoConfig && permisoReportes;
-            mnuReportes.Visible       = permisoReportes;
-            btnUsuarioConfig.Enabled  = permisoConfig || permisoReportes;
+            mnuPeriodos.Visible       = permisoConfig;
+            btnUsuarioConfig.Enabled  = permisoConfig;
+
         }
 
         private void BtnUsuarioConfig_Click(object sender, EventArgs e)
@@ -219,6 +225,11 @@ namespace SistemaPOS.Forms.Principal
             AbrirFormEnPanel(new Configuracion.FormLicencia());
         }
 
+        private void MnuPeriodos_Click(object sender, EventArgs e)
+        {
+            AbrirCierrePeriodo();
+        }
+
         private void MostrarMiCuenta()
         {
             var usuario = SesionActual.Usuario;
@@ -233,121 +244,42 @@ namespace SistemaPOS.Forms.Principal
             MessageBox.Show(mensaje, "Mi cuenta", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void ConfigurarIconosMenu()
-        {
-            _iconosNormal = new Dictionary<Button, Image>();
-            _iconosHover = new Dictionary<Button, Image>();
-            _coloresIcono = new Dictionary<Button, Color>();
-
-            var r = Properties.Resources.ResourceManager;
-            RegistrarIcono(btnDashboard, r.GetObject("Icono-Boton-Dashboard") as Image, r.GetObject("Icono-Boton-Dashboard-hover") as Image);
-            RegistrarIcono(btnVentas, r.GetObject("Icono-Boton-Ventas") as Image, r.GetObject("Icono-Boton-Ventas-hover") as Image);
-            RegistrarIcono(btnHistorialVentas, r.GetObject("Icono-Boton-HistorialVentas") as Image, r.GetObject("Icono-Boton-HistorialVentas-hover") as Image);
-            RegistrarIcono(btnCompras, r.GetObject("Icono-Boton-Compras") as Image, r.GetObject("Icono-Boton-Compras-hover") as Image);
-            RegistrarIcono(btnHistorialCompras, r.GetObject("Icono-Boton-HistorialCompras") as Image, r.GetObject("Icono-Boton-HistorialCompras-hover") as Image);
-            RegistrarIcono(btnProductos, r.GetObject("Icono-Boton-Productos") as Image, r.GetObject("Icono-Boton-Productos-hover") as Image);
-            RegistrarIcono(btnKardex, r.GetObject("Icono-Boton-AlertaStock") as Image, r.GetObject("Icono-Boton-AlertaStock-hover") as Image);
-            RegistrarIcono(btnAjustes, r.GetObject("Icono-Boton-Ajustes") as Image, r.GetObject("Icono-Boton-Ajustes-hover") as Image);
-            RegistrarIcono(btnClientes, r.GetObject("Icono-Boton-Clientes") as Image, r.GetObject("Icono-Boton-Clientes-hover") as Image);
-            RegistrarIcono(btnProveedores, r.GetObject("Icono-Boton-Proveedores") as Image, r.GetObject("Icono-Boton-Proveedores-hover") as Image);
-            RegistrarIcono(btnCaja, r.GetObject("Icono-Boton-Caja") as Image, r.GetObject("Icono-Boton-Caja-hover") as Image);
-            RegistrarIcono(btnGastos, r.GetObject("Icono-Boton-Gastos") as Image, r.GetObject("Icono-Boton-Gastos-hover") as Image);
-            RegistrarIcono(btnCobros, r.GetObject("Icono-Boton-LibroDiario") as Image, r.GetObject("Icono-Boton-LibroDiario-hover") as Image);
-            RegistrarIcono(btnCuentasPagar, r.GetObject("Icono-Boton-CuentasPorPagar") as Image, r.GetObject("Icono-Boton-CuentasPorPagar-hover") as Image);
-            RegistrarIcono(btnUsuarios, r.GetObject("Icono-Boton-Usuarios") as Image, r.GetObject("Icono-Boton-Usuarios-hover") as Image);
-            RegistrarIcono(btnEmpresa, r.GetObject("Icono-Boton-Empresa") as Image, r.GetObject("Icono-Boton-Empresa-hover") as Image);
-            RegistrarIcono(btnConfiguracion, r.GetObject("Icono-Boton-Configuracion") as Image, r.GetObject("Icono-Boton-Configuraciones-hover") as Image);
-            RegistrarIcono(btnCerrarSesion, r.GetObject("Icono-Boton-Cerrar") as Image, r.GetObject("Icono-Boton-Cerrar-hover") as Image);
-        }
-
-        private void RegistrarIcono(Button btn, Image normal, Image hover)
-        {
-            if (normal != null) _iconosNormal[btn] = normal;
-            if (hover != null)
-            {
-                _iconosHover[btn] = hover;
-                _coloresIcono[btn] = ObtenerColorDominante((Bitmap)hover);
-            }
-            btn.MouseEnter += BtnMenu_MouseEnter;
-            btn.MouseLeave += BtnMenu_MouseLeave;
-        }
-
-        private Color ObtenerColorDominante(Bitmap bmp)
-        {
-            int r = 0, g = 0, b = 0, count = 0;
-
-            for (int x = 0; x < bmp.Width; x += 2)
-            {
-                for (int y = 0; y < bmp.Height; y += 2)
-                {
-                    var pixel = bmp.GetPixel(x, y);
-                    // Ignorar pixels transparentes, blancos y muy claros
-                    if (pixel.A < 100) continue;
-                    if (pixel.R > 220 && pixel.G > 220 && pixel.B > 220) continue;
-
-                    r += pixel.R;
-                    g += pixel.G;
-                    b += pixel.B;
-                    count++;
-                }
-            }
-
-            if (count == 0) return Color.FromArgb(52, 152, 219);
-            return Color.FromArgb(r / count, g / count, b / count);
-        }
-
-        private void BtnMenu_MouseEnter(object sender, EventArgs e)
-        {
-            var btn = (Button)sender;
-            if (btn == _botonSeleccionado) return;
-            if (_iconosHover.ContainsKey(btn)) btn.Image = _iconosHover[btn];
-            if (_coloresIcono.ContainsKey(btn)) btn.ForeColor = _coloresIcono[btn];
-        }
-
-        private void BtnMenu_MouseLeave(object sender, EventArgs e)
-        {
-            var btn = (Button)sender;
-            if (btn == _botonSeleccionado) return;
-            if (_iconosNormal.ContainsKey(btn)) btn.Image = _iconosNormal[btn];
-            btn.ForeColor = _colorTextoNormal;
-        }
-
         private void SeleccionarBoton(Button btn)
         {
-            // Restaurar boton anterior
-            if (_botonSeleccionado != null && _botonSeleccionado != btn)
-            {
-                if (_iconosNormal.ContainsKey(_botonSeleccionado))
-                    _botonSeleccionado.Image = _iconosNormal[_botonSeleccionado];
-                _botonSeleccionado.ForeColor = _colorTextoNormal;
-                _botonSeleccionado.BackColor = Color.White;
-            }
-
-            // Marcar nuevo boton como seleccionado
             _botonSeleccionado = btn;
-            if (_iconosHover.ContainsKey(btn)) btn.Image = _iconosHover[btn];
-            if (_coloresIcono.ContainsKey(btn)) btn.ForeColor = _coloresIcono[btn];
-            btn.BackColor = _bgSeleccionado;
         }
 
         private void FormPrincipal_Load(object sender, EventArgs e)
         {
             AbrirFormEnPanel(new FormDashboard(), btnDashboard);
+            AutoBackupService.VerificarYEjecutar();
         }
 
         private void AbrirFormEnPanel(Form formHijo, Button botonOrigen = null)
         {
-            if (formActivo != null)
+            if (formActivo != null && !formActivo.IsDisposed)
                 formActivo.Close();
+            formActivo = null;
 
-            formActivo = formHijo;
-            formHijo.TopLevel = false;
-            formHijo.FormBorderStyle = FormBorderStyle.None;
-            formHijo.Dock = DockStyle.Fill;
-            pnlContenido.Controls.Add(formHijo);
-            pnlContenido.Tag = formHijo;
-            formHijo.BringToFront();
-            formHijo.Show();
+            try
+            {
+                formHijo.TopLevel = false;
+                formHijo.FormBorderStyle = FormBorderStyle.None;
+                formHijo.Dock = DockStyle.Fill;
+                pnlContenido.Controls.Add(formHijo);
+                pnlContenido.Tag = formHijo;
+                formHijo.BringToFront();
+                formHijo.Show();
+
+                // Si el formulario se auto-cerró durante Show() (ej. sin caja abierta), no lo guardamos
+                formActivo = formHijo.IsDisposed ? null : formHijo;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al abrir el módulo: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                formActivo = null;
+            }
 
             if (botonOrigen != null)
                 SeleccionarBoton(botonOrigen);
@@ -365,57 +297,75 @@ namespace SistemaPOS.Forms.Principal
             AbrirFormEnPanel(new FormDashboard(), btnDashboard);
         }
 
+        private bool CajaEstaAbierta()
+        {
+            if (Data.CajaRepository.ObtenerCajaAbierta() != null) return true;
+            Shared.FormAviso.Mostrar(
+                "No hay caja abierta.\n\nDebe abrir un turno en el módulo de Caja\nantes de acceder a este módulo.",
+                "Sin caja abierta", Shared.TipoAviso.Advertencia, this);
+            return false;
+        }
+
         private void BtnVentas_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoVentas, "Ventas")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Ventas.FormVentas(), btnVentas);
         }
 
         private void BtnHistorialVentas_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoVentas, "Historial de Ventas")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Ventas.FormHistorialVentas(), btnHistorialVentas);
         }
 
         private void BtnCompras_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoCompras, "Compras")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Compras.FormCompras(), btnCompras);
         }
 
         private void BtnHistorialCompras_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoCompras, "Historial de Compras")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Compras.FormHistorialCompras(), btnHistorialCompras);
         }
 
         private void BtnProductos_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoInventario, "Productos")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Inventario.FormProductos(), btnProductos);
         }
 
         private void BtnKardex_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoInventario, "Kardex")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Inventario.FormKardex(), btnKardex);
         }
 
         private void BtnAjustes_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoInventario, "Ajustes de Inventario")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Inventario.FormAjustes(), btnAjustes);
         }
 
         private void BtnClientes_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoClientes, "Clientes")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Contactos.FormClientes(), btnClientes);
         }
 
         private void BtnProveedores_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoProveedores, "Proveedores")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Contactos.FormProveedores(), btnProveedores);
         }
 
@@ -428,18 +378,21 @@ namespace SistemaPOS.Forms.Principal
         private void BtnGastos_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoFinanzas, "Gastos")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Finanzas.FormGastos(), btnGastos);
         }
 
         private void BtnCobros_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoFinanzas, "Cuentas por Cobrar")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Finanzas.FormCuentasPorCobrar(), btnCobros);
         }
 
         private void BtnCuentasPagar_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoFinanzas, "Cuentas por Pagar")) return;
+            if (!CajaEstaAbierta()) return;
             AbrirFormEnPanel(new Finanzas.FormCuentasPorPagar(), btnCuentasPagar);
         }
 
@@ -447,7 +400,8 @@ namespace SistemaPOS.Forms.Principal
         private void BtnReportes_Click(object sender, EventArgs e)
         {
             if (!TienePermiso(u => u.PermisoReportes, "Reportes")) return;
-            AbrirFormEnPanel(new Reportes.FormReportes());
+            Button btn = pnlMenu.Controls["btnReportes"] as Button;
+            AbrirFormEnPanel(new Reportes.FormReportes(), btn);
         }
 
         private void BtnUsuarios_Click(object sender, EventArgs e)
@@ -462,11 +416,7 @@ namespace SistemaPOS.Forms.Principal
             AbrirFormEnPanel(new Configuracion.FormEmpresa(), btnEmpresa);
         }
 
-        private void BtnConfiguracion_Click(object sender, EventArgs e)
-        {
-            if (!TienePermiso(u => u.PermisoConfiguracion, "Configuración")) return;
-            AbrirFormEnPanel(new Configuracion.FormConfiguracion(), btnConfiguracion);
-        }
+
 
         [DllImport("user32.dll")]
         private static extern int SendMessage(IntPtr hWnd, int wMsg, bool wParam, int lParam);
@@ -512,9 +462,8 @@ namespace SistemaPOS.Forms.Principal
                     else if (ctrl is Button btn && btn != btnToggleMenu)
                     {
                         btn.Text = "";
-                        // Restaurar fondo blanco excepto el seleccionado
                         if (btn != _botonSeleccionado)
-                            btn.BackColor = Color.White;
+                            btn.BackColor = Color.Transparent;
                     }
                 }
             }
@@ -567,6 +516,117 @@ namespace SistemaPOS.Forms.Principal
             pnlMenuBorder.Left = pnlMenu.Width;
         }
 
+        // ─── Menú contextual reorganizado con grupos ───────────────────
+        private void ReconfigurarMenuContextual()
+        {
+            cmsUsuarioConfig.Items.Clear();
+
+            // Grupo: CONFIGURACIÓN DEL NEGOCIO
+            var hdrNegocio = new ToolStripMenuItem("— NEGOCIO —") { Enabled = false };
+            hdrNegocio.Font = new System.Drawing.Font(hdrNegocio.Font, System.Drawing.FontStyle.Bold);
+            cmsUsuarioConfig.Items.Add(hdrNegocio);
+            cmsUsuarioConfig.Items.Add(mnuEmpresa);
+            cmsUsuarioConfig.Items.Add(mnuGeneral);
+            cmsUsuarioConfig.Items.Add(mnuImpresoras);
+            cmsUsuarioConfig.Items.Add(mnuCategorias);
+            cmsUsuarioConfig.Items.Add(mnuPresentaciones);
+            cmsUsuarioConfig.Items.Add(mnuUnidades);
+            cmsUsuarioConfig.Items.Add(new ToolStripSeparator());
+
+            // Grupo: ADMINISTRACIÓN DEL SISTEMA
+            var hdrAdmin = new ToolStripMenuItem("— ADMINISTRACIÓN —") { Enabled = false };
+            hdrAdmin.Font = new System.Drawing.Font(hdrAdmin.Font, System.Drawing.FontStyle.Bold);
+            cmsUsuarioConfig.Items.Add(hdrAdmin);
+            cmsUsuarioConfig.Items.Add(mnuUsuarios);
+            mnuRespaldo.Text = "⚠ Respaldo de Datos";
+            cmsUsuarioConfig.Items.Add(mnuRespaldo);
+            cmsUsuarioConfig.Items.Add(mnuLicencia);
+            cmsUsuarioConfig.Items.Add(mnuReportes);
+            cmsUsuarioConfig.Items.Add(new ToolStripSeparator());
+
+            // Otros
+            cmsUsuarioConfig.Items.Add(mnuPapelera);
+        }
+
+        // ─── Mostrar sección CONFIGURACIÓN en sidebar ──────────────────
+        private void MostrarSeccionConfiguracion()
+        {
+            lblConfiguracion.Visible = true;
+            btnUsuarios.Visible      = true;
+
+        }
+
+        // ─── Inactividad ───────────────────────────────────────────────
+        private void InicializarInactividad()
+        {
+            // Leer timeout de ConfigGeneral
+            try
+            {
+                using (var conn = DatabaseConnection.GetConnection())
+                using (var cmd = new System.Data.SQLite.SQLiteCommand(
+                    "SELECT Valor FROM ConfigGeneral WHERE Clave='TIEMPO_INACTIVIDAD' LIMIT 1", conn))
+                {
+                    var v = cmd.ExecuteScalar()?.ToString();
+                    if (int.TryParse(v, out int min) && min > 0)
+                        _minutosInactividad = min;
+                }
+            }
+            catch { }
+
+            if (_minutosInactividad <= 0) return; // 0 = desactivado
+
+            Application.AddMessageFilter(new InactividadFilter(this));
+
+            _timerInactividad = new Timer { Interval = 30000 }; // verifica cada 30 seg
+            _timerInactividad.Tick += TimerInactividad_Tick;
+            _timerInactividad.Start();
+        }
+
+        internal void ResetearInactividad()
+        {
+            _ultimaActividad = DateTime.Now;
+            _avisoMostrado = false;
+        }
+
+        private void TimerInactividad_Tick(object sender, EventArgs e)
+        {
+            double elapsed = (DateTime.Now - _ultimaActividad).TotalMinutes;
+            double limite = _minutosInactividad;
+
+            if (elapsed >= limite)
+            {
+                _timerInactividad.Stop();
+                CerrarSesionPorInactividad();
+                return;
+            }
+
+            if (!_avisoMostrado && elapsed >= limite - 2)
+            {
+                _avisoMostrado = true;
+                var dlg = MessageBox.Show(
+                    "Su sesión se cerrará en 2 minutos por inactividad.\n\n¿Desea continuar?",
+                    "Aviso de inactividad",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (dlg == DialogResult.Yes)
+                {
+                    ResetearInactividad();
+                }
+            }
+        }
+
+        private void CerrarSesionPorInactividad()
+        {
+            if (_timerInactividad != null) _timerInactividad.Stop();
+            MessageBox.Show("Se cerró la sesión por inactividad.", "Sesión expirada",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            this.Hide();
+            var login = new FormLogin();
+            login.ShowDialog();
+            this.Close();
+        }
+
         private void BtnCerrarSesion_Click(object sender, EventArgs e)
         {
             DialogResult result = MessageBox.Show(
@@ -577,6 +637,7 @@ namespace SistemaPOS.Forms.Principal
 
             if (result == DialogResult.Yes)
             {
+                if (_timerInactividad != null) _timerInactividad.Stop();
                 this.Hide();
                 FormLogin login = new FormLogin();
                 login.ShowDialog();
@@ -587,6 +648,28 @@ namespace SistemaPOS.Forms.Principal
         private void BtnContabilidad_Click(object sender, EventArgs e)
         {
             AbrirFormEnPanel(new SistemaPOS.Forms.Finanzas.FormContabilidad(), btnContabilidad);
+        }
+    }
+
+    // ─── Filtro global de mensajes para detectar actividad ───────────
+    internal class InactividadFilter : IMessageFilter
+    {
+        private readonly FormPrincipal _form;
+        private const int WM_MOUSEMOVE   = 0x0200;
+        private const int WM_LBUTTONDOWN = 0x0201;
+        private const int WM_KEYDOWN     = 0x0100;
+        private const int WM_SYSKEYDOWN  = 0x0104;
+
+        public InactividadFilter(FormPrincipal form) => _form = form;
+
+        public bool PreFilterMessage(ref Message m)
+        {
+            if (m.Msg == WM_MOUSEMOVE || m.Msg == WM_LBUTTONDOWN ||
+                m.Msg == WM_KEYDOWN   || m.Msg == WM_SYSKEYDOWN)
+            {
+                _form.ResetearInactividad();
+            }
+            return false; // no consume el mensaje
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
@@ -29,21 +30,43 @@ namespace SistemaPOS.Forms.Configuracion
 
         private void ConfigurarEventos()
         {
-            btnGuardar.Click += BtnGuardar_Click;
+            btnGuardar.Click  += BtnGuardar_Click;
             btnCancelar.Click += BtnCancelar_Click;
-            btnNuevo.Click += BtnNuevo_Click;
+            btnNuevo.Click    += BtnNuevo_Click;
             btnMostrarClave.Click += BtnMostrarClave_Click;
             dgvUsuarios.CellClick += DgvUsuarios_CellClick;
             cmbRol.SelectedIndexChanged += CmbRol_SelectedIndexChanged;
+            txtBuscar.TextChanged += (s, e) => CargarUsuarios(txtBuscar.Text);
+            txtBuscar.KeyDown     += TxtBuscar_KeyDown;
+
+            ConfigurarFocusUnderline(txtNombreCompleto, pnlLineNombre);
+            ConfigurarFocusUnderline(txtUsuario,        pnlLineUsuarioCampo);
+            ConfigurarFocusUnderline(txtContraseña,     pnlLineContra);
+            ConfigurarFocusUnderline(txtEmail,          pnlLineEmail);
+            ConfigurarFocusUnderline(txtTelefono,       pnlLineTelefono);
+        }
+
+        private static void ConfigurarFocusUnderline(
+            System.Windows.Forms.TextBox txt, System.Windows.Forms.Panel line)
+        {
+            var colorActivo = Color.FromArgb(99, 102, 241);
+            var colorNormal = Color.FromArgb(226, 232, 240);
+            txt.Enter += (s, e) => line.BackColor = colorActivo;
+            txt.Leave += (s, e) => line.BackColor = colorNormal;
+        }
+
+        private void TxtBuscar_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                CargarUsuarios(txtBuscar.Text);
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
         }
 
         private void ConfigurarControles()
         {
-            dgvUsuarios.AutoGenerateColumns = false;
-            dgvUsuarios.AllowUserToAddRows = false;
-            dgvUsuarios.ReadOnly = true;
-            dgvUsuarios.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-
             chkUsuarioActivo.Checked = true;
         }
 
@@ -61,9 +84,15 @@ namespace SistemaPOS.Forms.Configuracion
                 cmbRol.SelectedIndex = 0;
         }
 
-        private void CargarUsuarios()
+        private void CargarUsuarios(string busqueda = null)
         {
-            var usuarios = UsuarioRepository.Listar();
+            var todos    = UsuarioRepository.Listar();
+            var usuarios = string.IsNullOrWhiteSpace(busqueda)
+                ? todos
+                : todos.Where(u =>
+                    u.NombreCompleto.IndexOf(busqueda, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    u.NombreUsuario.IndexOf(busqueda, StringComparison.OrdinalIgnoreCase)  >= 0 ||
+                    u.NombreRol.IndexOf(busqueda, StringComparison.OrdinalIgnoreCase)      >= 0).ToList();
 
             dgvUsuarios.Rows.Clear();
             int numero = 1;
@@ -71,21 +100,33 @@ namespace SistemaPOS.Forms.Configuracion
             foreach (var u in usuarios)
             {
                 int index = dgvUsuarios.Rows.Add();
-                var row = dgvUsuarios.Rows[index];
+                var row   = dgvUsuarios.Rows[index];
 
-                row.Cells["colNumero"].Value = numero++;
-                row.Cells["colNombre"].Value = u.NombreCompleto;
+                row.Cells["colNumero"].Value  = numero++;
+                row.Cells["colNombre"].Value  = u.NombreCompleto;
                 row.Cells["colUsuario"].Value = u.NombreUsuario;
-                row.Cells["colRol"].Value = u.NombreRol;
-                row.Cells["colEstado"].Value = u.Activo ? "Activo" : "Inactivo";
+                row.Cells["colRol"].Value     = u.NombreRol;
 
-                if (!u.Activo)
+                if (u.Activo)
                 {
-                    row.DefaultCellStyle.ForeColor = Color.Gray;
+                    row.Cells["colEstado"].Value           = "ACTIVO";
+                    row.Cells["colEstado"].Style.ForeColor = Color.FromArgb(39, 174, 96);
+                }
+                else
+                {
+                    row.Cells["colEstado"].Value           = "INACTIVO";
+                    row.Cells["colEstado"].Style.ForeColor = Color.FromArgb(150, 160, 170);
+                    row.DefaultCellStyle.ForeColor         = Color.FromArgb(150, 160, 170);
                 }
 
                 row.Tag = u.UsuarioID;
             }
+
+            lblCardVal1.Text = todos.Count.ToString();
+            lblCardVal2.Text = todos.Count(u => u.Activo).ToString();
+            lblCardVal3.Text = todos.Count(u => u.NombreRol != null &&
+                               u.NombreRol.Equals("Administrador", StringComparison.OrdinalIgnoreCase)).ToString();
+            lblMostrar.Text  = $"Mostrando {usuarios.Count} usuario{(usuarios.Count != 1 ? "s" : "")}";
         }
 
         private void LimpiarFormulario()
@@ -98,6 +139,8 @@ namespace SistemaPOS.Forms.Configuracion
             txtUsuario.Clear();
             txtContraseña.Clear();
             txtContraseña.PasswordChar = '*';
+            txtEmail.Clear();
+            txtTelefono.Clear();
 
             if (cmbRol.Items.Count > 0)
                 cmbRol.SelectedIndex = 0;
@@ -126,8 +169,9 @@ namespace SistemaPOS.Forms.Configuracion
             // Aplicar permisos por defecto del rol seleccionado
             AplicarPermisosRol();
 
+            lblFormTitle.Text = "Nuevo Usuario";
+            btnGuardar.Text   = "Guardar";
             txtNombreCompleto.Focus();
-            btnGuardar.Text = "Guardar";
         }
 
         private void CargarUsuarioParaEditar(int usuarioID)
@@ -145,7 +189,9 @@ namespace SistemaPOS.Forms.Configuracion
 
             txtNombreCompleto.Text = usuario.NombreCompleto;
             txtUsuario.Text = usuario.NombreUsuario;
-            txtContraseña.Clear(); // No mostramos la contraseña
+            txtContraseña.Clear();
+            txtEmail.Text = usuario.Email ?? "";
+            txtTelefono.Text = usuario.Telefono ?? "";
             _dniActual = usuario.DNI;
 
             // Seleccionar rol
@@ -180,7 +226,8 @@ namespace SistemaPOS.Forms.Configuracion
 
             _cargandoDatos = false;
 
-            btnGuardar.Text = "Actualizar";
+            lblFormTitle.Text = "Editando Usuario";
+            btnGuardar.Text   = "Actualizar";
             txtNombreCompleto.Focus();
         }
 
@@ -366,6 +413,8 @@ namespace SistemaPOS.Forms.Configuracion
                 {
                     NombreCompleto = txtNombreCompleto.Text.Trim(),
                     NombreUsuario = txtUsuario.Text.Trim(),
+                    Email = string.IsNullOrWhiteSpace(txtEmail.Text) ? null : txtEmail.Text.Trim(),
+                    Telefono = string.IsNullOrWhiteSpace(txtTelefono.Text) ? null : txtTelefono.Text.Trim(),
                     DNI = _usuarioEditandoID.HasValue
                         ? (string.IsNullOrWhiteSpace(_dniActual) ? GenerarDniTecnicoUnico() : _dniActual)
                         : GenerarDniTecnicoUnico(),

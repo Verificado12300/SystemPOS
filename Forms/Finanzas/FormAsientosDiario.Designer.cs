@@ -19,6 +19,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.lblHasta = new System.Windows.Forms.Label();
             this.dtpHasta = new System.Windows.Forms.DateTimePicker();
             this.btnBuscar = new System.Windows.Forms.Button();
+            this.btnExportar = new System.Windows.Forms.Button();
             this.lblTotalAsientos = new System.Windows.Forms.Label();
             this.lblTipo = new System.Windows.Forms.Label();
             this.cboTipoOperacion = new System.Windows.Forms.ComboBox();
@@ -50,6 +51,7 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlFiltros.Controls.Add(this.lblHasta);
             this.pnlFiltros.Controls.Add(this.dtpHasta);
             this.pnlFiltros.Controls.Add(this.btnBuscar);
+            this.pnlFiltros.Controls.Add(this.btnExportar);
             this.pnlFiltros.Controls.Add(this.lblTotalAsientos);
             this.pnlFiltros.Controls.Add(this.lblTipo);
             this.pnlFiltros.Controls.Add(this.cboTipoOperacion);
@@ -110,6 +112,23 @@ namespace SistemaPOS.Forms.Finanzas
             this.btnBuscar.Text = "Buscar";
             this.btnBuscar.UseVisualStyleBackColor = true;
             this.btnBuscar.Click += new System.EventHandler(this.BtnBuscar_Click);
+            //
+            // btnExportar
+            //
+            this.btnExportar.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnExportar.BackColor = System.Drawing.Color.FromArgb(67, 97, 238);
+            this.btnExportar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExportar.FlatAppearance.BorderSize = 0;
+            this.btnExportar.ForeColor = System.Drawing.Color.White;
+            this.btnExportar.Font = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
+            this.btnExportar.Location = new System.Drawing.Point(1330, 6);
+            this.btnExportar.Name = "btnExportar";
+            this.btnExportar.Size = new System.Drawing.Size(120, 24);
+            this.btnExportar.TabIndex = 20;
+            this.btnExportar.Text = "⬇ Exportar";
+            this.btnExportar.UseVisualStyleBackColor = false;
+            this.btnExportar.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnExportar.Click += new System.EventHandler(this.BtnExportar_Click);
             //
             // lblTotalAsientos
             //
@@ -308,6 +327,7 @@ namespace SistemaPOS.Forms.Finanzas
         private System.Windows.Forms.Label lblHasta;
         private System.Windows.Forms.DateTimePicker dtpHasta;
         private System.Windows.Forms.Button btnBuscar;
+        private System.Windows.Forms.Button btnExportar;
         private System.Windows.Forms.Label lblTotalAsientos;
         private System.Windows.Forms.Label lblTipo;
         private System.Windows.Forms.ComboBox cboTipoOperacion;

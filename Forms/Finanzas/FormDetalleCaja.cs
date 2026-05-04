@@ -20,6 +20,8 @@ namespace SistemaPOS.Forms.Finanzas
             InitializeComponent();
             _cajaID = cajaID;
             ConfigurarEventos();
+            DgvStyleHelper.Aplicar(dgvVentasTurno);
+            DgvStyleHelper.Aplicar(dgvGastosTurno);
             CargarDatos();
         }
 
@@ -32,6 +34,44 @@ namespace SistemaPOS.Forms.Finanzas
         {
             btnCerrar.Click += (s, e) => this.Close();
             btnImprimir.Click += BtnImprimir_Click;
+            btnExportar.Click += BtnExportar_Click;
+            dgvVentasTurno.CellPainting += DgvVentasTurno_CellPainting;
+        }
+
+        private void DgvVentasTurno_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+            if (dgvVentasTurno.Columns[e.ColumnIndex].Name != "colVentaMetodoD") return;
+
+            e.PaintBackground(e.ClipBounds, true);
+
+            string val = e.Value?.ToString() ?? "";
+            Color bg, fg;
+            switch (val)
+            {
+                case "EFECTIVO":      bg = Color.FromArgb(241, 245, 249); fg = Color.FromArgb(51, 65, 85);    break;
+                case "YAPE":          bg = Color.FromArgb(237, 233, 254); fg = Color.FromArgb(91, 33, 182);   break;
+                case "TRANSFERENCIA": bg = Color.FromArgb(219, 234, 254); fg = Color.FromArgb(30, 64, 175);   break;
+                case "TARJETA":       bg = Color.FromArgb(204, 251, 241); fg = Color.FromArgb(17, 94, 89);    break;
+                case "CREDITO":       bg = Color.FromArgb(254, 243, 199); fg = Color.FromArgb(146, 64, 14);   break;
+                default:              bg = Color.FromArgb(241, 245, 249); fg = Color.FromArgb(100, 116, 139); break;
+            }
+
+            var g = e.Graphics;
+            var cb = e.CellBounds;
+            int bH = 22; int bW = Math.Min(val.Length * 8 + 18, cb.Width - 12);
+            int bx = cb.X + (cb.Width - bW) / 2;
+            int by = cb.Y + (cb.Height - bH) / 2;
+            var badge = new Rectangle(bx, by, bW, bH);
+
+            using (var br = new SolidBrush(bg)) g.FillRectangle(br, badge);
+            using (var font = new Font("Segoe UI", 7.5F, FontStyle.Bold))
+            using (var tb   = new SolidBrush(fg))
+            {
+                var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(val, font, tb, badge, sf);
+            }
+            e.Handled = true;
         }
 
         private void CargarDatos()
@@ -100,6 +140,42 @@ namespace SistemaPOS.Forms.Finanzas
                 txtObservaciones.Text = "Sin gastos registrados en este turno";
             }
             txtObservaciones.ReadOnly = true;
+
+            CargarDetalleTransacciones();
+        }
+
+        private void CargarDetalleTransacciones()
+        {
+            try
+            {
+                // Ventas del turno
+                dgvVentasTurno.Rows.Clear();
+                var ventas = CajaRepository.ObtenerVentasDelTurno(_cajaID);
+                foreach (var v in ventas)
+                {
+                    int idx = dgvVentasTurno.Rows.Add();
+                    var row = dgvVentasTurno.Rows[idx];
+                    row.Cells["colVentaHoraD"].Value    = v.Hora;
+                    row.Cells["colVentaNumeroD"].Value  = v.NumeroVenta;
+                    row.Cells["colVentaClienteD"].Value = v.NombreCliente;
+                    row.Cells["colVentaMetodoD"].Value  = v.Metodo;
+                    row.Cells["colVentaTotalD"].Value   = $"S/ {v.Total:N2}";
+                }
+
+                // Gastos del turno
+                dgvGastosTurno.Rows.Clear();
+                var gastos = CajaRepository.ObtenerGastosDelTurno(_cajaID);
+                foreach (var g in gastos)
+                {
+                    int idx = dgvGastosTurno.Rows.Add();
+                    var row = dgvGastosTurno.Rows[idx];
+                    row.Cells["colGastoHoraD"].Value     = g.Hora;
+                    row.Cells["colGastoConceptoD"].Value = g.Concepto;
+                    row.Cells["colGastoCategoriaD"].Value= g.Categoria;
+                    row.Cells["colGastoMontoD"].Value    = $"S/ {g.Monto:N2}";
+                }
+            }
+            catch { /* No bloquear el form si falla el detalle */ }
         }
 
         private void BtnImprimir_Click(object sender, EventArgs e)
@@ -120,6 +196,33 @@ namespace SistemaPOS.Forms.Finanzas
             catch (Exception ex)
             {
                 MessageBox.Show($"Error al imprimir: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnExportar_Click(object sender, EventArgs e)
+        {
+            if (_caja == null) return;
+
+            try
+            {
+                var parametros = ReportHelper.GetCompanyParameters();
+                ReportDataSourceHelper.ObtenerParametrosDetalleCaja(_cajaID, parametros);
+
+                var dataSources = new Dictionary<string, DataTable>
+                {
+                    ["DsVentasCaja"]   = ReportDataSourceHelper.ObtenerDatosDetalleCajaVentas(_cajaID),
+                    ["DsGastosCaja"]   = ReportDataSourceHelper.ObtenerDatosDetalleCajaGastos(_cajaID),
+                    ["DsMoneteoCaja"]  = ReportDataSourceHelper.ObtenerDatosMoneteo(_cajaID)
+                };
+
+                ReportHelper.MostrarDialogoExportacion(
+                    ReportHelper.GetRdlcPath(@"Documents\RptDetalleCajaFull.rdlc"),
+                    dataSources, parametros, "detalle_turno_completo");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al exportar: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

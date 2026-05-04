@@ -69,9 +69,9 @@ namespace SistemaPOS.Forms.Ventas
         private void ConfigurarDataGridView()
         {
             dgvVentas.AutoGenerateColumns = false;
-            dgvVentas.AllowUserToAddRows = false;
-            dgvVentas.ReadOnly = true;
-            dgvVentas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvVentas.AllowUserToAddRows  = false;
+            dgvVentas.ReadOnly            = true;
+            DgvStyleHelper.Aplicar(dgvVentas);
         }
 
         private void InicializarFiltros()
@@ -124,6 +124,37 @@ namespace SistemaPOS.Forms.Ventas
             }
         }
 
+        private void ActualizarResumenFooter()
+        {
+            decimal efectivo = 0, yape = 0, tarjeta = 0, transferencia = 0, credito = 0, total = 0;
+            foreach (DataGridViewRow row in dgvVentas.Rows)
+            {
+                string estado = row.Cells["colEstado"].Value?.ToString() ?? "";
+                if (estado == "ANULADA") continue;
+
+                string metodo = row.Cells["colMetodoPago"].Value?.ToString() ?? "";
+                string totalStr = row.Cells["colTotal"].Value?.ToString() ?? "";
+                if (!decimal.TryParse(totalStr.Replace("S/", "").Trim(), out decimal monto)) continue;
+
+                total += monto;
+                switch (metodo.ToUpper())
+                {
+                    case "EFECTIVO": efectivo += monto; break;
+                    case "YAPE":     yape += monto; break;
+                    case "TARJETA":  tarjeta += monto; break;
+                    case "TRANSFERENCIA": transferencia += monto; break;
+                    case "CREDITO":  credito += monto; break;
+                }
+            }
+
+            if (txtEfectivoCantidad != null)    txtEfectivoCantidad.Text    = $"S/ {efectivo:N2}";
+            if (txtYapeCantidad != null)        txtYapeCantidad.Text        = $"S/ {yape:N2}";
+            if (txtTarjetaCantidad != null)     txtTarjetaCantidad.Text     = $"S/ {tarjeta:N2}";
+            if (txtTransferenciaCantidad != null) txtTransferenciaCantidad.Text = $"S/ {transferencia:N2}";
+            if (txtCreditoCantidad != null)     txtCreditoCantidad.Text     = $"S/ {credito:N2}";
+            if (txtTotalCantidad != null)       txtTotalCantidad.Text       = $"S/ {total:N2}";
+        }
+
         private void CargarVentas()
         {
             try
@@ -142,6 +173,7 @@ namespace SistemaPOS.Forms.Ventas
                 var usuario = SesionActual.Usuario;
                 bool esAdmin = usuario != null && usuario.RolID == 1;
                 int? cajaID = esAdmin ? (int?)null : (_cajaActualID > 0 ? _cajaActualID : (int?)null);
+
                 var ventas = VentaRepository.Listar(clienteID, estado, tipoComprobante, fechaDesde, fechaHasta, cajaID);
                 dgvVentas.Rows.Clear();
                 int numero = 1;
@@ -163,10 +195,27 @@ namespace SistemaPOS.Forms.Ventas
                     else if (venta.Estado == "CREDITO" || venta.Estado == "PENDIENTE")
                         row.Cells["colEstado"].Style.ForeColor = Color.Orange;
                     else if (venta.Estado == "ANULADA")
-                        row.Cells["colEstado"].Style.ForeColor = Color.Red;
+                    {
+                        // Fila completa en gris para indicar que está inactiva
+                        row.DefaultCellStyle.ForeColor = Color.FromArgb(160, 160, 160);
+                        row.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250);
+                        // Estado mantiene rojo apagado para seguir indicando ANULADA
+                        row.Cells["colEstado"].Style.ForeColor = Color.FromArgb(192, 57, 43);
+                        // Deshabilitar visualmente el botón Anular
+                        if (row.Cells["colAnular"] is DataGridViewImageCell anularCell)
+                        {
+                            anularCell.Style.BackColor = Color.FromArgb(240, 240, 240);
+                            anularCell.ToolTipText = "Esta venta ya fue anulada";
+                        }
+                    }
 
                     row.Tag = venta.VentaID;
                 }
+
+                ActualizarResumenFooter();
+                int totalRegistros = dgvVentas.Rows.Count;
+                if (lblSubTitulo3 != null)
+                    lblSubTitulo3.Text = $"{totalRegistros} venta{(totalRegistros != 1 ? "s" : "")} encontrada{(totalRegistros != 1 ? "s" : "")}";
             }
             catch (Exception ex)
             {
@@ -189,7 +238,7 @@ namespace SistemaPOS.Forms.Ventas
                 VerDetalleVenta(ventaID);
             }
             // Botón Imprimir
-            else if (columnName == "colImprimir")
+            else if (columnName == "colReimprimir")
             {
                 ImprimirVenta(ventaID);
             }
@@ -258,7 +307,7 @@ namespace SistemaPOS.Forms.Ventas
                 var parametros = ReportHelper.GetCompanyParameters();
                 var dt = ReportDataSourceHelper.ObtenerDatosTicketVenta(ventaID, parametros);
 
-                using (var preview = new FormPreviewTicket(dt, parametros))
+                using (var preview = new FormCobrarConTicket(dt, parametros))
                     preview.ShowDialog(this);
             }
             catch (Exception ex)

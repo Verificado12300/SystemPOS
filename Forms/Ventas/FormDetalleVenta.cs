@@ -27,13 +27,24 @@ namespace SistemaPOS.Forms.Ventas
         {
             btnCerrar.Click += (s, e) => this.Close();
             btnImprimir.Click += BtnImprimir_Click;
+
+            this.Shown += (s, e) =>
+            {
+                dgvDetalleProductos.Columns["colNumero"].Width         = 60;
+                dgvDetalleProductos.Columns["colPresentacionDV"].Width = 200;
+                dgvDetalleProductos.Columns["colCantidad"].Width       = 130;
+                dgvDetalleProductos.Columns["colPrecioUnitario"].Width = 160;
+                dgvDetalleProductos.Columns["colSubTotal"].Width       = 150;
+            };
         }
 
         private void ConfigurarDataGridView()
         {
             dgvDetalleProductos.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvDetalleProductos);
             dgvDetalleProductos.AllowUserToAddRows = false;
             dgvDetalleProductos.ReadOnly = true;
+
         }
 
         private void CargarDatosVenta()
@@ -161,7 +172,7 @@ namespace SistemaPOS.Forms.Ventas
                 var parametros = ReportHelper.GetCompanyParameters();
                 var dt = ReportDataSourceHelper.ObtenerDatosTicketVenta(_ventaID, parametros);
 
-                using (var preview = new FormPreviewTicket(dt, parametros))
+                using (var preview = new FormCobrarConTicket(dt, parametros))
                     preview.ShowDialog(this);
             }
             catch (Exception ex)

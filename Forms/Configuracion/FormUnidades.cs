@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
@@ -16,7 +17,7 @@ namespace SistemaPOS.Forms.Configuracion
             InitializeComponent();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime) return;
             ConfigurarEventos();
-            ConfigurarControles();
+            chkActivo.Checked = true;
             CargarTipos();
             CargarUnidades();
             LimpiarFormulario();
@@ -24,11 +25,11 @@ namespace SistemaPOS.Forms.Configuracion
 
         private void ConfigurarEventos()
         {
-            btnGuardar.Click += BtnGuardar_Click;
-            btnCancelar.Click += BtnCancelar_Click;
-            txtBuscar.TextChanged += TxtBuscar_TextChanged;
-            txtBuscar.KeyDown += TxtBuscar_KeyDown;
-            dgvPresentaciones.CellClick += DgvUnidades_CellClick;
+            btnGuardar.Click      += BtnGuardar_Click;
+            btnCancelar.Click     += BtnCancelar_Click;
+            txtBuscar.TextChanged += (s, e) => CargarUnidades(txtBuscar.Text);
+            txtBuscar.KeyDown     += TxtBuscar_KeyDown;
+            dgvUnidades.CellClick += DgvUnidades_CellClick;
         }
 
         private void TxtBuscar_KeyDown(object sender, KeyEventArgs e)
@@ -39,16 +40,6 @@ namespace SistemaPOS.Forms.Configuracion
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
-        }
-
-        private void ConfigurarControles()
-        {
-            dgvPresentaciones.AutoGenerateColumns = false;
-            dgvPresentaciones.AllowUserToAddRows = false;
-            dgvPresentaciones.ReadOnly = true;
-            dgvPresentaciones.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-
-            chkActivo.Checked = true;
         }
 
         private void CargarTipos()
@@ -63,30 +54,39 @@ namespace SistemaPOS.Forms.Configuracion
         {
             var unidades = UnidadRepository.Listar(busqueda);
 
-            dgvPresentaciones.Rows.Clear();
+            dgvUnidades.Rows.Clear();
             int numero = 1;
 
             foreach (var u in unidades)
             {
-                int index = dgvPresentaciones.Rows.Add();
-                var row = dgvPresentaciones.Rows[index];
+                int index = dgvUnidades.Rows.Add();
+                var row   = dgvUnidades.Rows[index];
 
-                row.Cells["colNumero"].Value = numero++;
-                row.Cells["colNombre"].Value = u.Nombre;
+                row.Cells["colNumero"].Value      = numero++;
+                row.Cells["colNombre"].Value      = u.Nombre;
                 row.Cells["colAbreviatura"].Value = u.Simbolo;
-                row.Cells["colTipo"].Value = u.Tipo;
-                row.Cells["colProducto"].Value = u.CantidadProductos.ToString();
-                row.Cells["colEstado"].Value = u.Activo ? "Activo" : "Inactivo";
+                row.Cells["colTipo"].Value        = u.Tipo;
+                row.Cells["colProducto"].Value    = u.CantidadProductos.ToString();
 
-                if (!u.Activo)
+                if (u.Activo)
                 {
-                    row.DefaultCellStyle.ForeColor = Color.Gray;
+                    row.Cells["colEstado"].Value           = "ACTIVO";
+                    row.Cells["colEstado"].Style.ForeColor = Color.FromArgb(39, 174, 96);
+                }
+                else
+                {
+                    row.Cells["colEstado"].Value           = "INACTIVO";
+                    row.Cells["colEstado"].Style.ForeColor = Color.FromArgb(150, 160, 170);
+                    row.DefaultCellStyle.ForeColor         = Color.FromArgb(150, 160, 170);
                 }
 
                 row.Tag = u.UnidadID;
             }
 
-            lblTotal.Text = $"Mostrando {unidades.Count} Unidades";
+            lblCardVal1.Text = unidades.Count.ToString();
+            lblCardVal2.Text = unidades.Count(u => u.Activo).ToString();
+            lblCardVal3.Text = unidades.Count(u => u.CantidadProductos > 0).ToString();
+            lblMostrar.Text  = $"Mostrando {unidades.Count} unidad{(unidades.Count != 1 ? "es" : "")}";
         }
 
         private void LimpiarFormulario()
@@ -98,8 +98,8 @@ namespace SistemaPOS.Forms.Configuracion
                 cmbTipo.SelectedIndex = 0;
             chkActivo.Checked = true;
 
-            btnGuardar.Text = "Guardar";
-            lblSubTitulo.Text = "NUEVA / EDITAR UNIDAD";
+            lblFormTitle.Text = "Nueva Unidad";
+            btnGuardar.Text   = "Guardar";
             txtNombre.Focus();
         }
 
@@ -108,16 +108,16 @@ namespace SistemaPOS.Forms.Configuracion
             var unidad = UnidadRepository.ObtenerPorID(unidadID);
             if (unidad == null)
             {
-                MessageBox.Show("No se encontró la unidad", "Error",
+                MessageBox.Show("No se encontró la unidad.", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            _unidadEditandoID = unidadID;
-            txtNombre.Text = unidad.Nombre;
+            _unidadEditandoID   = unidadID;
+            txtNombre.Text      = unidad.Nombre;
             txtAbreviatura.Text = unidad.Simbolo;
+            chkActivo.Checked   = unidad.Activo;
 
-            // Seleccionar tipo
             for (int i = 0; i < cmbTipo.Items.Count; i++)
             {
                 if (cmbTipo.Items[i].ToString() == unidad.Tipo)
@@ -127,10 +127,8 @@ namespace SistemaPOS.Forms.Configuracion
                 }
             }
 
-            chkActivo.Checked = unidad.Activo;
-
-            btnGuardar.Text = "Actualizar";
-            lblSubTitulo.Text = "EDITANDO UNIDAD";
+            lblFormTitle.Text = "Editando Unidad";
+            btnGuardar.Text   = "Actualizar";
             txtNombre.Focus();
         }
 
@@ -138,7 +136,7 @@ namespace SistemaPOS.Forms.Configuracion
         {
             if (string.IsNullOrWhiteSpace(txtNombre.Text))
             {
-                MessageBox.Show("Ingrese el nombre de la unidad", "Validación",
+                MessageBox.Show("Ingrese el nombre de la unidad.", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtNombre.Focus();
                 return false;
@@ -146,7 +144,7 @@ namespace SistemaPOS.Forms.Configuracion
 
             if (txtNombre.Text.Trim().Length < 2)
             {
-                MessageBox.Show("El nombre debe tener al menos 2 caracteres", "Validación",
+                MessageBox.Show("El nombre debe tener al menos 2 caracteres.", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtNombre.Focus();
                 return false;
@@ -154,7 +152,7 @@ namespace SistemaPOS.Forms.Configuracion
 
             if (string.IsNullOrWhiteSpace(txtAbreviatura.Text))
             {
-                MessageBox.Show("Ingrese la abreviatura de la unidad", "Validación",
+                MessageBox.Show("Ingrese la abreviatura de la unidad.", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtAbreviatura.Focus();
                 return false;
@@ -162,16 +160,15 @@ namespace SistemaPOS.Forms.Configuracion
 
             if (cmbTipo.SelectedIndex < 0)
             {
-                MessageBox.Show("Seleccione el tipo de unidad", "Validación",
+                MessageBox.Show("Seleccione el tipo de unidad.", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 cmbTipo.Focus();
                 return false;
             }
 
-            // Validar nombre único
             if (UnidadRepository.ExisteNombre(txtNombre.Text.Trim(), _unidadEditandoID))
             {
-                MessageBox.Show("Ya existe una unidad con ese nombre", "Validación",
+                MessageBox.Show("Ya existe una unidad con ese nombre.", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtNombre.Focus();
                 return false;
@@ -182,50 +179,46 @@ namespace SistemaPOS.Forms.Configuracion
 
         private void BtnGuardar_Click(object sender, EventArgs e)
         {
-            if (!ValidarFormulario())
-                return;
+            if (!ValidarFormulario()) return;
 
             try
             {
                 var unidad = new UnidadBase
                 {
-                    Nombre = txtNombre.Text.Trim(),
+                    Nombre  = txtNombre.Text.Trim(),
                     Simbolo = txtAbreviatura.Text.Trim(),
-                    Tipo = cmbTipo.SelectedItem.ToString(),
-                    Activo = chkActivo.Checked
+                    Tipo    = cmbTipo.SelectedItem.ToString(),
+                    Activo  = chkActivo.Checked
                 };
 
                 if (_unidadEditandoID.HasValue)
                 {
-                    // Actualizar
                     unidad.UnidadID = _unidadEditandoID.Value;
-
                     if (UnidadRepository.Actualizar(unidad))
                     {
-                        MessageBox.Show("Unidad actualizada exitosamente", "Éxito",
+                        MessageBox.Show("Unidad actualizada exitosamente.", "Éxito",
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                         CargarUnidades(txtBuscar.Text);
                         LimpiarFormulario();
                     }
                     else
                     {
-                        MessageBox.Show("No se pudo actualizar la unidad", "Error",
+                        MessageBox.Show("No se pudo actualizar la unidad.", "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
                 {
-                    // Crear nueva
                     if (UnidadRepository.Crear(unidad))
                     {
-                        MessageBox.Show("Unidad creada exitosamente", "Éxito",
+                        MessageBox.Show("Unidad creada exitosamente.", "Éxito",
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                         CargarUnidades(txtBuscar.Text);
                         LimpiarFormulario();
                     }
                     else
                     {
-                        MessageBox.Show("No se pudo crear la unidad", "Error",
+                        MessageBox.Show("No se pudo crear la unidad.", "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
@@ -242,26 +235,17 @@ namespace SistemaPOS.Forms.Configuracion
             LimpiarFormulario();
         }
 
-        private void TxtBuscar_TextChanged(object sender, EventArgs e)
-        {
-            CargarUnidades(txtBuscar.Text);
-        }
-
         private void DgvUnidades_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
 
-            int unidadID = Convert.ToInt32(dgvPresentaciones.Rows[e.RowIndex].Tag);
-            string columnName = dgvPresentaciones.Columns[e.ColumnIndex].Name;
+            int    unidadID   = Convert.ToInt32(dgvUnidades.Rows[e.RowIndex].Tag);
+            string columnName = dgvUnidades.Columns[e.ColumnIndex].Name;
 
             if (columnName == "colEditar")
-            {
                 CargarUnidadParaEditar(unidadID);
-            }
             else if (columnName == "colEliminar")
-            {
                 EliminarUnidad(unidadID);
-            }
         }
 
         private void EliminarUnidad(int unidadID)
@@ -281,14 +265,14 @@ namespace SistemaPOS.Forms.Configuracion
             {
                 if (UnidadRepository.Eliminar(unidadID))
                 {
-                    MessageBox.Show("Unidad eliminada/desactivada exitosamente", "Éxito",
+                    MessageBox.Show("Unidad eliminada/desactivada exitosamente.", "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     CargarUnidades(txtBuscar.Text);
                     LimpiarFormulario();
                 }
                 else
                 {
-                    MessageBox.Show("No se pudo eliminar la unidad", "Error",
+                    MessageBox.Show("No se pudo eliminar la unidad.", "Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }

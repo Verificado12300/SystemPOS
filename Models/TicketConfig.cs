@@ -18,6 +18,10 @@ namespace SistemaPOS.Models
         public bool MostrarPie       { get; set; } = true;
         public bool MostrarInfoPago  { get; set; } = true;
 
+        // ── Tamaño logo ───────────────────────────────────────────────────────
+
+        public int LogoAltura { get; set; } = 50;   // px en preview; escala a dots en ESC/POS
+
         // ── Texto ─────────────────────────────────────────────────────────────
 
         public string MensajePie { get; set; } = "Gracias por su compra!";
@@ -42,6 +46,7 @@ namespace SistemaPOS.Models
                 cfg.MostrarDNI       = Leer("TICKET_MOSTRAR_DNI",        true);
                 cfg.MostrarPie       = Leer("TICKET_MOSTRAR_PIE",        true);
                 cfg.MostrarInfoPago  = Leer("TICKET_MOSTRAR_INFO_PAGO",  true);
+                cfg.LogoAltura = LeerEntero("TICKET_LOGO_ALTURA", 50);
                 cfg.MensajePie = BuildMensajePie();
                 // TICKET_MOSTRAR_NOMBRE no se lee: siempre true
             }
@@ -73,6 +78,12 @@ namespace SistemaPOS.Models
         };
 
         // ── Helpers privados ──────────────────────────────────────────────────
+
+        private static int LeerEntero(string clave, int valorDefault)
+        {
+            string raw = EmpresaRepository.ObtenerConfiguracion(clave, valorDefault.ToString());
+            return int.TryParse(raw, out int v) ? v : valorDefault;
+        }
 
         private static bool Leer(string clave, bool valorDefault)
         {

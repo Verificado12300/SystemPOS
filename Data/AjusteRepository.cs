@@ -98,10 +98,10 @@ namespace SistemaPOS.Data
                         SELECT a.AjusteID, a.ProductoID, a.TipoAjuste, a.Cantidad,
                                a.StockAnterior, a.StockNuevo, a.Motivo, a.UsuarioID, a.Fecha,
                                p.Nombre as NombreProducto, p.Codigo as CodigoProducto,
-                               u.NombreCompleto as NombreUsuario
+                               COALESCE(u.NombreCompleto, 'Usuario eliminado') as NombreUsuario
                         FROM Ajustes a
                         INNER JOIN Productos p ON a.ProductoID = p.ProductoID
-                        INNER JOIN Usuarios u ON a.UsuarioID = u.UsuarioID
+                        LEFT JOIN Usuarios u ON a.UsuarioID = u.UsuarioID
                         WHERE 1=1";
 
                     if (fechaInicio.HasValue)
@@ -144,7 +144,7 @@ namespace SistemaPOS.Data
                                     Fecha = DateTime.Parse(reader.GetString(8)),
                                     NombreProducto = reader.GetString(9),
                                     CodigoProducto = reader.GetString(10),
-                                    NombreUsuario = reader.GetString(11)
+                                    NombreUsuario = reader.IsDBNull(11) ? "Usuario eliminado" : reader.GetString(11)
                                 });
                             }
                         }

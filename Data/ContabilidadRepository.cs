@@ -496,7 +496,7 @@ namespace SistemaPOS.Data
                             WHEN a.TipoAjuste = 'CORRECCION' THEN ABS(a.StockNuevo - a.StockAnterior)
                             ELSE a.Cantidad
                         END as cantidad,
-                        0.0 as costo,
+                        a.CostoUnitario as costo,
                         a.Fecha as fechahora
                     FROM Ajustes a
                     WHERE a.ProductoID = @ProductoID
@@ -546,7 +546,6 @@ namespace SistemaPOS.Data
 
         // =====================================================================
         // Saldo neto (Debe - Haber) de una cuenta contable hasta una fecha dada.
-        // Usado por FormConciliacionInventario para calcular el saldo de cuenta 140.
         // =====================================================================
         public static decimal ObtenerSaldoCuentaHasta(string codigoCuenta, DateTime hasta)
         {
@@ -576,9 +575,10 @@ namespace SistemaPOS.Data
             {
                 case "TARJETA":
                 case "TRANSFERENCIA":
-                    return "102"; // Bancos
+                case "YAPE":
+                    return "102"; // Bancos / medios digitales
                 default:
-                    return "101"; // Caja (EFECTIVO, YAPE, MIXTO, etc.)
+                    return "101"; // Caja (solo EFECTIVO)
             }
         }
     }

@@ -25,6 +25,7 @@ namespace SistemaPOS.Forms.Finanzas
                 CargarCategorias();
                 CargarGastos();
                 btnExportar.Click += BtnExportar_Click;
+                dgvGastos.CellPainting += DgvGastos_CellPainting;
             }
             catch (Exception ex)
             {
@@ -41,6 +42,7 @@ namespace SistemaPOS.Forms.Finanzas
 
             // Configurar DataGridView
             dgvGastos.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvGastos);
             dgvGastos.AllowUserToAddRows = false;
             dgvGastos.ReadOnly = true;
             dgvGastos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -56,7 +58,8 @@ namespace SistemaPOS.Forms.Finanzas
             colMonto.DefaultCellStyle.Format = "N2";
             colMetodoPago.Width = 120;
             colComprobante.Width = 120;
-            colEliminar.Width = 40;
+            colEditar.Width = 70;
+            colEliminar.Width = 70;
         }
 
         private void CargarCategorias()
@@ -112,8 +115,13 @@ namespace SistemaPOS.Forms.Finanzas
                     totalGastos += gasto.Monto;
                 }
 
-                lblTotalRegistros.Text = $"Total: {gastos.Count} registros";
+                lblTotalRegistros.Text = $"{gastos.Count} registros encontrados";
                 txtTotalGastos.Text = $"S/ {totalGastos:N2}";
+                // KPI cards
+                decimal promedio = gastos.Count > 0 ? totalGastos / gastos.Count : 0m;
+                lblKpi1Val.Text = $"S/ {totalGastos:N2}";
+                lblKpi2Val.Text = gastos.Count.ToString();
+                lblKpi3Val.Text = $"S/ {promedio:N2}";
             }
             catch (Exception ex)
             {
@@ -195,11 +203,63 @@ namespace SistemaPOS.Forms.Finanzas
             }
         }
 
+        private void DgvGastos_CellPainting(object sender, System.Windows.Forms.DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+            if (dgvGastos.Columns[e.ColumnIndex].Name != "colMetodoPago") return;
+
+            e.PaintBackground(e.ClipBounds, true);
+
+            string metodo = e.Value?.ToString() ?? "";
+            Color bgColor, fgColor;
+            switch (metodo)
+            {
+                case "EFECTIVO":     bgColor = Color.FromArgb(241, 245, 249); fgColor = Color.FromArgb(51, 65, 85); break;
+                case "YAPE":         bgColor = Color.FromArgb(237, 233, 254); fgColor = Color.FromArgb(91, 33, 182); break;
+                case "TRANSFERENCIA":bgColor = Color.FromArgb(219, 234, 254); fgColor = Color.FromArgb(30, 64, 175); break;
+                case "TARJETA":      bgColor = Color.FromArgb(209, 250, 229); fgColor = Color.FromArgb(6, 95, 70);  break;
+                case "CREDITO":      bgColor = Color.FromArgb(254, 243, 199); fgColor = Color.FromArgb(146, 64, 14); break;
+                default:             bgColor = Color.FromArgb(241, 245, 249); fgColor = Color.FromArgb(100, 116, 139); break;
+            }
+
+            var g = e.Graphics;
+            var cellBounds = e.CellBounds;
+            int badgeH = 20; int badgeW = Math.Max(1, Math.Min(metodo.Length * 8 + 16, cellBounds.Width - 12));
+            int bx = cellBounds.X + (cellBounds.Width - badgeW) / 2;
+            int by = cellBounds.Y + (cellBounds.Height - badgeH) / 2;
+            var badgeRect = new System.Drawing.Rectangle(bx, by, badgeW, badgeH);
+
+            using (var brush = new System.Drawing.SolidBrush(bgColor))
+                g.FillRectangle(brush, badgeRect);
+            using (var font = new System.Drawing.Font("Segoe UI", 7.5F, System.Drawing.FontStyle.Bold))
+            using (var textBrush = new System.Drawing.SolidBrush(fgColor))
+            {
+                var sf = new System.Drawing.StringFormat { Alignment = System.Drawing.StringAlignment.Center, LineAlignment = System.Drawing.StringAlignment.Center };
+                g.DrawString(metodo, font, textBrush, badgeRect, sf);
+            }
+            e.Handled = true;
+        }
+
         private void DgvGastos_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             try
             {
                 if (e.RowIndex < 0) return;
+
+                // Columna Editar
+                if (dgvGastos.Columns[e.ColumnIndex].Name == "colEditar")
+                {
+                    int gastoID = Convert.ToInt32(dgvGastos.Rows[e.RowIndex].Tag);
+                    var gasto = GastoRepository.ObtenerPorID(gastoID);
+                    if (gasto == null) return;
+
+                    using (var form = new FormRegistrarGasto(gasto))
+                    {
+                        if (form.ShowDialog(this) == DialogResult.OK)
+                            CargarGastos();
+                    }
+                    return;
+                }
 
                 // Columna Eliminar
                 if (dgvGastos.Columns[e.ColumnIndex].Name == "colEliminar")

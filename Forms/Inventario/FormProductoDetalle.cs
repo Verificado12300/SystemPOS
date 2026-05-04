@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Inventario
 {
@@ -12,6 +14,10 @@ namespace SistemaPOS.Forms.Inventario
         private int? _productoID = null;
         private List<ProductoPresentacion> _presentaciones = new List<ProductoPresentacion>();
         private byte[] _imagenProducto = null;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, string lParam);
+        private const int EM_SETCUEBANNER = 0x1501;
 
         public FormProductoDetalle(int? productoID = null)
         {
@@ -23,15 +29,39 @@ namespace SistemaPOS.Forms.Inventario
 
             if (_productoID.HasValue)
             {
-                // Modo edición
-                this.Text = "Editar Producto";
+                lblTitulo.Text    = "Editar Producto";
+                lblSubtitulo.Text = "Modifica los datos del producto seleccionado";
+                lblBadge.Text     = "✏  EDITANDO";
+                lblBadge.BackColor = System.Drawing.Color.FromArgb(30, 58, 138);
+                lblBadge.ForeColor = System.Drawing.Color.FromArgb(147, 197, 253);
+                this.Text          = "Editar Producto";
                 CargarDatosProducto(_productoID.Value);
             }
             else
             {
-                // Modo nuevo
                 txtCodigo.Text = ProductoRepository.GenerarCodigoProducto();
             }
+
+            ConfigurarPlaceholders();
+            this.KeyPreview = true;
+            this.KeyDown += (s, e) =>
+            {
+                if (e.Control && e.KeyCode == System.Windows.Forms.Keys.S)
+                    BtnGuardar_Click(s, e);
+                else if (e.KeyCode == System.Windows.Forms.Keys.Escape)
+                    this.Close();
+            };
+        }
+
+        private void ConfigurarPlaceholders()
+        {
+            SendMessage(txtProducto.Handle,    EM_SETCUEBANNER, 1, "Ej: Arroz extra, Detergente 5kg...");
+            SendMessage(txtCantidad.Handle,    EM_SETCUEBANNER, 1, "0");
+            SendMessage(txtCostoBase.Handle,   EM_SETCUEBANNER, 1, "0.00");
+            SendMessage(txtPrecio.Handle,      EM_SETCUEBANNER, 1, "0.00");
+            SendMessage(txtStock.Handle,       EM_SETCUEBANNER, 1, "0");
+            SendMessage(txtStockMinimo.Handle, EM_SETCUEBANNER, 1, "0");
+            SendMessage(txtStockMaximo.Handle, EM_SETCUEBANNER, 1, "0");
         }
 
         private void ConfigurarEventos()
@@ -47,6 +77,7 @@ namespace SistemaPOS.Forms.Inventario
         private void ConfigurarDataGridView()
         {
             dgvPresentaciones.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvPresentaciones);
             dgvPresentaciones.AllowUserToAddRows = false;
         }
 

@@ -11,6 +11,7 @@ namespace SistemaPOS.Forms.Finanzas
         public FormPeriodosContables()
         {
             InitializeComponent();
+            DgvStyleHelper.Aplicar(dgvPeriodos);
             nudAnio.Value = DateTime.Today.Year;
             cmbMes.SelectedIndex = DateTime.Today.Month - 1;
             CargarPeriodos();

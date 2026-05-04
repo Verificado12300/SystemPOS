@@ -149,11 +149,22 @@ namespace SistemaPOS.Reports.DataSources
             var dt = new DataTable("HistorialCaja");
             dt.Columns.Add("Numero", typeof(int));
             dt.Columns.Add("Fecha", typeof(string));
+            dt.Columns.Add("Turno", typeof(string));
             dt.Columns.Add("Apertura", typeof(string));
             dt.Columns.Add("Cierre", typeof(string));
             dt.Columns.Add("Duracion", typeof(string));
             dt.Columns.Add("Usuario", typeof(string));
+            dt.Columns.Add("FondoInicial", typeof(decimal));
+            dt.Columns.Add("TotalEfectivo", typeof(decimal));
+            dt.Columns.Add("TotalYape", typeof(decimal));
+            dt.Columns.Add("TotalTransferencia", typeof(decimal));
+            dt.Columns.Add("TotalCredito", typeof(decimal));
+            dt.Columns.Add("TotalGastos", typeof(decimal));
+            dt.Columns.Add("EfectivoEsperado", typeof(decimal));
+            dt.Columns.Add("EfectivoReal", typeof(decimal));
+            dt.Columns.Add("Diferencia", typeof(decimal));
             dt.Columns.Add("TotalVentas", typeof(decimal));
+            dt.Columns.Add("Estado", typeof(string));
 
             var historial = CajaRepository.Listar(fechaDesde, fechaHasta, usuarioID);
             int numero = 1;
@@ -162,11 +173,22 @@ namespace SistemaPOS.Reports.DataSources
             {
                 dt.Rows.Add(numero++,
                     caja.FechaApertura.ToString("dd/MM/yyyy"),
+                    caja.Turno,
                     caja.HoraApertura.ToString(@"hh\:mm"),
                     caja.HoraCierre?.ToString(@"hh\:mm") ?? "-",
                     caja.Duracion,
                     caja.NombreUsuario,
-                    caja.TotalVentas);
+                    caja.MontoInicial,
+                    caja.TotalEfectivo,
+                    caja.TotalYape,
+                    caja.TotalTransferencia,
+                    caja.TotalCredito,
+                    caja.TotalGastos,
+                    caja.EfectivoEsperado,
+                    caja.EfectivoReal,
+                    caja.Diferencia,
+                    caja.TotalVentas,
+                    caja.Estado);
             }
             return dt;
         }
@@ -460,11 +482,18 @@ namespace SistemaPOS.Reports.DataSources
             parametros["pHora"] = venta.Hora.ToString(@"hh\:mm\:ss");
             parametros["pEstado"] = venta.Estado;
             parametros["pMetodoPago"] = venta.MetodoPago;
-            parametros["pSubTotal"] = $"S/ {venta.SubTotal:N2}";
-            decimal descuento = venta.SubTotal + venta.IGV - venta.Total;
-            parametros["pDescuento"] = $"S/ {descuento:N2}";
+            parametros["pSubTotal"]   = $"S/ {venta.SubTotal:N2}";
+            parametros["pDescuento"]  = $"S/ {venta.Descuento:N2}";
             parametros["pIGV"] = $"S/ {venta.IGV:N2}";
             parametros["pTotal"] = $"S/ {venta.Total:N2}";
+            // Recibido/vuelto desde BD para mostrar siempre la misma versión (historial y post-venta)
+            if (venta.MontoEfectivo > 0)
+            {
+                parametros["pMontoRecibido"] = venta.MontoEfectivo.ToString("N2");
+                decimal vuelto = venta.MontoEfectivo - venta.Total;
+                if (vuelto > 0)
+                    parametros["pVuelto"] = vuelto.ToString("N2");
+            }
 
             string nombreCliente = "CLIENTE GENERAL";
             string docCliente = "00000000";
@@ -690,6 +719,67 @@ namespace SistemaPOS.Reports.DataSources
             parametros["pMotivo"] = caja.MotivoDiferencia ?? "";
         }
 
+        /// <summary>
+        /// Obtiene los asientos del libro diario desde ContabilidadRepository para el reporte RDLC.
+        /// Usa reflexión sobre los objetos dynamic que retorna ObtenerAsientos.
+        /// </summary>
+        public static DataTable ObtenerDatosAsientosDiario(
+            DateTime desde, DateTime hasta,
+            string tipo = null, string cuenta = null, string texto = null,
+            decimal? montoMin = null, decimal? montoMax = null)
+        {
+            var dt = new DataTable("AsientosDiario");
+            dt.Columns.Add("Numero",      typeof(int));
+            dt.Columns.Add("Fecha",       typeof(string));
+            dt.Columns.Add("Hora",        typeof(string));
+            dt.Columns.Add("Tipo",        typeof(string));
+            dt.Columns.Add("Descripcion", typeof(string));
+            dt.Columns.Add("Ingreso",     typeof(decimal));
+            dt.Columns.Add("Egreso",      typeof(decimal));
+            dt.Columns.Add("Saldo",       typeof(decimal));
+            dt.Columns.Add("Usuario",     typeof(string));
+
+            var asientos = ContabilidadRepository.ObtenerAsientos(desde, hasta, tipo, cuenta, texto, montoMin, montoMax);
+            decimal saldo = 0m;
+            int numero = 1;
+
+            foreach (var a in asientos)
+            {
+                var t = ((object)a).GetType();
+                string GetStr(string name) {
+                    var p = t.GetProperty(name); return p == null ? "" : (p.GetValue(a)?.ToString() ?? "");
+                }
+                decimal GetDec(string name) {
+                    var p = t.GetProperty(name); if (p == null) return 0m;
+                    var v = p.GetValue(a); return v == null ? 0m : Convert.ToDecimal(v);
+                }
+
+                decimal debe  = GetDec("TotalDebe");
+                decimal haber = GetDec("TotalHaber");
+                saldo += debe - haber;
+
+                string doc   = GetStr("Documento");
+                string glosa = GetStr("Glosa");
+                string desc  = string.IsNullOrEmpty(glosa) ? doc
+                    : (string.IsNullOrEmpty(doc) ? glosa : $"{doc} - {glosa}");
+
+                string fechaRaw = GetStr("Fecha");
+                string fechaFmt = DateTime.TryParse(fechaRaw, out DateTime fd)
+                    ? fd.ToString("dd/MM/yyyy") : fechaRaw;
+
+                string horaRaw = GetStr("Hora");
+                string horaFmt = TimeSpan.TryParse(horaRaw, out TimeSpan ht)
+                    ? ht.ToString(@"hh\:mm") : horaRaw;
+
+                string usuario = GetStr("UsuarioNombre");
+                if (string.IsNullOrEmpty(usuario)) usuario = GetStr("Usuario");
+                if (string.IsNullOrEmpty(usuario)) usuario = "-";
+
+                dt.Rows.Add(numero++, fechaFmt, horaFmt, GetStr("TipoOperacion"), desc, debe, haber, saldo, usuario);
+            }
+            return dt;
+        }
+
         // =============================================
         // REPORTES FINANCIEROS
         // =============================================
@@ -779,6 +869,85 @@ namespace SistemaPOS.Reports.DataSources
             dt.Rows.Add("  Capital", $"S/ {balance.Capital:N2}", balance.Capital, "normal");
             dt.Rows.Add("  Utilidad Acumulada", $"S/ {balance.UtilidadAcumulada:N2}", balance.UtilidadAcumulada, "normal");
             dt.Rows.Add("PATRIMONIO NETO", $"S/ {balance.TotalPatrimonio:N2}", balance.TotalPatrimonio, "result");
+
+            return dt;
+        }
+
+        // =============================================
+        // EXPORTACION DETALLE CAJA Y MONETEO
+        // =============================================
+
+        /// <summary>
+        /// Ventas del turno para el reporte completo de detalle de caja.
+        /// </summary>
+        public static DataTable ObtenerDatosDetalleCajaVentas(int cajaID)
+        {
+            var dt = new DataTable("DsVentasCaja");
+            dt.Columns.Add("Hora", typeof(string));
+            dt.Columns.Add("NumeroVenta", typeof(string));
+            dt.Columns.Add("Cliente", typeof(string));
+            dt.Columns.Add("Metodo", typeof(string));
+            dt.Columns.Add("Total", typeof(decimal));
+
+            var ventas = CajaRepository.ObtenerVentasDelTurno(cajaID);
+            foreach (var v in ventas)
+                dt.Rows.Add(v.Hora, v.NumeroVenta, v.NombreCliente, v.Metodo, v.Total);
+
+            return dt;
+        }
+
+        /// <summary>
+        /// Gastos del turno para el reporte completo de detalle de caja.
+        /// </summary>
+        public static DataTable ObtenerDatosDetalleCajaGastos(int cajaID)
+        {
+            var dt = new DataTable("DsGastosCaja");
+            dt.Columns.Add("Hora", typeof(string));
+            dt.Columns.Add("Concepto", typeof(string));
+            dt.Columns.Add("Categoria", typeof(string));
+            dt.Columns.Add("Monto", typeof(decimal));
+
+            var gastos = CajaRepository.ObtenerGastosDelTurno(cajaID);
+            foreach (var g in gastos)
+                dt.Rows.Add(g.Hora, g.Concepto, g.Categoria, g.Monto);
+
+            return dt;
+        }
+
+        /// <summary>
+        /// Conversiones del turno para el reporte completo de detalle de caja.
+        /// </summary>
+        public static DataTable ObtenerDatosDetalleCajaConversiones(int cajaID)
+        {
+            var dt = new DataTable("DsConversionesCaja");
+            dt.Columns.Add("Hora", typeof(string));
+            dt.Columns.Add("Origen", typeof(string));
+            dt.Columns.Add("Destino", typeof(string));
+            dt.Columns.Add("Monto", typeof(decimal));
+            dt.Columns.Add("Observacion", typeof(string));
+
+            var conversiones = CajaRepository.ObtenerConversiones(cajaID);
+            foreach (var c in conversiones)
+                dt.Rows.Add(c.FechaHora.ToString(@"hh\:mm"), c.MetodoOrigen, c.MetodoDestino, c.Monto,
+                    string.IsNullOrEmpty(c.Observacion) ? "-" : c.Observacion);
+
+            return dt;
+        }
+
+        /// <summary>
+        /// Moneteo del turno para el reporte completo de detalle de caja y para el reporte de moneteo.
+        /// </summary>
+        public static DataTable ObtenerDatosMoneteo(int cajaID)
+        {
+            var dt = new DataTable("DsMoneteoCaja");
+            dt.Columns.Add("Denominacion", typeof(decimal));
+            dt.Columns.Add("DenominacionTexto", typeof(string));
+            dt.Columns.Add("Cantidad", typeof(int));
+            dt.Columns.Add("Subtotal", typeof(decimal));
+
+            var moneteo = CajaRepository.ObtenerMoneteo(cajaID);
+            foreach (var m in moneteo)
+                dt.Rows.Add(m.Denominacion, $"S/ {m.Denominacion:N2}", m.Cantidad, m.Subtotal);
 
             return dt;
         }

@@ -14,10 +14,18 @@ namespace SistemaPOS.Forms.Finanzas
         private decimal _igvGasto;
         private decimal _totalGasto;
         private List<Proveedor> _proveedores;
+        private int? _gastoIDEdicion;
 
         public FormRegistrarGasto()
         {
             InitializeComponent();
+        }
+
+        public FormRegistrarGasto(Models.Gasto gasto) : this()
+        {
+            _gastoIDEdicion = gasto.GastoID;
+            // Pre-fill after Load via stored reference
+            Tag = gasto;
         }
 
         private void FormRegistrarGasto_Load(object sender, EventArgs e)
@@ -27,12 +35,59 @@ namespace SistemaPOS.Forms.Finanzas
                 CargarCategorias();
                 CargarProveedores();
                 ConfigurarControles();
+
+                if (_gastoIDEdicion.HasValue && Tag is Models.Gasto gastoEdicion)
+                    AplicarModoEdicion(gastoEdicion);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error al cargar formulario: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void AplicarModoEdicion(Models.Gasto gasto)
+        {
+            this.Text = "Editar Gasto";
+
+            // Pre-fill editable fields
+            txtConcepto.Text      = gasto.Concepto;
+            txtComprobante.Text   = gasto.Comprobante ?? "";
+            txtObservaciones.Text = gasto.Observaciones ?? "";
+
+            // Select categoria
+            int catIdx = cmbCategoria.Items.IndexOf(gasto.Categoria);
+            if (catIdx >= 0) cmbCategoria.SelectedIndex = catIdx;
+
+            // Lock financial fields — editing monto/fecha/método requires full reversal of accounting
+            dtpFecha.Enabled      = false;
+            dtpHora.Enabled       = false;
+            numMonto.Enabled      = false;
+            cmbMetodoPago.Enabled = false;
+            cboIGV.Enabled        = false;
+            cmbProveedor.Enabled  = false;
+
+            // Show read-only financial values
+            dtpFecha.Value = gasto.Fecha;
+            dtpHora.Value  = DateTime.Today + gasto.Hora;
+            numMonto.Value = gasto.TipoIGV == 0 ? gasto.Monto : (gasto.TipoIGV == 2 ? gasto.BaseImponible : gasto.Monto);
+
+            int mpIdx = cmbMetodoPago.FindStringExact(gasto.MetodoPago);
+            if (mpIdx >= 0) cmbMetodoPago.SelectedIndex = mpIdx;
+            if (gasto.TipoIGV < cboIGV.Items.Count) cboIGV.SelectedIndex = gasto.TipoIGV;
+
+            // Show note to user
+            var lblNota = new System.Windows.Forms.Label
+            {
+                Text      = "Solo se puede editar: concepto, categoría, comprobante y observaciones.",
+                AutoSize  = false,
+                Size      = new System.Drawing.Size(440, 18),
+                Location  = new System.Drawing.Point(12, 2),
+                Font      = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Italic),
+                ForeColor = System.Drawing.Color.FromArgb(52, 152, 219)
+            };
+            this.Controls.Add(lblNota);
+            lblNota.BringToFront();
         }
 
         private void CargarProveedores()
@@ -99,6 +154,15 @@ namespace SistemaPOS.Forms.Finanzas
             bool esCredito = cmbMetodoPago.Text == "CREDITO";
             lblProveedor.Visible = esCredito;
             cmbProveedor.Visible = esCredito;
+
+            if (esCredito)
+            {
+                var tip = new System.Windows.Forms.ToolTip();
+                tip.SetToolTip(cmbProveedor,
+                    "Opcional. Si selecciona un proveedor, el gasto quedará\nvinculado a Cuentas por Pagar para seguimiento de deuda.");
+                tip.SetToolTip(lblProveedor,
+                    "Opcional. Si selecciona un proveedor, el gasto quedará\nvinculado a Cuentas por Pagar para seguimiento de deuda.");
+            }
         }
 
         private void CalcularTotales()
@@ -192,9 +256,31 @@ namespace SistemaPOS.Forms.Finanzas
                     Comprobante   = string.IsNullOrWhiteSpace(txtComprobante.Text) ? null : txtComprobante.Text.Trim(),
                     Observaciones = string.IsNullOrWhiteSpace(txtObservaciones.Text) ? null : txtObservaciones.Text.Trim(),
                     CajaID        = CajaRepository.ObtenerCajaAbierta()?.CajaID,
-                    UsuarioID     = SesionActual.Usuario.UsuarioID,
+                    UsuarioID     = SesionActual.Usuario?.UsuarioID ?? 0,
                     ProveedorID   = proveedorID
                 };
+
+                if (_gastoIDEdicion.HasValue)
+                {
+                    string concepto      = txtConcepto.Text.Trim();
+                    string categoria     = cmbCategoria.Text;
+                    string comprobante   = string.IsNullOrWhiteSpace(txtComprobante.Text) ? null : txtComprobante.Text.Trim();
+                    string observaciones = string.IsNullOrWhiteSpace(txtObservaciones.Text) ? null : txtObservaciones.Text.Trim();
+
+                    if (GastoRepository.ActualizarDescriptivos(_gastoIDEdicion.Value, concepto, categoria, comprobante, observaciones))
+                    {
+                        MessageBox.Show("Gasto actualizado correctamente", "Éxito",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        this.DialogResult = DialogResult.OK;
+                        this.Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show("No se pudo actualizar el gasto", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    return;
+                }
 
                 if (GastoRepository.Crear(gasto))
                 {

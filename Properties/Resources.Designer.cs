@@ -22,7 +22,7 @@ namespace SistemaPOS.Properties {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "18.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Resources {
+    public class Resources {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
@@ -36,7 +36,7 @@ namespace SistemaPOS.Properties {
         ///   Devuelve la instancia de ResourceManager almacenada en caché utilizada por esta clase.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager {
+        public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("SistemaPOS.Properties.Resources", typeof(Resources).Assembly);
@@ -51,7 +51,7 @@ namespace SistemaPOS.Properties {
         ///   búsquedas de recursos mediante esta clase de recurso fuertemente tipado.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture {
+        public static global::System.Globalization.CultureInfo Culture {
             get {
                 return resourceCulture;
             }
@@ -63,9 +63,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Ajustes {
+        public static System.Drawing.Bitmap icons8_caja_registradora_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Ajustes", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-caja-registradora-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -73,9 +73,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Ajustes_hover {
+        public static System.Drawing.Bitmap icons8_casa_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Ajustes-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-casa-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -83,9 +83,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_AlertaStock {
+        public static System.Drawing.Bitmap icons8_clientes_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-AlertaStock", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-clientes-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -93,9 +93,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_AlertaStock_hover {
+        public static System.Drawing.Bitmap icons8_compras_1_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-AlertaStock-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-compras-1-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -103,9 +103,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_BalanceGeneral {
+        public static System.Drawing.Bitmap icons8_contabilidad_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-BalanceGeneral", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-contabilidad-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -113,9 +113,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_BalanceGeneral_hover {
+        public static System.Drawing.Bitmap icons8_copybook_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-BalanceGeneral-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-copybook-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -123,9 +123,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Caja {
+        public static System.Drawing.Bitmap icons8_general_ledger_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Caja", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-general-ledger-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -133,9 +133,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Caja_hover {
+        public static System.Drawing.Bitmap icons8_ledger_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Caja-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-ledger-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -143,9 +143,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Cerrar {
+        public static System.Drawing.Bitmap icons8_menú_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Cerrar", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-menú-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -153,9 +153,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Cerrar_hover {
+        public static System.Drawing.Bitmap icons8_pagar_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Cerrar-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-pagar-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -163,9 +163,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Clientes {
+        public static System.Drawing.Bitmap icons8_payment_history_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Clientes", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-payment-history-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -173,9 +173,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Clientes_hover {
+        public static System.Drawing.Bitmap icons8_product_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Clientes-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-product-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -183,9 +183,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Compras {
+        public static System.Drawing.Bitmap icons8_proveedor_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Compras", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-proveedor-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -193,9 +193,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Compras_hover {
+        public static System.Drawing.Bitmap icons8_salida_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Compras-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-salida-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -203,9 +203,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Configuracion {
+        public static System.Drawing.Bitmap icons8_tools_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Configuracion", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-tools-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -213,9 +213,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Configuraciones_hover {
+        public static System.Drawing.Bitmap icons8_transaction_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Configuraciones-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-transaction-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -223,279 +223,9 @@ namespace SistemaPOS.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_CuentasPorPagar {
+        public static System.Drawing.Bitmap icons8_ventas_25 {
             get {
-                object obj = ResourceManager.GetObject("Icono-Boton-CuentasPorPagar", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_CuentasPorPagar_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-CuentasPorPagar-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Dashboard {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Dashboard", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Dashboard_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Dashboard-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Empresa {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Empresa", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Empresa_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Empresa-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_EstadoDeResultado {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-EstadoDeResultado", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_EstadoDeResultado_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-EstadoDeResultado-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_FlujoDeCaja {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-FlujoDeCaja", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_FlujoDeCaja_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-FlujoDeCaja-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Gastos {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Gastos", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Gastos_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Gastos-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_HistorialCompras {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-HistorialCompras", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_HistorialCompras_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-HistorialCompras-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_HistorialVentas {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-HistorialVentas", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_HistorialVentas_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-HistorialVentas-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_LibroDiario {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-LibroDiario", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_LibroDiario_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-LibroDiario-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Productos {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Productos", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Productos_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Productos-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Proveedores {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Proveedores", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Proveedores_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Proveedores-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_ReportesGenerales {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-ReportesGenerales", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_ReportesGenerales_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-ReportesGenerales-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Usuarios {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Usuarios", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Usuarios_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Usuarios-hover", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Ventas {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Ventas", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Icono_Boton_Ventas_hover {
-            get {
-                object obj = ResourceManager.GetObject("Icono-Boton-Ventas-hover", resourceCulture);
+                object obj = ResourceManager.GetObject("icons8-ventas-25", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

@@ -8,7 +8,46 @@ namespace SistemaPOS.Data
 {
     public class ProductoRepository
     {
-        public static List<Producto> BuscarProductos(string busqueda = "")
+        /// <summary>
+        /// Devuelve todos los productos activos (ID, Codigo, Nombre) para poblar combos de búsqueda.
+        /// No usa JOINs para garantizar que aparezcan aunque falte Categoría o UnidadBase.
+        /// </summary>
+        public static List<Producto> ObtenerCatalogoBusqueda()
+        {
+            var productos = new List<Producto>();
+            try
+            {
+                using (var connection = DatabaseConnection.GetConnection())
+                {
+                    string query = @"
+                        SELECT ProductoID, Codigo, Nombre
+                        FROM Productos
+                        WHERE Activo = 1
+                        ORDER BY Nombre";
+
+                    using (var cmd = new SQLiteCommand(query, connection))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            productos.Add(new Producto
+                            {
+                                ProductoID = reader.GetInt32(0),
+                                Codigo     = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                                Nombre     = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error al cargar catálogo de productos: {ex.Message}");
+            }
+            return productos;
+        }
+
+        public static List<Producto> BuscarProductos(string busqueda = "", int? categoriaID = null)
         {
             var productos = new List<Producto>();
 
@@ -17,7 +56,7 @@ namespace SistemaPOS.Data
                 using (var connection = DatabaseConnection.GetConnection())
                 {
                     string query = @"
-                        SELECT p.ProductoID, p.Codigo, p.Nombre, p.StockTotal, 
+                        SELECT p.ProductoID, p.Codigo, p.Nombre, p.StockTotal,
                                c.Nombre as CategoriaNombre, u.Nombre as UnidadNombre,
                                p.CategoriaID, p.UnidadBaseID, p.StockMinimo, p.StockMaximo,
                                p.ProveedorID, p.Activo, p.Descripcion, p.CodigoBarras,
@@ -27,12 +66,14 @@ namespace SistemaPOS.Data
                         INNER JOIN UnidadesBase u ON p.UnidadBaseID = u.UnidadID
                         WHERE p.Activo = 1
                         AND (p.Nombre LIKE @Busqueda OR p.Codigo LIKE @Busqueda)
+                        AND (@CategoriaID IS NULL OR p.CategoriaID = @CategoriaID)
                         ORDER BY p.Nombre
                         LIMIT 50";
 
                     using (var cmd = new SQLiteCommand(query, connection))
                     {
                         cmd.Parameters.AddWithValue("@Busqueda", "%" + busqueda + "%");
+                        cmd.Parameters.AddWithValue("@CategoriaID", (object)categoriaID ?? DBNull.Value);
 
                         using (var reader = cmd.ExecuteReader())
                         {

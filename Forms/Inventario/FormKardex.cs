@@ -18,6 +18,7 @@ namespace SistemaPOS.Forms.Inventario
         public FormKardex()
         {
             InitializeComponent();
+            if (System.ComponentModel.LicenseManager.UsageMode == System.ComponentModel.LicenseUsageMode.Designtime) return;
             ConfigurarControles();
             CargarProductos();
             CargarKardex();
@@ -43,9 +44,9 @@ namespace SistemaPOS.Forms.Inventario
                 CargarKardex();
             };
             btnExportar.Click += (_, __) => ExportarReporte();
-            btnVerAjustes.Click += (_, __) => new FormAjustes().ShowDialog(this);
 
             dgvKardex.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvKardex);
             dgvKardex.AllowUserToAddRows = false;
             dgvKardex.AllowUserToDeleteRows = false;
             dgvKardex.ReadOnly = true;

@@ -62,21 +62,26 @@ namespace SistemaPOS.Data
                 bg.TotalPasivos = bg.CuentasPorPagar;
 
                 // PATRIMONIO
-                // Utilidad acumulada: Total ventas - Total costo mercadería - Total gastos
-                decimal totalVentas = ObtenerDecimal(connection,
-                    "SELECT COALESCE(SUM(Total), 0) FROM Ventas WHERE Estado != 'ANULADA'");
+                // Utilidad acumulada desde asientos contables (cuentas 400, 500, 600 — todo el tiempo)
+                const string sqlUtil = @"
+                    SELECT
+                        COALESCE(SUM(CASE WHEN cc.Codigo = '400' THEN ad.Haber - ad.Debe ELSE 0 END), 0),
+                        COALESCE(SUM(CASE WHEN cc.Codigo = '500' THEN ad.Debe - ad.Haber ELSE 0 END), 0),
+                        COALESCE(SUM(CASE WHEN cc.Codigo = '600' THEN ad.Debe - ad.Haber ELSE 0 END), 0)
+                    FROM   AsientosDetalle ad
+                    JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID";
 
-                decimal totalCostoMercaderia = ObtenerDecimal(connection, @"
-                    SELECT COALESCE(SUM(vd.Cantidad * pp.CostoBase), 0)
-                    FROM VentaDetalles vd
-                    INNER JOIN Ventas v ON vd.VentaID = v.VentaID
-                    INNER JOIN ProductoPresentaciones pp ON vd.ProductoPresentacionID = pp.ProductoPresentacionID
-                    WHERE v.Estado != 'ANULADA'");
-
-                decimal totalGastos = ObtenerDecimal(connection,
-                    "SELECT COALESCE(SUM(Monto), 0) FROM Gastos");
-
-                bg.UtilidadAcumulada = totalVentas - totalCostoMercaderia - totalGastos;
+                using (var cmd = new SQLiteCommand(sqlUtil, connection))
+                using (var r = cmd.ExecuteReader())
+                {
+                    if (r.Read())
+                    {
+                        decimal ventas = r.IsDBNull(0) ? 0m : r.GetDecimal(0);
+                        decimal cogs   = r.IsDBNull(1) ? 0m : r.GetDecimal(1);
+                        decimal gastos = r.IsDBNull(2) ? 0m : r.GetDecimal(2);
+                        bg.UtilidadAcumulada = ventas - cogs - gastos;
+                    }
+                }
 
                 // Capital = Total Patrimonio - Utilidad Acumulada (lo que se invirtió inicialmente)
                 bg.Capital = (bg.TotalActivos - bg.TotalPasivos) - bg.UtilidadAcumulada;

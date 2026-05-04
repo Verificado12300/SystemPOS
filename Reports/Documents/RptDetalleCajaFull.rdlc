@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report xmlns="http://schemas.microsoft.com/sqlserver/reporting/2008/01/reportdefinition" xmlns:rd="http://schemas.microsoft.com/SQLServer/reporting/reportdesigner">
+  <Body>
+    <ReportItems>
+      <!-- Encabezado empresa -->
+      <Textbox Name="txtEmpresaNombre">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>=Parameters!pEmpresaNombre.Value</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>14pt</FontSize><FontWeight>Bold</FontWeight><Color>#333333</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>0cm</Top><Left>0cm</Left><Height>0.8cm</Height><Width>17cm</Width>
+        <Style><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtEmpresaInfo">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>=Parameters!pEmpresaDireccion.Value &amp; " | RUC: " &amp; Parameters!pEmpresaRUC.Value</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><Color>#666666</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>0.8cm</Top><Left>0cm</Left><Height>0.5cm</Height><Width>17cm</Width>
+        <Style><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <!-- Título -->
+      <Textbox Name="txtTitulo">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>DETALLE DE TURNO DE CAJA</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>12pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>1.5cm</Top><Left>0cm</Left><Height>0.7cm</Height><Width>17cm</Width>
+        <Style><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtFechaGen">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>="Generado: " &amp; Parameters!pFechaGeneracion.Value</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><Color>#888888</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Right</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>2.3cm</Top><Left>0cm</Left><Height>0.4cm</Height><Width>17cm</Width>
+        <Style><PaddingRight>4pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+
+      <!-- Sección: Info del turno -->
+      <Textbox Name="txtSecInfoTurno">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>INFORMACIÓN DEL TURNO</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>9pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>2.8cm</Top><Left>0cm</Left><Height>0.55cm</Height><Width>17cm</Width>
+        <Style><BackgroundColor>#636E72</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>6pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+
+      <!-- Fila info 1 -->
+      <Textbox Name="lblEncargadoL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Encargado:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>3.45cm</Top><Left>0cm</Left><Height>0.5cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtEncargado"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pEncargado.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>3.45cm</Top><Left>3cm</Left><Height>0.5cm</Height><Width>5cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblTurnoL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Turno:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>3.45cm</Top><Left>8.5cm</Left><Height>0.5cm</Height><Width>2.5cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtTurno"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pTurno.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>3.45cm</Top><Left>11cm</Left><Height>0.5cm</Height><Width>6cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+
+      <!-- Fila info 2 -->
+      <Textbox Name="lblFechaL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Fecha:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>4cm</Top><Left>0cm</Left><Height>0.5cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtFechaTurno"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pFechaApertura.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>4cm</Top><Left>3cm</Left><Height>0.5cm</Height><Width>5cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblHoraL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Apertura / Cierre:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>4cm</Top><Left>8.5cm</Left><Height>0.5cm</Height><Width>2.5cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtHoras"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pHoraApertura.Value &amp; " / " &amp; Parameters!pHoraCierre.Value &amp; " (" &amp; Parameters!pDuracion.Value &amp; ")"</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>4cm</Top><Left>11cm</Left><Height>0.5cm</Height><Width>6cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+
+      <!-- Separador -->
+      <Textbox Name="sep1"><CanGrow>false</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value></Value></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>4.55cm</Top><Left>0cm</Left><Height>0.05cm</Height><Width>17cm</Width>
+        <Style><BackgroundColor>#CCCCCC</BackgroundColor></Style>
+      </Textbox>
+
+      <!-- Sección: Resumen de ingresos -->
+      <Textbox Name="txtSecResumen">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>RESUMEN DE INGRESOS Y ARQUEO</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>9pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>4.65cm</Top><Left>0cm</Left><Height>0.55cm</Height><Width>17cm</Width>
+        <Style><BackgroundColor>#636E72</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>6pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+
+      <!-- Resumen: columna izq -->
+      <Textbox Name="lblOpL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Operaciones:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>5.3cm</Top><Left>0cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtOpV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pOperaciones.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>5.3cm</Top><Left>3cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblEfL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Efectivo:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>5.8cm</Top><Left>0cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtEfV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pEfectivo.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#27AE60</Color><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>5.8cm</Top><Left>3cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblYpL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Yape:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>6.3cm</Top><Left>0cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtYpV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pYape.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#8E44AD</Color><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>6.3cm</Top><Left>3cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblTrL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Transferencia:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>6.8cm</Top><Left>0cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtTrV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pTransferencia.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#2980B9</Color><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>6.8cm</Top><Left>3cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <!-- Resumen: columna der -->
+      <Textbox Name="lblTvL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Total Ventas:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>5.3cm</Top><Left>8.5cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtTvV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pTotalVentas.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>5.3cm</Top><Left>11.5cm</Left><Height>0.45cm</Height><Width>5.5cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblGsL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Gastos Efectivo:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>5.8cm</Top><Left>8.5cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtGsV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pGastos.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#C0392B</Color><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>5.8cm</Top><Left>11.5cm</Left><Height>0.45cm</Height><Width>5.5cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblFiL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Fondo Inicial:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>6.3cm</Top><Left>8.5cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtFiV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pFondoInicial.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>6.3cm</Top><Left>11.5cm</Left><Height>0.45cm</Height><Width>5.5cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblEeL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Ef. Esperado:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>6.8cm</Top><Left>8.5cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtEeV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pEfectivoEsperado.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>6.8cm</Top><Left>11.5cm</Left><Height>0.45cm</Height><Width>5.5cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblErL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Ef. Real (Moneteo):</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>7.3cm</Top><Left>8.5cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtErV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pEfectivoReal.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><Color>#333333</Color><FontWeight>Bold</FontWeight></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>7.3cm</Top><Left>11.5cm</Left><Height>0.45cm</Height><Width>5.5cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="lblDifL"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>Diferencia:</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#555555</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>7.8cm</Top><Left>8.5cm</Left><Height>0.45cm</Height><Width>3cm</Width>
+        <Style><PaddingLeft>4pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Textbox Name="txtDifV"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Parameters!pDiferencia.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#C0392B</Color></Style></TextRun></TextRuns></Paragraph></Paragraphs>
+        <Top>7.8cm</Top><Left>11.5cm</Left><Height>0.45cm</Height><Width>5.5cm</Width>
+        <Style><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+
+      <!-- Sección: Ventas del turno -->
+      <Textbox Name="txtSecVentas">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>VENTAS DEL TURNO</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>9pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>8.5cm</Top><Left>0cm</Left><Height>0.55cm</Height><Width>17cm</Width>
+        <Style><BackgroundColor>#636E72</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>6pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Tablix Name="TablixVentas">
+        <TablixBody>
+          <TablixColumns>
+            <TablixColumn><Width>1.5cm</Width></TablixColumn>
+            <TablixColumn><Width>3cm</Width></TablixColumn>
+            <TablixColumn><Width>7cm</Width></TablixColumn>
+            <TablixColumn><Width>2.5cm</Width></TablixColumn>
+            <TablixColumn><Width>3cm</Width></TablixColumn>
+          </TablixColumns>
+          <TablixRows>
+            <TablixRow>
+              <Height>0.6cm</Height>
+              <TablixCells>
+                <TablixCell><CellContents><Textbox Name="VH1"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Hora</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="VH2"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>N° Venta</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="VH3"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Cliente</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>4pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="VH4"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Método</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="VH5"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Total</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Right</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>4pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+              </TablixCells>
+            </TablixRow>
+            <TablixRow>
+              <Height>0.55cm</Height>
+              <TablixCells>
+                <TablixCell><CellContents><Textbox Name="VC1"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Hora.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#F5F5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="VC2"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!NumeroVenta.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#F5F5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="VC3"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Cliente.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#F5F5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>4pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="VC4"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Metodo.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#F5F5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="VC5"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Total.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#27AE60</Color><Format>S/ #,##0.00</Format></Style></TextRun></TextRuns><Style><TextAlign>Right</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#F5F5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>4pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+              </TablixCells>
+            </TablixRow>
+          </TablixRows>
+        </TablixBody>
+        <TablixColumnHierarchy><TablixMembers><TablixMember /><TablixMember /><TablixMember /><TablixMember /><TablixMember /></TablixMembers></TablixColumnHierarchy>
+        <TablixRowHierarchy><TablixMembers><TablixMember><KeepWithGroup>After</KeepWithGroup><RepeatOnNewPage>true</RepeatOnNewPage></TablixMember><TablixMember><Group Name="DetailsVentas" /></TablixMember></TablixMembers></TablixRowHierarchy>
+        <DataSetName>DsVentasCaja</DataSetName>
+        <Top>9.1cm</Top><Left>0cm</Left><Height>1.15cm</Height><Width>17cm</Width><ZIndex>20</ZIndex>
+        <Style />
+      </Tablix>
+
+      <!-- Sección: Gastos del turno -->
+      <Textbox Name="txtSecGastos">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>GASTOS DEL TURNO</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>9pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>10.4cm</Top><Left>0cm</Left><Height>0.55cm</Height><Width>17cm</Width>
+        <Style><BackgroundColor>#636E72</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>6pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Tablix Name="TablixGastos">
+        <TablixBody>
+          <TablixColumns>
+            <TablixColumn><Width>1.5cm</Width></TablixColumn>
+            <TablixColumn><Width>8cm</Width></TablixColumn>
+            <TablixColumn><Width>4.5cm</Width></TablixColumn>
+            <TablixColumn><Width>3cm</Width></TablixColumn>
+          </TablixColumns>
+          <TablixRows>
+            <TablixRow>
+              <Height>0.6cm</Height>
+              <TablixCells>
+                <TablixCell><CellContents><Textbox Name="GH1"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Hora</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="GH2"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Concepto</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>4pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="GH3"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Categoría</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="GH4"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Monto</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Right</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>4pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+              </TablixCells>
+            </TablixRow>
+            <TablixRow>
+              <Height>0.55cm</Height>
+              <TablixCells>
+                <TablixCell><CellContents><Textbox Name="GC1"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Hora.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#FFF5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="GC2"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Concepto.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#FFF5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>4pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="GC3"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Categoria.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#FFF5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="GC4"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Monto.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>7.5pt</FontSize><FontWeight>Bold</FontWeight><Color>#C0392B</Color><Format>S/ #,##0.00</Format></Style></TextRun></TextRuns><Style><TextAlign>Right</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#FFF5F5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>4pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+              </TablixCells>
+            </TablixRow>
+          </TablixRows>
+        </TablixBody>
+        <TablixColumnHierarchy><TablixMembers><TablixMember /><TablixMember /><TablixMember /><TablixMember /></TablixMembers></TablixColumnHierarchy>
+        <TablixRowHierarchy><TablixMembers><TablixMember><KeepWithGroup>After</KeepWithGroup><RepeatOnNewPage>true</RepeatOnNewPage></TablixMember><TablixMember><Group Name="DetailsGastos" /></TablixMember></TablixMembers></TablixRowHierarchy>
+        <DataSetName>DsGastosCaja</DataSetName>
+        <Top>11cm</Top><Left>0cm</Left><Height>1.15cm</Height><Width>17cm</Width><ZIndex>30</ZIndex>
+        <Style />
+      </Tablix>
+
+      <!-- Sección: Moneteo -->
+      <Textbox Name="txtSecMoneteo">
+        <CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+        <Paragraphs><Paragraph><TextRuns><TextRun>
+          <Value>MONETEO — CONTEO DE EFECTIVO</Value>
+          <Style><FontFamily>Segoe UI</FontFamily><FontSize>9pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style>
+        </TextRun></TextRuns><Style><TextAlign>Left</TextAlign></Style></Paragraph></Paragraphs>
+        <Top>12.3cm</Top><Left>0cm</Left><Height>0.55cm</Height><Width>17cm</Width>
+        <Style><BackgroundColor>#636E72</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>6pt</PaddingLeft><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+      </Textbox>
+      <Tablix Name="TablixMoneteo">
+        <TablixBody>
+          <TablixColumns>
+            <TablixColumn><Width>4cm</Width></TablixColumn>
+            <TablixColumn><Width>4cm</Width></TablixColumn>
+            <TablixColumn><Width>4cm</Width></TablixColumn>
+          </TablixColumns>
+          <TablixRows>
+            <TablixRow>
+              <Height>0.6cm</Height>
+              <TablixCells>
+                <TablixCell><CellContents><Textbox Name="MH1"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Denominación</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="MH2"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Cantidad</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="MH3"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>Subtotal</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>White</Color></Style></TextRun></TextRuns><Style><TextAlign>Right</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>White</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>#2D3436</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>4pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+              </TablixCells>
+            </TablixRow>
+            <TablixRow>
+              <Height>0.55cm</Height>
+              <TablixCells>
+                <TablixCell><CellContents><Textbox Name="MC1"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!DenominacionTexto.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#F5FFF5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="MC2"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Cantidad.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#F5FFF5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+                <TablixCell><CellContents><Textbox Name="MC3"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether><Paragraphs><Paragraph><TextRuns><TextRun><Value>=Fields!Subtotal.Value</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><FontWeight>Bold</FontWeight><Color>#27AE60</Color><Format>S/ #,##0.00</Format></Style></TextRun></TextRuns><Style><TextAlign>Right</TextAlign></Style></Paragraph></Paragraphs><Style><Border><Color>#E0E0E0</Color><Style>Solid</Style><Width>0.5pt</Width></Border><BackgroundColor>=IIF(RowNumber(Nothing) Mod 2 = 0, "#F5FFF5", "White")</BackgroundColor><VerticalAlign>Middle</VerticalAlign><PaddingLeft>2pt</PaddingLeft><PaddingRight>4pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style></Textbox></CellContents></TablixCell>
+              </TablixCells>
+            </TablixRow>
+          </TablixRows>
+        </TablixBody>
+        <TablixColumnHierarchy><TablixMembers><TablixMember /><TablixMember /><TablixMember /></TablixMembers></TablixColumnHierarchy>
+        <TablixRowHierarchy><TablixMembers><TablixMember><KeepWithGroup>After</KeepWithGroup><RepeatOnNewPage>true</RepeatOnNewPage></TablixMember><TablixMember><Group Name="DetailsMoneteo" /></TablixMember></TablixMembers></TablixRowHierarchy>
+        <DataSetName>DsMoneteoCaja</DataSetName>
+        <Top>12.9cm</Top><Left>0cm</Left><Height>1.15cm</Height><Width>12cm</Width><ZIndex>40</ZIndex>
+        <Style />
+      </Tablix>
+    </ReportItems>
+    <Height>14.5cm</Height>
+    <Style />
+  </Body>
+  <Width>17cm</Width>
+  <Page>
+    <PageFooter>
+      <Height>0.8cm</Height><PrintOnFirstPage>true</PrintOnFirstPage><PrintOnLastPage>true</PrintOnLastPage>
+      <ReportItems>
+        <Textbox Name="txtPageNum"><CanGrow>true</CanGrow><KeepTogether>true</KeepTogether>
+          <Paragraphs><Paragraph><TextRuns><TextRun><Value>=Globals!PageNumber &amp; " de " &amp; Globals!TotalPages</Value><Style><FontFamily>Segoe UI</FontFamily><FontSize>8pt</FontSize><Color>#888888</Color></Style></TextRun></TextRuns><Style><TextAlign>Center</TextAlign></Style></Paragraph></Paragraphs>
+          <Top>0cm</Top><Left>0cm</Left><Height>0.6cm</Height><Width>17cm</Width>
+          <Style><PaddingLeft>2pt</PaddingLeft><PaddingRight>2pt</PaddingRight><PaddingTop>2pt</PaddingTop><PaddingBottom>2pt</PaddingBottom></Style>
+        </Textbox>
+      </ReportItems>
+      <Style />
+    </PageFooter>
+    <PageHeight>29.7cm</PageHeight><PageWidth>21cm</PageWidth>
+    <LeftMargin>2cm</LeftMargin><RightMargin>2cm</RightMargin><TopMargin>2cm</TopMargin><BottomMargin>2cm</BottomMargin>
+    <Style />
+  </Page>
+  <AutoRefresh>0</AutoRefresh>
+  <DataSources>
+    <DataSource Name="SistemaPOSDataSource">
+      <ConnectionProperties><DataProvider>System.Data.DataSet</DataProvider><ConnectString>/* Local Report */</ConnectString></ConnectionProperties>
+      <rd:DataSourceID>b2c3d4e5-f6a7-8901-bcde-333333333333</rd:DataSourceID>
+    </DataSource>
+  </DataSources>
+  <DataSets>
+    <DataSet Name="DsVentasCaja">
+      <Query><DataSourceName>SistemaPOSDataSource</DataSourceName><CommandText>/* Local Report */</CommandText></Query>
+      <Fields>
+        <Field Name="Hora"><DataField>Hora</DataField><rd:TypeName>System.String</rd:TypeName></Field>
+        <Field Name="NumeroVenta"><DataField>NumeroVenta</DataField><rd:TypeName>System.String</rd:TypeName></Field>
+        <Field Name="Cliente"><DataField>Cliente</DataField><rd:TypeName>System.String</rd:TypeName></Field>
+        <Field Name="Metodo"><DataField>Metodo</DataField><rd:TypeName>System.String</rd:TypeName></Field>
+        <Field Name="Total"><DataField>Total</DataField><rd:TypeName>System.Decimal</rd:TypeName></Field>
+      </Fields>
+    </DataSet>
+    <DataSet Name="DsGastosCaja">
+      <Query><DataSourceName>SistemaPOSDataSource</DataSourceName><CommandText>/* Local Report */</CommandText></Query>
+      <Fields>
+        <Field Name="Hora"><DataField>Hora</DataField><rd:TypeName>System.String</rd:TypeName></Field>
+        <Field Name="Concepto"><DataField>Concepto</DataField><rd:TypeName>System.String</rd:TypeName></Field>
+        <Field Name="Categoria"><DataField>Categoria</DataField><rd:TypeName>System.String</rd:TypeName></Field>
+        <Field Name="Monto"><DataField>Monto</DataField><rd:TypeName>System.Decimal</rd:TypeName></Field>
+      </Fields>
+    </DataSet>
+    <DataSet Name="DsMoneteoCaja">
+      <Query><DataSourceName>SistemaPOSDataSource</DataSourceName><CommandText>/* Local Report */</CommandText></Query>
+      <Fields>
+        <Field Name="Denominacion"><DataField>Denominacion</DataField><rd:TypeName>System.Decimal</rd:TypeName></Field>
+        <Field Name="DenominacionTexto"><DataField>DenominacionTexto</DataField><rd:TypeName>System.String</rd:TypeName></Field>
+        <Field Name="Cantidad"><DataField>Cantidad</DataField><rd:TypeName>System.Int32</rd:TypeName></Field>
+        <Field Name="Subtotal"><DataField>Subtotal</DataField><rd:TypeName>System.Decimal</rd:TypeName></Field>
+      </Fields>
+    </DataSet>
+  </DataSets>
+  <ReportParameters>
+    <ReportParameter Name="pEmpresaNombre"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Empresa</Prompt></ReportParameter>
+    <ReportParameter Name="pEmpresaDireccion"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Direccion</Prompt></ReportParameter>
+    <ReportParameter Name="pEmpresaRUC"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>RUC</Prompt></ReportParameter>
+    <ReportParameter Name="pFechaGeneracion"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>FechaGen</Prompt></ReportParameter>
+    <ReportParameter Name="pEncargado"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Encargado</Prompt></ReportParameter>
+    <ReportParameter Name="pTurno"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Turno</Prompt></ReportParameter>
+    <ReportParameter Name="pFechaApertura"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>FechaApertura</Prompt></ReportParameter>
+    <ReportParameter Name="pHoraApertura"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>HoraApertura</Prompt></ReportParameter>
+    <ReportParameter Name="pHoraCierre"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>HoraCierre</Prompt></ReportParameter>
+    <ReportParameter Name="pDuracion"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Duracion</Prompt></ReportParameter>
+    <ReportParameter Name="pOperaciones"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Operaciones</Prompt></ReportParameter>
+    <ReportParameter Name="pEfectivo"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Efectivo</Prompt></ReportParameter>
+    <ReportParameter Name="pYape"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Yape</Prompt></ReportParameter>
+    <ReportParameter Name="pTransferencia"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Transferencia</Prompt></ReportParameter>
+    <ReportParameter Name="pCredito"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Credito</Prompt></ReportParameter>
+    <ReportParameter Name="pTotalVentas"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>TotalVentas</Prompt></ReportParameter>
+    <ReportParameter Name="pGastos"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Gastos</Prompt></ReportParameter>
+    <ReportParameter Name="pFondoInicial"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>FondoInicial</Prompt></ReportParameter>
+    <ReportParameter Name="pEfectivoEsperado"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>EfectivoEsperado</Prompt></ReportParameter>
+    <ReportParameter Name="pEfectivoReal"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>EfectivoReal</Prompt></ReportParameter>
+    <ReportParameter Name="pDiferencia"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Diferencia</Prompt></ReportParameter>
+    <ReportParameter Name="pMotivo"><DataType>String</DataType><AllowBlank>true</AllowBlank><Prompt>Motivo</Prompt></ReportParameter>
+  </ReportParameters>
+  <rd:ReportUnitType>Cm</rd:ReportUnitType>
+  <rd:ReportID>b2c3d4e5-f6a7-8901-bcde-333333333334</rd:ReportID>
+</Report>

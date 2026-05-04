@@ -121,35 +121,33 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlFiltros.Height    = 40;
             this.pnlFiltros.BackColor = System.Drawing.Color.FromArgb(236, 240, 243);
 
-            int fx = 10, fy = 8;
-
             this.lblDesde.AutoSize  = true;
-            this.lblDesde.Location  = new System.Drawing.Point(fx, fy + 2);
+            this.lblDesde.Location  = new System.Drawing.Point(10, 10);
             this.lblDesde.Text      = "Desde:";
             this.lblDesde.ForeColor = System.Drawing.Color.FromArgb(60, 70, 80);
 
-            this.dtpDesde.Location  = new System.Drawing.Point(fx + 48, fy);
+            this.dtpDesde.Location  = new System.Drawing.Point(58, 8);
             this.dtpDesde.Size      = new System.Drawing.Size(110, 22);
             this.dtpDesde.Format    = System.Windows.Forms.DateTimePickerFormat.Short;
 
             this.lblHasta.AutoSize  = true;
-            this.lblHasta.Location  = new System.Drawing.Point(fx + 170, fy + 2);
+            this.lblHasta.Location  = new System.Drawing.Point(180, 10);
             this.lblHasta.Text      = "Hasta:";
             this.lblHasta.ForeColor = System.Drawing.Color.FromArgb(60, 70, 80);
 
-            this.dtpHasta.Location  = new System.Drawing.Point(fx + 216, fy);
+            this.dtpHasta.Location  = new System.Drawing.Point(226, 8);
             this.dtpHasta.Size      = new System.Drawing.Size(110, 22);
             this.dtpHasta.Format    = System.Windows.Forms.DateTimePickerFormat.Short;
 
             this.lblBuscar.AutoSize  = true;
-            this.lblBuscar.Location  = new System.Drawing.Point(fx + 340, fy + 2);
+            this.lblBuscar.Location  = new System.Drawing.Point(350, 10);
             this.lblBuscar.Text      = "Buscar:";
             this.lblBuscar.ForeColor = System.Drawing.Color.FromArgb(60, 70, 80);
 
-            this.txtBuscar.Location  = new System.Drawing.Point(fx + 386, fy);
+            this.txtBuscar.Location  = new System.Drawing.Point(396, 8);
             this.txtBuscar.Size      = new System.Drawing.Size(170, 22);
 
-            this.btnFiltrar.Location  = new System.Drawing.Point(fx + 566, fy - 1);
+            this.btnFiltrar.Location  = new System.Drawing.Point(576, 7);
             this.btnFiltrar.Size      = new System.Drawing.Size(74, 24);
             this.btnFiltrar.Text      = "Filtrar";
             this.btnFiltrar.BackColor = System.Drawing.Color.FromArgb(52, 152, 219);
@@ -169,15 +167,93 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlResumen.BackColor = System.Drawing.Color.FromArgb(245, 247, 250);
             this.pnlResumen.Padding   = new System.Windows.Forms.Padding(10, 6, 10, 6);
 
-            _cardNextX = 10;
-            InicializarCard(this.pnlCardCompras, this.lblComprasLbl, this.lblComprasVal,
-                "TOTAL COMPRAS",    System.Drawing.Color.FromArgb(214, 48, 49));
-            InicializarCard(this.pnlCardPagos,   this.lblPagosLbl,   this.lblPagosVal,
-                "TOTAL PAGADO",     System.Drawing.Color.FromArgb(39, 174, 96));
-            InicializarCard(this.pnlCardAnul,    this.lblAnulLbl,    this.lblAnulVal,
-                "ANULACIONES",      System.Drawing.Color.FromArgb(149, 165, 166));
-            InicializarCard(this.pnlCardSaldo,   this.lblSaldoLbl,   this.lblSaldoVal,
-                "SALDO ACTUAL",     System.Drawing.Color.FromArgb(52, 152, 219));
+            this.pnlCardCompras.Size        = new System.Drawing.Size(236, 52);
+            this.pnlCardCompras.Location    = new System.Drawing.Point(10, 6);
+            this.pnlCardCompras.BackColor   = System.Drawing.Color.White;
+            this.pnlCardCompras.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblComprasLbl.AutoSize  = false;
+            this.lblComprasLbl.Dock      = System.Windows.Forms.DockStyle.Top;
+            this.lblComprasLbl.Height    = 17;
+            this.lblComprasLbl.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
+            this.lblComprasLbl.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            this.lblComprasLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
+            this.lblComprasLbl.ForeColor = System.Drawing.Color.FromArgb(120, 130, 140);
+            this.lblComprasLbl.Text      = "TOTAL COMPRAS";
+            this.lblComprasVal.AutoSize  = false;
+            this.lblComprasVal.Dock      = System.Windows.Forms.DockStyle.Fill;
+            this.lblComprasVal.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.lblComprasVal.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            this.lblComprasVal.Font      = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.lblComprasVal.ForeColor = System.Drawing.Color.FromArgb(214, 48, 49);
+            this.lblComprasVal.Text      = "S/ 0.00";
+            this.pnlCardCompras.Controls.Add(this.lblComprasVal);
+            this.pnlCardCompras.Controls.Add(this.lblComprasLbl);
+
+            this.pnlCardPagos.Size        = new System.Drawing.Size(236, 52);
+            this.pnlCardPagos.Location    = new System.Drawing.Point(254, 6);
+            this.pnlCardPagos.BackColor   = System.Drawing.Color.White;
+            this.pnlCardPagos.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblPagosLbl.AutoSize  = false;
+            this.lblPagosLbl.Dock      = System.Windows.Forms.DockStyle.Top;
+            this.lblPagosLbl.Height    = 17;
+            this.lblPagosLbl.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
+            this.lblPagosLbl.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            this.lblPagosLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
+            this.lblPagosLbl.ForeColor = System.Drawing.Color.FromArgb(120, 130, 140);
+            this.lblPagosLbl.Text      = "TOTAL PAGADO";
+            this.lblPagosVal.AutoSize  = false;
+            this.lblPagosVal.Dock      = System.Windows.Forms.DockStyle.Fill;
+            this.lblPagosVal.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.lblPagosVal.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            this.lblPagosVal.Font      = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.lblPagosVal.ForeColor = System.Drawing.Color.FromArgb(39, 174, 96);
+            this.lblPagosVal.Text      = "S/ 0.00";
+            this.pnlCardPagos.Controls.Add(this.lblPagosVal);
+            this.pnlCardPagos.Controls.Add(this.lblPagosLbl);
+
+            this.pnlCardAnul.Size        = new System.Drawing.Size(236, 52);
+            this.pnlCardAnul.Location    = new System.Drawing.Point(498, 6);
+            this.pnlCardAnul.BackColor   = System.Drawing.Color.White;
+            this.pnlCardAnul.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblAnulLbl.AutoSize  = false;
+            this.lblAnulLbl.Dock      = System.Windows.Forms.DockStyle.Top;
+            this.lblAnulLbl.Height    = 17;
+            this.lblAnulLbl.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
+            this.lblAnulLbl.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            this.lblAnulLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
+            this.lblAnulLbl.ForeColor = System.Drawing.Color.FromArgb(120, 130, 140);
+            this.lblAnulLbl.Text      = "ANULACIONES";
+            this.lblAnulVal.AutoSize  = false;
+            this.lblAnulVal.Dock      = System.Windows.Forms.DockStyle.Fill;
+            this.lblAnulVal.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.lblAnulVal.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            this.lblAnulVal.Font      = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.lblAnulVal.ForeColor = System.Drawing.Color.FromArgb(149, 165, 166);
+            this.lblAnulVal.Text      = "S/ 0.00";
+            this.pnlCardAnul.Controls.Add(this.lblAnulVal);
+            this.pnlCardAnul.Controls.Add(this.lblAnulLbl);
+
+            this.pnlCardSaldo.Size        = new System.Drawing.Size(236, 52);
+            this.pnlCardSaldo.Location    = new System.Drawing.Point(742, 6);
+            this.pnlCardSaldo.BackColor   = System.Drawing.Color.White;
+            this.pnlCardSaldo.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lblSaldoLbl.AutoSize  = false;
+            this.lblSaldoLbl.Dock      = System.Windows.Forms.DockStyle.Top;
+            this.lblSaldoLbl.Height    = 17;
+            this.lblSaldoLbl.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
+            this.lblSaldoLbl.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            this.lblSaldoLbl.Font      = new System.Drawing.Font("Segoe UI", 7F);
+            this.lblSaldoLbl.ForeColor = System.Drawing.Color.FromArgb(120, 130, 140);
+            this.lblSaldoLbl.Text      = "SALDO ACTUAL";
+            this.lblSaldoVal.AutoSize  = false;
+            this.lblSaldoVal.Dock      = System.Windows.Forms.DockStyle.Fill;
+            this.lblSaldoVal.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.lblSaldoVal.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
+            this.lblSaldoVal.Font      = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.lblSaldoVal.ForeColor = System.Drawing.Color.FromArgb(52, 152, 219);
+            this.lblSaldoVal.Text      = "S/ 0.00";
+            this.pnlCardSaldo.Controls.Add(this.lblSaldoVal);
+            this.pnlCardSaldo.Controls.Add(this.lblSaldoLbl);
 
             this.pnlResumen.Controls.AddRange(new System.Windows.Forms.Control[] {
                 pnlCardCompras, pnlCardPagos, pnlCardAnul, pnlCardSaldo
@@ -228,11 +304,10 @@ namespace SistemaPOS.Forms.Finanzas
             this.dgvMovimientos.AutoGenerateColumns    = false;
             this.dgvMovimientos.ReadOnly               = false;
 
-            var hStyle = this.dgvMovimientos.ColumnHeadersDefaultCellStyle;
-            hStyle.BackColor = System.Drawing.Color.FromArgb(44, 62, 80);
-            hStyle.ForeColor = System.Drawing.Color.White;
-            hStyle.Font      = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
-            hStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            this.dgvMovimientos.ColumnHeadersDefaultCellStyle.BackColor   = System.Drawing.Color.FromArgb(44, 62, 80);
+            this.dgvMovimientos.ColumnHeadersDefaultCellStyle.ForeColor   = System.Drawing.Color.White;
+            this.dgvMovimientos.ColumnHeadersDefaultCellStyle.Font        = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
+            this.dgvMovimientos.ColumnHeadersDefaultCellStyle.Alignment   = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             this.dgvMovimientos.ColumnHeadersHeight         = 30;
             this.dgvMovimientos.ColumnHeadersHeightSizeMode =
                 System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
@@ -316,43 +391,6 @@ namespace SistemaPOS.Forms.Finanzas
             this.pnlBotones.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)this.dgvMovimientos).EndInit();
             this.ResumeLayout(false);
-        }
-
-        // ── Helper tarjetas ─────────────────────────────────────────────
-        private static int _cardNextX;
-
-        private void InicializarCard(
-            System.Windows.Forms.Panel panel,
-            System.Windows.Forms.Label lblTit,
-            System.Windows.Forms.Label lblVal,
-            string titulo,
-            System.Drawing.Color acento)
-        {
-            panel.Size        = new System.Drawing.Size(236, 52);
-            panel.Location    = new System.Drawing.Point(_cardNextX, 6);
-            panel.BackColor   = System.Drawing.Color.White;
-            panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            _cardNextX += 244;
-
-            lblTit.AutoSize  = false;
-            lblTit.Dock      = System.Windows.Forms.DockStyle.Top;
-            lblTit.Height    = 17;
-            lblTit.TextAlign = System.Drawing.ContentAlignment.BottomLeft;
-            lblTit.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
-            lblTit.Font      = new System.Drawing.Font("Segoe UI", 7F);
-            lblTit.ForeColor = System.Drawing.Color.FromArgb(120, 130, 140);
-            lblTit.Text      = titulo;
-
-            lblVal.AutoSize  = false;
-            lblVal.Dock      = System.Windows.Forms.DockStyle.Fill;
-            lblVal.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            lblVal.Padding   = new System.Windows.Forms.Padding(7, 0, 0, 0);
-            lblVal.Font      = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
-            lblVal.ForeColor = acento;
-            lblVal.Text      = "S/ 0.00";
-
-            panel.Controls.Add(lblVal);
-            panel.Controls.Add(lblTit);
         }
 
         // ── Declaración de controles ─────────────────────────────────────

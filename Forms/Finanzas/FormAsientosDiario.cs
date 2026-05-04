@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using SistemaPOS.Data;
+using SistemaPOS.Reports.DataSources;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Finanzas
 {
@@ -17,6 +20,8 @@ namespace SistemaPOS.Forms.Finanzas
         public FormAsientosDiario()
         {
             InitializeComponent();
+            DgvStyleHelper.Aplicar(dgvAsientos);
+            DgvStyleHelper.Aplicar(dgvDetalles);
             dtpDesde.Value = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             dtpHasta.Value = DateTime.Today;
             CargarCombos();
@@ -315,6 +320,49 @@ namespace SistemaPOS.Forms.Finanzas
             if (dgvDetalles.Columns.Count == 0) return;
             ConfigurarColumnasDetalles();
             _columnasDetallesConfiguradas = true;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Exportar
+        // ─────────────────────────────────────────────────────────────
+
+        private void BtnExportar_Click(object sender, EventArgs e) => ExportarReporte();
+
+        private void ExportarReporte()
+        {
+            if (_todosLosAsientos.Count == 0)
+            {
+                MessageBox.Show("No hay asientos para exportar.", "Información",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string tipo = (cboTipoOperacion.SelectedIndex <= 0) ? null : cboTipoOperacion.SelectedItem as string;
+                string cuenta = null;
+                if (cboCuenta.SelectedItem is CuentaItem ci && !string.IsNullOrEmpty(ci.Codigo))
+                    cuenta = ci.Codigo;
+                string texto = string.IsNullOrWhiteSpace(txtBuscar.Text) ? null : txtBuscar.Text.Trim();
+                decimal? montoMin = decimal.TryParse(txtMontoMin.Text, out decimal mn) && mn > 0 ? mn : (decimal?)null;
+                decimal? montoMax = decimal.TryParse(txtMontoMax.Text, out decimal mx) && mx > 0 ? mx : (decimal?)null;
+
+                var dt = ReportDataSourceHelper.ObtenerDatosAsientosDiario(
+                    dtpDesde.Value, dtpHasta.Value, tipo, cuenta, texto, montoMin, montoMax);
+
+                var dataSources = new Dictionary<string, DataTable> { { "DsLibroDiario", dt } };
+                var parameters = ReportHelper.GetCompanyParameters();
+                parameters["pPeriodo"] = $"Período: {dtpDesde.Value:dd/MM/yyyy} - {dtpHasta.Value:dd/MM/yyyy}";
+
+                ReportHelper.MostrarDialogoExportacion(
+                    ReportHelper.GetRdlcPath(@"Tabular\RptLibroDiario.rdlc"),
+                    dataSources, parameters, "libro_diario");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al exportar: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

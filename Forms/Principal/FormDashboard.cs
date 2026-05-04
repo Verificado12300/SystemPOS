@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using SistemaPOS.Controls;
 using SistemaPOS.Data;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Principal
 {
@@ -25,9 +26,29 @@ namespace SistemaPOS.Forms.Principal
         public FormDashboard()
         {
             InitializeComponent();
+            dgvOperaciones.RowPrePaint += (s, e) =>
+            {
+                e.PaintParts &= ~DataGridViewPaintParts.SelectionBackground;
+            };
+            dgvOperaciones.CellMouseEnter += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                dgvOperaciones.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(245, 248, 255);
+            };
+            dgvOperaciones.CellMouseLeave += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                dgvOperaciones.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.Empty;
+            };
             ConfigurarChart();
             ConfigurarBotonesToggle();
-            // Layout se controla desde el Designer con Anchors
+            AplicarEstiloModerno();
+        }
+
+        private void AplicarEstiloModerno()
+        {
+            // Solo configuración del gráfico — no hay modificaciones visuales en runtime
+            // para que Designer y ejecución sean idénticos
         }
 
         private void ConfigurarBotonesToggle()
@@ -142,6 +163,7 @@ namespace SistemaPOS.Forms.Principal
                 CargarKPIVentas(util.Ventas, cantidad);
                 CargarKPIUtilidad(util);
                 CargarKPIAlertas();
+                CargarKPICxP();
                 CargarGrafico(periodo);
                 CargarTopProductos(periodo);
                 CargarOperacionesRecientes();
@@ -173,6 +195,17 @@ namespace SistemaPOS.Forms.Principal
             lblKPIUtilidadValor.ForeColor = util.Utilidad >= 0
                 ? Color.FromArgb(39, 174, 96)
                 : Color.FromArgb(231, 76, 60);
+        }
+
+        private void CargarKPICxP()
+        {
+            var (total, cantidad) = DashboardRepository.ObtenerCxPPendiente();
+            lblKPICxPValor.Text = $"S/ {total:N2}";
+            lblKPICxPCant.Text  = cantidad == 1 ? "1 documento" : $"{cantidad} documentos";
+            // Si no hay pendiente, mostrar en gris; si hay, en morado
+            lblKPICxPValor.ForeColor = total > 0
+                ? Color.FromArgb(142, 68, 173)
+                : Color.FromArgb(149, 165, 166);
         }
 
         private void CargarKPIAlertas()

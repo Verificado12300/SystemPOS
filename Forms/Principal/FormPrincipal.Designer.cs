@@ -29,6 +29,7 @@ namespace SistemaPOS.Forms.Principal
             this.mnuGeneral = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuPapelera = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuLicencia = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuPeriodos = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuSep = new System.Windows.Forms.ToolStripSeparator();
             this.btnUsuarioConfig = new System.Windows.Forms.Button();
             this.pnlMenu = new System.Windows.Forms.Panel();
@@ -53,7 +54,7 @@ namespace SistemaPOS.Forms.Principal
             this.btnVentas = new System.Windows.Forms.Button();
             this.lblOperaciones = new System.Windows.Forms.Label();
             this.btnDashboard = new System.Windows.Forms.Button();
-            this.btnConfiguracion = new System.Windows.Forms.Button();
+
             this.btnEmpresa = new System.Windows.Forms.Button();
             this.btnUsuarios = new System.Windows.Forms.Button();
             this.lblConfiguracion = new System.Windows.Forms.Label();
@@ -63,6 +64,7 @@ namespace SistemaPOS.Forms.Principal
             this.pnlStatus = new System.Windows.Forms.Panel();
             this.pnlStatusBorderTop = new System.Windows.Forms.Panel();
             this.lblFecha = new System.Windows.Forms.Label();
+            this.lblNebula = new System.Windows.Forms.Label();
             this.lblUsuario = new System.Windows.Forms.Label();
             this.lblCaja = new System.Windows.Forms.Label();
             this.cmsUsuarioConfig.SuspendLayout();
@@ -85,6 +87,7 @@ namespace SistemaPOS.Forms.Principal
             this.mnuGeneral,
             this.mnuPapelera,
             this.mnuLicencia,
+            this.mnuPeriodos,
             this.mnuSep});
             this.cmsUsuarioConfig.Name = "cmsUsuarioConfig";
             this.cmsUsuarioConfig.Size = new System.Drawing.Size(154, 252);
@@ -165,7 +168,14 @@ namespace SistemaPOS.Forms.Principal
             this.mnuLicencia.Size = new System.Drawing.Size(153, 22);
             this.mnuLicencia.Text = "Licencia";
             this.mnuLicencia.Click += new System.EventHandler(this.MnuLicencia_Click);
-            // 
+            //
+            // mnuPeriodos
+            //
+            this.mnuPeriodos.Name = "mnuPeriodos";
+            this.mnuPeriodos.Size = new System.Drawing.Size(153, 22);
+            this.mnuPeriodos.Text = "Períodos Contables";
+            this.mnuPeriodos.Click += new System.EventHandler(this.MnuPeriodos_Click);
+            //
             // mnuSep
             // 
             this.mnuSep.Name = "mnuSep";
@@ -192,7 +202,8 @@ namespace SistemaPOS.Forms.Principal
             // 
             // pnlMenu
             // 
-            this.pnlMenu.BackColor = System.Drawing.Color.White;
+            this.pnlMenu.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(13)))), ((int)(((byte)(0)))), ((int)(((byte)(40)))));
+            this.pnlMenu.Controls.Add(this.lblNebula);
             this.pnlMenu.Controls.Add(this.btnToggleMenu);
             this.pnlMenu.Controls.Add(this.btnCerrarSesion);
             this.pnlMenu.Controls.Add(this.btnContabilidad);
@@ -222,31 +233,42 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnToggleMenu
             // 
-            this.btnToggleMenu.BackColor = System.Drawing.Color.White;
+            this.btnToggleMenu.BackColor = System.Drawing.Color.Transparent;
             this.btnToggleMenu.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnToggleMenu.FlatAppearance.BorderSize = 0;
             this.btnToggleMenu.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
             this.btnToggleMenu.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnToggleMenu.Font = new System.Drawing.Font("Segoe UI", 14F);
             this.btnToggleMenu.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(52)))), ((int)(((byte)(54)))));
+            this.btnToggleMenu.Image = global::SistemaPOS.Properties.Resources.icons8_menú_25;
             this.btnToggleMenu.Location = new System.Drawing.Point(12, 4);
             this.btnToggleMenu.Name = "btnToggleMenu";
             this.btnToggleMenu.Size = new System.Drawing.Size(40, 40);
             this.btnToggleMenu.TabIndex = 28;
-            this.btnToggleMenu.Text = "☰";
             this.btnToggleMenu.UseVisualStyleBackColor = false;
             this.btnToggleMenu.Click += new System.EventHandler(this.BtnToggleMenu_Click);
-            // 
+            //
+            // lblNebula
+            //
+            this.lblNebula.AutoSize = true;
+            this.lblNebula.Font = new System.Drawing.Font("Segoe UI", 13F, System.Drawing.FontStyle.Bold);
+            this.lblNebula.ForeColor = System.Drawing.Color.FromArgb(45, 52, 54);
+            this.lblNebula.Location = new System.Drawing.Point(60, 9);
+            this.lblNebula.Name = "lblNebula";
+            this.lblNebula.TabIndex = 99;
+            this.lblNebula.Text = "SystemPOS";
+            //
             // btnCerrarSesion
             // 
-            this.btnCerrarSesion.BackColor = System.Drawing.Color.White;
+            this.btnCerrarSesion.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnCerrarSesion.BackColor = System.Drawing.Color.Transparent;
             this.btnCerrarSesion.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnCerrarSesion.FlatAppearance.BorderSize = 0;
             this.btnCerrarSesion.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(128)))), ((int)(((byte)(128)))));
             this.btnCerrarSesion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCerrarSesion.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnCerrarSesion.ForeColor = System.Drawing.Color.DimGray;
-            this.btnCerrarSesion.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Cerrar_hover;
+            this.btnCerrarSesion.ForeColor = System.Drawing.Color.White;
+            this.btnCerrarSesion.Image = ((System.Drawing.Image)(resources.GetObject("btnCerrarSesion.Image")));
             this.btnCerrarSesion.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnCerrarSesion.Location = new System.Drawing.Point(0, 877);
             this.btnCerrarSesion.Name = "btnCerrarSesion";
@@ -257,18 +279,19 @@ namespace SistemaPOS.Forms.Principal
             this.btnCerrarSesion.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnCerrarSesion.UseVisualStyleBackColor = false;
             this.btnCerrarSesion.Click += new System.EventHandler(this.BtnCerrarSesion_Click);
-            //
+            // 
             // btnContabilidad
             // 
-            this.btnContabilidad.BackColor = System.Drawing.Color.White;
+            this.btnContabilidad.BackColor = System.Drawing.Color.Transparent;
             this.btnContabilidad.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnContabilidad.FlatAppearance.BorderSize = 0;
-            this.btnContabilidad.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnContabilidad.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnContabilidad.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnContabilidad.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnContabilidad.ForeColor = System.Drawing.Color.Black;
+            this.btnContabilidad.ForeColor = System.Drawing.Color.White;
+            this.btnContabilidad.Image = global::SistemaPOS.Properties.Resources.icons8_contabilidad_25;
             this.btnContabilidad.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnContabilidad.Location = new System.Drawing.Point(0, 662);
+            this.btnContabilidad.Location = new System.Drawing.Point(0, 755);
             this.btnContabilidad.Name = "btnContabilidad";
             this.btnContabilidad.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnContabilidad.Size = new System.Drawing.Size(250, 35);
@@ -280,16 +303,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnCuentasPagar
             // 
-            this.btnCuentasPagar.BackColor = System.Drawing.Color.White;
+            this.btnCuentasPagar.BackColor = System.Drawing.Color.Transparent;
             this.btnCuentasPagar.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnCuentasPagar.FlatAppearance.BorderSize = 0;
-            this.btnCuentasPagar.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnCuentasPagar.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnCuentasPagar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCuentasPagar.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnCuentasPagar.ForeColor = System.Drawing.Color.Black;
-            this.btnCuentasPagar.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_CuentasPorPagar;
+            this.btnCuentasPagar.ForeColor = System.Drawing.Color.White;
+            this.btnCuentasPagar.Image = global::SistemaPOS.Properties.Resources.icons8_pagar_25;
             this.btnCuentasPagar.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnCuentasPagar.Location = new System.Drawing.Point(0, 627);
+            this.btnCuentasPagar.Location = new System.Drawing.Point(0, 715);
             this.btnCuentasPagar.Name = "btnCuentasPagar";
             this.btnCuentasPagar.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnCuentasPagar.Size = new System.Drawing.Size(250, 35);
@@ -301,16 +324,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnCobros
             // 
-            this.btnCobros.BackColor = System.Drawing.Color.White;
+            this.btnCobros.BackColor = System.Drawing.Color.Transparent;
             this.btnCobros.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnCobros.FlatAppearance.BorderSize = 0;
-            this.btnCobros.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnCobros.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnCobros.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCobros.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnCobros.ForeColor = System.Drawing.Color.Black;
-            this.btnCobros.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_LibroDiario;
+            this.btnCobros.ForeColor = System.Drawing.Color.White;
+            this.btnCobros.Image = global::SistemaPOS.Properties.Resources.icons8_transaction_25;
             this.btnCobros.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnCobros.Location = new System.Drawing.Point(0, 588);
+            this.btnCobros.Location = new System.Drawing.Point(0, 675);
             this.btnCobros.Name = "btnCobros";
             this.btnCobros.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnCobros.Size = new System.Drawing.Size(250, 35);
@@ -322,16 +345,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnGastos
             // 
-            this.btnGastos.BackColor = System.Drawing.Color.White;
+            this.btnGastos.BackColor = System.Drawing.Color.Transparent;
             this.btnGastos.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnGastos.FlatAppearance.BorderSize = 0;
-            this.btnGastos.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnGastos.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnGastos.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnGastos.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnGastos.ForeColor = System.Drawing.Color.Black;
-            this.btnGastos.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Gastos;
+            this.btnGastos.ForeColor = System.Drawing.Color.White;
+            this.btnGastos.Image = global::SistemaPOS.Properties.Resources.icons8_payment_history_25;
             this.btnGastos.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnGastos.Location = new System.Drawing.Point(0, 549);
+            this.btnGastos.Location = new System.Drawing.Point(0, 635);
             this.btnGastos.Name = "btnGastos";
             this.btnGastos.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnGastos.Size = new System.Drawing.Size(250, 35);
@@ -343,16 +366,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnCaja
             // 
-            this.btnCaja.BackColor = System.Drawing.Color.White;
+            this.btnCaja.BackColor = System.Drawing.Color.Transparent;
             this.btnCaja.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnCaja.FlatAppearance.BorderSize = 0;
-            this.btnCaja.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnCaja.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnCaja.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCaja.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnCaja.ForeColor = System.Drawing.Color.Black;
-            this.btnCaja.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Caja;
+            this.btnCaja.ForeColor = System.Drawing.Color.White;
+            this.btnCaja.Image = global::SistemaPOS.Properties.Resources.icons8_caja_registradora_25;
             this.btnCaja.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnCaja.Location = new System.Drawing.Point(0, 510);
+            this.btnCaja.Location = new System.Drawing.Point(0, 595);
             this.btnCaja.Name = "btnCaja";
             this.btnCaja.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnCaja.Size = new System.Drawing.Size(250, 35);
@@ -367,24 +390,24 @@ namespace SistemaPOS.Forms.Principal
             this.lblFinanzas.AutoSize = true;
             this.lblFinanzas.Font = new System.Drawing.Font("Inter V Semi Bold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblFinanzas.ForeColor = System.Drawing.SystemColors.AppWorkspace;
-            this.lblFinanzas.Location = new System.Drawing.Point(15, 492);
+            this.lblFinanzas.Location = new System.Drawing.Point(15, 575);
             this.lblFinanzas.Name = "lblFinanzas";
-            this.lblFinanzas.Size = new System.Drawing.Size(106, 14);
+            this.lblFinanzas.Size = new System.Drawing.Size(62, 14);
             this.lblFinanzas.TabIndex = 13;
             this.lblFinanzas.Text = "FINANZAS";
             // 
             // btnProveedores
             // 
-            this.btnProveedores.BackColor = System.Drawing.Color.White;
+            this.btnProveedores.BackColor = System.Drawing.Color.Transparent;
             this.btnProveedores.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnProveedores.FlatAppearance.BorderSize = 0;
-            this.btnProveedores.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnProveedores.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnProveedores.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnProveedores.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnProveedores.ForeColor = System.Drawing.Color.Black;
-            this.btnProveedores.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Proveedores;
+            this.btnProveedores.ForeColor = System.Drawing.Color.White;
+            this.btnProveedores.Image = global::SistemaPOS.Properties.Resources.icons8_proveedor_25;
             this.btnProveedores.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnProveedores.Location = new System.Drawing.Point(0, 453);
+            this.btnProveedores.Location = new System.Drawing.Point(0, 519);
             this.btnProveedores.Name = "btnProveedores";
             this.btnProveedores.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnProveedores.Size = new System.Drawing.Size(250, 35);
@@ -396,16 +419,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnClientes
             // 
-            this.btnClientes.BackColor = System.Drawing.Color.White;
+            this.btnClientes.BackColor = System.Drawing.Color.Transparent;
             this.btnClientes.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnClientes.FlatAppearance.BorderSize = 0;
-            this.btnClientes.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnClientes.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnClientes.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnClientes.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnClientes.ForeColor = System.Drawing.Color.Black;
-            this.btnClientes.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Clientes;
+            this.btnClientes.ForeColor = System.Drawing.Color.White;
+            this.btnClientes.Image = global::SistemaPOS.Properties.Resources.icons8_clientes_25;
             this.btnClientes.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnClientes.Location = new System.Drawing.Point(0, 414);
+            this.btnClientes.Location = new System.Drawing.Point(0, 479);
             this.btnClientes.Name = "btnClientes";
             this.btnClientes.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnClientes.Size = new System.Drawing.Size(250, 35);
@@ -420,24 +443,24 @@ namespace SistemaPOS.Forms.Principal
             this.lblContactos.AutoSize = true;
             this.lblContactos.Font = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Bold);
             this.lblContactos.ForeColor = System.Drawing.SystemColors.AppWorkspace;
-            this.lblContactos.Location = new System.Drawing.Point(15, 397);
+            this.lblContactos.Location = new System.Drawing.Point(15, 460);
             this.lblContactos.Name = "lblContactos";
-            this.lblContactos.Size = new System.Drawing.Size(73, 13);
+            this.lblContactos.Size = new System.Drawing.Size(71, 13);
             this.lblContactos.TabIndex = 10;
             this.lblContactos.Text = "CONTACTOS";
             // 
             // btnAjustes
             // 
-            this.btnAjustes.BackColor = System.Drawing.Color.White;
+            this.btnAjustes.BackColor = System.Drawing.Color.Transparent;
             this.btnAjustes.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnAjustes.FlatAppearance.BorderSize = 0;
-            this.btnAjustes.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnAjustes.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnAjustes.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnAjustes.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnAjustes.ForeColor = System.Drawing.Color.Black;
-            this.btnAjustes.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Ajustes;
+            this.btnAjustes.ForeColor = System.Drawing.Color.White;
+            this.btnAjustes.Image = global::SistemaPOS.Properties.Resources.icons8_tools_25;
             this.btnAjustes.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnAjustes.Location = new System.Drawing.Point(0, 358);
+            this.btnAjustes.Location = new System.Drawing.Point(0, 403);
             this.btnAjustes.Name = "btnAjustes";
             this.btnAjustes.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnAjustes.Size = new System.Drawing.Size(250, 35);
@@ -449,16 +472,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnKardex
             // 
-            this.btnKardex.BackColor = System.Drawing.Color.White;
+            this.btnKardex.BackColor = System.Drawing.Color.Transparent;
             this.btnKardex.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnKardex.FlatAppearance.BorderSize = 0;
-            this.btnKardex.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnKardex.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnKardex.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnKardex.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnKardex.ForeColor = System.Drawing.Color.Black;
-            this.btnKardex.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_AlertaStock;
+            this.btnKardex.ForeColor = System.Drawing.Color.White;
+            this.btnKardex.Image = global::SistemaPOS.Properties.Resources.icons8_copybook_25;
             this.btnKardex.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnKardex.Location = new System.Drawing.Point(0, 319);
+            this.btnKardex.Location = new System.Drawing.Point(0, 363);
             this.btnKardex.Name = "btnKardex";
             this.btnKardex.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnKardex.Size = new System.Drawing.Size(250, 35);
@@ -470,16 +493,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnProductos
             // 
-            this.btnProductos.BackColor = System.Drawing.Color.White;
+            this.btnProductos.BackColor = System.Drawing.Color.Transparent;
             this.btnProductos.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnProductos.FlatAppearance.BorderSize = 0;
-            this.btnProductos.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnProductos.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnProductos.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnProductos.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnProductos.ForeColor = System.Drawing.Color.Black;
-            this.btnProductos.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Productos;
+            this.btnProductos.ForeColor = System.Drawing.Color.White;
+            this.btnProductos.Image = global::SistemaPOS.Properties.Resources.icons8_product_25;
             this.btnProductos.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnProductos.Location = new System.Drawing.Point(0, 280);
+            this.btnProductos.Location = new System.Drawing.Point(0, 323);
             this.btnProductos.Name = "btnProductos";
             this.btnProductos.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnProductos.Size = new System.Drawing.Size(250, 35);
@@ -494,7 +517,7 @@ namespace SistemaPOS.Forms.Principal
             this.lblInventario.AutoSize = true;
             this.lblInventario.Font = new System.Drawing.Font("Inter V Semi Bold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblInventario.ForeColor = System.Drawing.SystemColors.AppWorkspace;
-            this.lblInventario.Location = new System.Drawing.Point(15, 262);
+            this.lblInventario.Location = new System.Drawing.Point(15, 303);
             this.lblInventario.Name = "lblInventario";
             this.lblInventario.Size = new System.Drawing.Size(74, 14);
             this.lblInventario.TabIndex = 6;
@@ -502,16 +525,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnHistorialCompras
             // 
-            this.btnHistorialCompras.BackColor = System.Drawing.Color.White;
+            this.btnHistorialCompras.BackColor = System.Drawing.Color.Transparent;
             this.btnHistorialCompras.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnHistorialCompras.FlatAppearance.BorderSize = 0;
-            this.btnHistorialCompras.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnHistorialCompras.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnHistorialCompras.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnHistorialCompras.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnHistorialCompras.ForeColor = System.Drawing.Color.Black;
-            this.btnHistorialCompras.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_HistorialCompras;
+            this.btnHistorialCompras.ForeColor = System.Drawing.Color.White;
+            this.btnHistorialCompras.Image = global::SistemaPOS.Properties.Resources.icons8_general_ledger_25;
             this.btnHistorialCompras.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnHistorialCompras.Location = new System.Drawing.Point(0, 223);
+            this.btnHistorialCompras.Location = new System.Drawing.Point(0, 245);
             this.btnHistorialCompras.Name = "btnHistorialCompras";
             this.btnHistorialCompras.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnHistorialCompras.Size = new System.Drawing.Size(250, 35);
@@ -523,16 +546,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnCompras
             // 
-            this.btnCompras.BackColor = System.Drawing.Color.White;
+            this.btnCompras.BackColor = System.Drawing.Color.Transparent;
             this.btnCompras.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnCompras.FlatAppearance.BorderSize = 0;
-            this.btnCompras.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnCompras.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnCompras.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCompras.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnCompras.ForeColor = System.Drawing.Color.Black;
-            this.btnCompras.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Compras;
+            this.btnCompras.ForeColor = System.Drawing.Color.White;
+            this.btnCompras.Image = ((System.Drawing.Image)(resources.GetObject("btnCompras.Image")));
             this.btnCompras.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnCompras.Location = new System.Drawing.Point(0, 184);
+            this.btnCompras.Location = new System.Drawing.Point(0, 205);
             this.btnCompras.Name = "btnCompras";
             this.btnCompras.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnCompras.Size = new System.Drawing.Size(250, 35);
@@ -544,16 +567,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnHistorialVentas
             // 
-            this.btnHistorialVentas.BackColor = System.Drawing.Color.White;
+            this.btnHistorialVentas.BackColor = System.Drawing.Color.Transparent;
             this.btnHistorialVentas.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnHistorialVentas.FlatAppearance.BorderSize = 0;
-            this.btnHistorialVentas.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnHistorialVentas.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnHistorialVentas.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnHistorialVentas.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnHistorialVentas.ForeColor = System.Drawing.Color.Black;
-            this.btnHistorialVentas.Image = ((System.Drawing.Image)(resources.GetObject("btnHistorialVentas.Image")));
+            this.btnHistorialVentas.ForeColor = System.Drawing.Color.White;
+            this.btnHistorialVentas.Image = global::SistemaPOS.Properties.Resources.icons8_ledger_25;
             this.btnHistorialVentas.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnHistorialVentas.Location = new System.Drawing.Point(0, 145);
+            this.btnHistorialVentas.Location = new System.Drawing.Point(0, 165);
             this.btnHistorialVentas.Name = "btnHistorialVentas";
             this.btnHistorialVentas.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnHistorialVentas.Size = new System.Drawing.Size(250, 35);
@@ -565,16 +588,16 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnVentas
             // 
-            this.btnVentas.BackColor = System.Drawing.Color.White;
+            this.btnVentas.BackColor = System.Drawing.Color.Transparent;
             this.btnVentas.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnVentas.FlatAppearance.BorderSize = 0;
-            this.btnVentas.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnVentas.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnVentas.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnVentas.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnVentas.ForeColor = System.Drawing.Color.Black;
-            this.btnVentas.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Ventas;
+            this.btnVentas.ForeColor = System.Drawing.Color.White;
+            this.btnVentas.Image = global::SistemaPOS.Properties.Resources.icons8_ventas_25;
             this.btnVentas.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnVentas.Location = new System.Drawing.Point(0, 106);
+            this.btnVentas.Location = new System.Drawing.Point(0, 125);
             this.btnVentas.Name = "btnVentas";
             this.btnVentas.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnVentas.Size = new System.Drawing.Size(250, 35);
@@ -589,24 +612,24 @@ namespace SistemaPOS.Forms.Principal
             this.lblOperaciones.AutoSize = true;
             this.lblOperaciones.Font = new System.Drawing.Font("Inter V Semi Bold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblOperaciones.ForeColor = System.Drawing.SystemColors.AppWorkspace;
-            this.lblOperaciones.Location = new System.Drawing.Point(15, 88);
+            this.lblOperaciones.Location = new System.Drawing.Point(15, 105);
             this.lblOperaciones.Name = "lblOperaciones";
-            this.lblOperaciones.Size = new System.Drawing.Size(51, 14);
+            this.lblOperaciones.Size = new System.Drawing.Size(73, 14);
             this.lblOperaciones.TabIndex = 1;
             this.lblOperaciones.Text = "COMERCIAL";
             // 
             // btnDashboard
             // 
-            this.btnDashboard.BackColor = System.Drawing.Color.White;
+            this.btnDashboard.BackColor = System.Drawing.Color.Transparent;
             this.btnDashboard.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnDashboard.FlatAppearance.BorderSize = 0;
-            this.btnDashboard.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
+            this.btnDashboard.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGoldenrod;
             this.btnDashboard.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnDashboard.Font = new System.Drawing.Font("Inter V Semi Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnDashboard.ForeColor = System.Drawing.Color.Black;
-            this.btnDashboard.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Dashboard;
+            this.btnDashboard.ForeColor = System.Drawing.Color.White;
+            this.btnDashboard.Image = global::SistemaPOS.Properties.Resources.icons8_casa_25;
             this.btnDashboard.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.btnDashboard.Location = new System.Drawing.Point(0, 47);
+            this.btnDashboard.Location = new System.Drawing.Point(0, 49);
             this.btnDashboard.Margin = new System.Windows.Forms.Padding(0);
             this.btnDashboard.Name = "btnDashboard";
             this.btnDashboard.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
@@ -616,39 +639,17 @@ namespace SistemaPOS.Forms.Principal
             this.btnDashboard.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnDashboard.UseVisualStyleBackColor = false;
             this.btnDashboard.Click += new System.EventHandler(this.BtnDashboard_Click);
-            // 
-            // btnConfiguracion
-            // 
-            this.btnConfiguracion.BackColor = System.Drawing.Color.White;
-            this.btnConfiguracion.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnConfiguracion.FlatAppearance.BorderSize = 0;
-            this.btnConfiguracion.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
-            this.btnConfiguracion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnConfiguracion.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnConfiguracion.ForeColor = System.Drawing.Color.Black;
-            this.btnConfiguracion.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Configuracion;
-            this.btnConfiguracion.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnConfiguracion.Location = new System.Drawing.Point(0, 936);
-            this.btnConfiguracion.Name = "btnConfiguracion";
-            this.btnConfiguracion.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
-            this.btnConfiguracion.Size = new System.Drawing.Size(250, 35);
-            this.btnConfiguracion.TabIndex = 26;
-            this.btnConfiguracion.Text = "       Configuracion del Sistema";
-            this.btnConfiguracion.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnConfiguracion.UseVisualStyleBackColor = false;
-            this.btnConfiguracion.Visible = false;
-            this.btnConfiguracion.Click += new System.EventHandler(this.BtnConfiguracion_Click);
+
             // 
             // btnEmpresa
             // 
-            this.btnEmpresa.BackColor = System.Drawing.Color.White;
+            this.btnEmpresa.BackColor = System.Drawing.Color.Transparent;
             this.btnEmpresa.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnEmpresa.FlatAppearance.BorderSize = 0;
             this.btnEmpresa.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
             this.btnEmpresa.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnEmpresa.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnEmpresa.ForeColor = System.Drawing.Color.Black;
-            this.btnEmpresa.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Empresa;
             this.btnEmpresa.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnEmpresa.Location = new System.Drawing.Point(0, 897);
             this.btnEmpresa.Name = "btnEmpresa";
@@ -663,16 +664,15 @@ namespace SistemaPOS.Forms.Principal
             // 
             // btnUsuarios
             // 
-            this.btnUsuarios.BackColor = System.Drawing.Color.White;
+            this.btnUsuarios.BackColor = System.Drawing.Color.Transparent;
             this.btnUsuarios.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnUsuarios.FlatAppearance.BorderSize = 0;
             this.btnUsuarios.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(244)))), ((int)(((byte)(244)))), ((int)(((byte)(250)))));
             this.btnUsuarios.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnUsuarios.Font = new System.Drawing.Font("Inter V", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnUsuarios.ForeColor = System.Drawing.Color.Black;
-            this.btnUsuarios.Image = global::SistemaPOS.Properties.Resources.Icono_Boton_Usuarios;
             this.btnUsuarios.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnUsuarios.Location = new System.Drawing.Point(0, 858);
+            this.btnUsuarios.Location = new System.Drawing.Point(0, 776);
             this.btnUsuarios.Name = "btnUsuarios";
             this.btnUsuarios.Padding = new System.Windows.Forms.Padding(16, 0, 0, 0);
             this.btnUsuarios.Size = new System.Drawing.Size(250, 35);
@@ -688,11 +688,11 @@ namespace SistemaPOS.Forms.Principal
             this.lblConfiguracion.AutoSize = true;
             this.lblConfiguracion.Font = new System.Drawing.Font("Inter V Semi Bold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblConfiguracion.ForeColor = System.Drawing.SystemColors.AppWorkspace;
-            this.lblConfiguracion.Location = new System.Drawing.Point(15, 840);
+            this.lblConfiguracion.Location = new System.Drawing.Point(15, 758);
             this.lblConfiguracion.Name = "lblConfiguracion";
             this.lblConfiguracion.Size = new System.Drawing.Size(104, 14);
             this.lblConfiguracion.TabIndex = 23;
-            this.lblConfiguracion.Text = "ADMINISTRACION";
+            this.lblConfiguracion.Text = "CONFIGURACIÓN";
             this.lblConfiguracion.Visible = false;
             // 
             // pnlTop
@@ -818,6 +818,7 @@ namespace SistemaPOS.Forms.Principal
         private System.Windows.Forms.Label lblCaja;
         private System.Windows.Forms.Label lblUsuario;
         private System.Windows.Forms.Label lblFecha;
+        private System.Windows.Forms.Label lblNebula;
         private System.Windows.Forms.Button btnToggleMenu;
         private System.Windows.Forms.Button btnDashboard;
         private System.Windows.Forms.Label lblOperaciones;
@@ -841,7 +842,7 @@ namespace SistemaPOS.Forms.Principal
         private System.Windows.Forms.Label lblConfiguracion;
         private System.Windows.Forms.Button btnUsuarios;
         private System.Windows.Forms.Button btnEmpresa;
-        private System.Windows.Forms.Button btnConfiguracion;
+
         private System.Windows.Forms.Button btnCerrarSesion;
         private System.Windows.Forms.ContextMenuStrip cmsUsuarioConfig;
         private System.Windows.Forms.ToolStripMenuItem mnuEmpresa;
@@ -854,6 +855,7 @@ namespace SistemaPOS.Forms.Principal
         private System.Windows.Forms.ToolStripMenuItem mnuGeneral;
         private System.Windows.Forms.ToolStripMenuItem mnuPapelera;
         private System.Windows.Forms.ToolStripMenuItem mnuLicencia;
+        private System.Windows.Forms.ToolStripMenuItem mnuPeriodos;
         private System.Windows.Forms.ToolStripSeparator mnuSep;
         private System.Windows.Forms.ToolStripMenuItem mnuReportes;
         private System.Windows.Forms.Button btnUsuarioConfig;

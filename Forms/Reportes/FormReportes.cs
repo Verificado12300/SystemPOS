@@ -75,7 +75,7 @@ namespace SistemaPOS.Forms.Reportes
                 // Notificaciones por correo
                 chkEnviarporCorreo.Checked = config.EnviarPorCorreo;
                 txtDestinatarios.Text = config.DestinatariosCorreo ?? "";
-                txtAsunto.Text = config.AsuntoCorreo ?? "Reporte Automático - SistemaPOS";
+                txtAsunto.Text = config.AsuntoCorreo ?? "Reporte Automático - SystemPOS";
 
                 if (config.FormatoReporte == "PDF")
                     rbPDF.Checked = true;
@@ -155,9 +155,15 @@ namespace SistemaPOS.Forms.Reportes
 
         private void FrecuenciaChanged(object sender, EventArgs e)
         {
+            bool showDay = rbSemanal.Checked || rbMensual.Checked;
+
             // Mostrar/ocultar selector de día según frecuencia
-            lblDiaEnvio.Visible = rbSemanal.Checked || rbMensual.Checked;
-            cmbDiaEnvio.Visible = rbSemanal.Checked || rbMensual.Checked;
+            lblDiaEnvio.Visible = showDay;
+            cmbDiaEnvio.Visible = showDay;
+
+            // Reposicionar hora: a la derecha del día si éste es visible, o a la izquierda si está oculto
+            lblHora.Left  = showDay ? 188 : 18;
+            dtpHora.Left  = showDay ? 188 : 18;
 
             if (rbMensual.Checked)
             {
@@ -215,8 +221,8 @@ namespace SistemaPOS.Forms.Reportes
         private void BtnGuardar_Click(object sender, EventArgs e)
         {
             GuardarConfiguracion();
-            MessageBox.Show("Configuración de reportes guardada", "Éxito",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            lblEstadoGuardado.Text      = "\uE73E  Configuracion guardada correctamente";
+            lblEstadoGuardado.ForeColor = System.Drawing.Color.FromArgb(100, 220, 150);
         }
     }
 }

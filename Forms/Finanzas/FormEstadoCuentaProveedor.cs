@@ -13,6 +13,8 @@ namespace SistemaPOS.Forms.Finanzas
         private readonly string _nombreProveedor;
         private bool _huboCambios;
 
+        public FormEstadoCuentaProveedor() { InitializeComponent(); }
+
         public FormEstadoCuentaProveedor(int? proveedorID, string nombreProveedor)
         {
             InitializeComponent();
@@ -36,6 +38,7 @@ namespace SistemaPOS.Forms.Finanzas
             lblProveedorVal.Text = _nombreProveedor;
 
             dgvMovimientos.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvMovimientos);
             dgvMovimientos.AllowUserToAddRows  = false;
             dgvMovimientos.ReadOnly            = false;
 

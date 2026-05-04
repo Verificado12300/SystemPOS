@@ -23,108 +23,28 @@ namespace SistemaPOS.Forms.Configuracion
             _cargandoDatos = true;   // evitar renders parciales al setear defaults
             ConfigurarControles();
             _cargandoDatos = false;
-            CargarImpresoras();
-            CargarDatos();
+            if (System.ComponentModel.LicenseManager.UsageMode != System.ComponentModel.LicenseUsageMode.Designtime)
+            {
+                CargarImpresoras();
+                CargarDatos();
+            }
         }
 
         private void AplicarTemaDashboard()
         {
-            Color fondo = Color.FromArgb(244, 244, 250);
-            Color textoPrincipal = Color.FromArgb(45, 52, 54);
-            Color textoSecundario = Color.FromArgb(127, 140, 141);
-            Color bordeTarjeta = Color.FromArgb(223, 228, 234);
-
-            BackColor = fondo;
-
-            EstilizarTarjeta(pnlImpresora, bordeTarjeta);
-            EstilizarTarjeta(pnlContenidoTicket, bordeTarjeta);
-            EstilizarTarjeta(pnlOpcionesImpresion, bordeTarjeta);
-            EstilizarTarjeta(pnlVistaTicket, bordeTarjeta);
-
-            lblTitulo.ForeColor = textoPrincipal;
-            lblVistaPrevia.ForeColor = textoPrincipal;
-
-            EstilizarBotonPrimario(btnGuardarConfiguracion);
-            EstilizarBotonSecundario(btnImprimirPrueba);
-            EstilizarBotonSecundario(btnConfigurarImpresora);
-
-            EstilizarControlesPanel(pnlImpresora, textoPrincipal, textoSecundario);
-            EstilizarControlesPanel(pnlContenidoTicket, textoPrincipal, textoSecundario);
-            EstilizarControlesPanel(pnlOpcionesImpresion, textoPrincipal, textoSecundario);
-        }
-
-        private static void EstilizarTarjeta(Panel panel, Color borde)
-        {
-            panel.BackColor = Color.White;
-            panel.BorderStyle = BorderStyle.FixedSingle;
-        }
-
-        private static void EstilizarBotonPrimario(Button boton)
-        {
-            boton.FlatStyle = FlatStyle.Flat;
-            boton.FlatAppearance.BorderSize = 0;
-            boton.BackColor = Color.FromArgb(46, 134, 222);
-            boton.ForeColor = Color.White;
-        }
-
-        private static void EstilizarBotonSecundario(Button boton)
-        {
-            boton.FlatStyle = FlatStyle.Flat;
-            boton.FlatAppearance.BorderColor = Color.FromArgb(223, 228, 234);
-            boton.FlatAppearance.BorderSize = 1;
-            boton.BackColor = Color.White;
-            boton.ForeColor = Color.FromArgb(45, 52, 54);
-        }
-
-        private static void EstilizarControlesPanel(Control root, Color textoPrincipal, Color textoSecundario)
-        {
-            foreach (Control c in root.Controls)
-            {
-                if (c is Label lbl)
-                {
-                    lbl.ForeColor = lbl.Font.Bold ? textoPrincipal : textoSecundario;
-                }
-                else if (c is CheckBox chk)
-                {
-                    chk.FlatStyle = FlatStyle.Flat;
-                    chk.ForeColor = textoPrincipal;
-                }
-                else if (c is ComboBox cmb)
-                {
-                    cmb.FlatStyle = FlatStyle.Flat;
-                    cmb.BackColor = Color.White;
-                    cmb.ForeColor = textoPrincipal;
-                }
-                else if (c is TextBox txt)
-                {
-                    txt.BackColor = Color.White;
-                    txt.ForeColor = textoPrincipal;
-                    txt.BorderStyle = BorderStyle.FixedSingle;
-                }
-                else if (c is NumericUpDown nud)
-                {
-                    nud.BackColor = Color.White;
-                    nud.ForeColor = textoPrincipal;
-                    nud.BorderStyle = BorderStyle.FixedSingle;
-                }
-            }
+            BackColor = Color.FromArgb(244, 244, 250);
         }
 
         private void InicializarPanelPreview()
         {
-            // Limpiar TODOS los controles del Designer que estaban en pnlVistaTicket
-            // (el Designer original tenía ~35 labels/picturebox propios del ticket).
-            // Ahora la única fuente visual es TicketPreviewControl.
             pnlVistaTicket.Controls.Clear();
 
             _ticketPreview = new SistemaPOS.Controls.TicketPreviewControl
             {
-                Location = new Point(0, 0),
-                Width    = 288
+                Location = new Point(0, 14),  // debajo de los dientes superiores (ToothSize=10 + 4px)
+                Width    = 340
             };
             pnlVistaTicket.Controls.Add(_ticketPreview);
-            pnlVistaTicket.AutoScroll  = false;
-            pnlVistaTicket.AutoSize    = false;
         }
 
         private void ConfigurarEventos()
@@ -136,6 +56,7 @@ namespace SistemaPOS.Forms.Configuracion
 
             // Eventos de contenido del ticket (Nombre siempre visible — sin evento)
             chkMostrarLogo.CheckedChanged += ConfiguracionCambiada;
+            nudLogoAltura.ValueChanged    += ConfiguracionCambiada;
             chkMostrarRUC.CheckedChanged += ConfiguracionCambiada;
             chkMostrarDireccion.CheckedChanged += ConfiguracionCambiada;
             chkMostrarTelefono.CheckedChanged += ConfiguracionCambiada;
@@ -271,7 +192,8 @@ namespace SistemaPOS.Forms.Configuracion
                 _cargandoDatos = true;
 
                 // Cargar configuracion de contenido del ticket
-                chkMostrarLogo.Checked   = EmpresaRepository.ObtenerConfiguracion("TICKET_MOSTRAR_LOGO",      "true")  == "true";
+                chkMostrarLogo.Checked = EmpresaRepository.ObtenerConfiguracion("TICKET_MOSTRAR_LOGO", "true") == "true";
+                nudLogoAltura.Value    = LeerEnteroConfig("TICKET_LOGO_ALTURA", 50, (int)nudLogoAltura.Minimum, (int)nudLogoAltura.Maximum);
                 chkMostrarNombre.Checked = true; // Nombre empresa siempre visible
                 chkMostrarRUC.Checked    = EmpresaRepository.ObtenerConfiguracion("TICKET_MOSTRAR_RUC",       "true")  == "true";
                 chkMostrarDireccion.Checked = EmpresaRepository.ObtenerConfiguracion("TICKET_MOSTRAR_DIRECCION", "true") == "true";
@@ -357,6 +279,7 @@ namespace SistemaPOS.Forms.Configuracion
         private void ActualizarVistaPrevia()
         {
             if (_cargandoDatos) return;
+
             bool hasPie = chkMostrarPie.Checked && !string.IsNullOrWhiteSpace(txtMensajePie1.Text);
             string mensajePie = string.IsNullOrWhiteSpace(txtMensajePie2.Text)
                 ? txtMensajePie1.Text
@@ -373,22 +296,17 @@ namespace SistemaPOS.Forms.Configuracion
                 MostrarPie       = hasPie,
                 MostrarQR        = chkMostrarQR.Checked,
                 MensajePie       = mensajePie,
+                LogoAltura       = (int)nudLogoAltura.Value,
             };
+
+            // Renderizar ticket (AjustarAncho() ajusta _ticketPreview.Width internamente)
             _ticketPreview.LlenarDatosDemo(config);
 
-            // Ajustar ancho del panel al ticket + 20px de margen (10 cada lado)
-            int disponible  = ClientSize.Width - pnlVistaTicket.Left - 8;
-            int panelTarget = Math.Min(disponible, _ticketPreview.Width + 20);
-            if (panelTarget != pnlVistaTicket.Width)
-                pnlVistaTicket.Width = panelTarget;
-
-            // Centrar usando ClientSize.Width (descuenta el borde FixedSingle del panel)
-            int clientW  = pnlVistaTicket.ClientSize.Width;
-            int ticketW  = _ticketPreview.Width;
-            _ticketPreview.Left = Math.Max(0, (clientW - ticketW) / 2);
-
-            System.Diagnostics.Debug.WriteLine(
-                $"[Preview] pnlVistaTicket.ClientSize.Width={clientW}  _ticketPreview.Width={ticketW}  Left={_ticketPreview.Left}");
+            // Centrar el ticket sobre el ancho completo del panel
+            int panelW  = pnlVistaTicket.ClientSize.Width;
+            int ticketW = _ticketPreview.Width;
+            _ticketPreview.Left = Math.Max(0, (panelW - ticketW) / 2) + 6;
+            _ticketPreview.Top  = 14;  // debajo de los dientes superiores
         }
 
 
@@ -407,7 +325,8 @@ namespace SistemaPOS.Forms.Configuracion
                     cmbImpresoraPredeterminada.SelectedItem?.ToString() ?? "", "STRING", "Impresion", "Impresora predeterminada");
 
                 // Guardar contenido del ticket
-                EmpresaRepository.GuardarConfiguracion("TICKET_MOSTRAR_LOGO",    chkMostrarLogo.Checked   ? "true" : "false", "BOOLEAN", "Impresion", "Mostrar logo en ticket");
+                EmpresaRepository.GuardarConfiguracion("TICKET_MOSTRAR_LOGO",   chkMostrarLogo.Checked ? "true" : "false", "BOOLEAN",  "Impresion", "Mostrar logo en ticket");
+                EmpresaRepository.GuardarConfiguracion("TICKET_LOGO_ALTURA",   nudLogoAltura.Value.ToString(),              "INTEGER", "Impresion", "Alto del logo en px");
                 EmpresaRepository.GuardarConfiguracion("TICKET_MOSTRAR_NOMBRE", "true",                                       "BOOLEAN", "Impresion", "Mostrar nombre en ticket");
                 EmpresaRepository.GuardarConfiguracion("TICKET_MOSTRAR_RUC",    chkMostrarRUC.Checked    ? "true" : "false", "BOOLEAN", "Impresion", "Mostrar RUC en ticket");
                 EmpresaRepository.GuardarConfiguracion("TICKET_MOSTRAR_DIRECCION", chkMostrarDireccion.Checked ? "true" : "false", "BOOLEAN", "Impresion", "Mostrar direccion en ticket");
@@ -500,6 +419,7 @@ namespace SistemaPOS.Forms.Configuracion
                     MostrarPie       = chkMostrarPie.Checked,
                     MostrarQR        = chkMostrarQR.Checked,
                     MensajePie       = mensajePiePrueba,
+                    LogoAltura       = (int)nudLogoAltura.Value,
                 };
 
                 // Build demo data (same as LlenarDatosDemo)

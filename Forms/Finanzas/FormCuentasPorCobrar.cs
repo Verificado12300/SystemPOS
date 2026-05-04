@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using SistemaPOS.Data;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Finanzas
 {
@@ -18,11 +19,16 @@ namespace SistemaPOS.Forms.Finanzas
             {
                 cmbEstado.SelectedIndex = 0;
                 dgvCuentas.AutoGenerateColumns = false;
+                DgvStyleHelper.Aplicar(dgvCuentas);
                 dgvCuentas.AllowUserToAddRows  = false;
                 dgvCuentas.ReadOnly            = true;
                 dgvCuentas.SelectionMode       = DataGridViewSelectionMode.FullRowSelect;
 
-                txtBuscar.KeyDown += (s, ev) => { if (ev.KeyCode == Keys.Enter) CargarCuentas(); };
+                txtBuscar.KeyDown              += (s, ev) => { if (ev.KeyCode == Keys.Enter) CargarCuentas(); };
+                cmbEstado.SelectedIndexChanged += (s, ev) => CargarCuentas();
+                dtpDesde.ValueChanged          += (s, ev) => CargarCuentas();
+                dtpHasta.ValueChanged          += (s, ev) => CargarCuentas();
+                dgvCuentas.CellPainting        += DgvCuentas_CellPainting;
 
                 CargarCuentas();
             }
@@ -32,10 +38,6 @@ namespace SistemaPOS.Forms.Finanzas
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
-        // ─────────────────────────────────────────────────────────────
-        // Carga principal
-        // ─────────────────────────────────────────────────────────────
 
         private void CargarCuentas()
         {
@@ -51,6 +53,8 @@ namespace SistemaPOS.Forms.Finanzas
 
                 int     numero         = 1;
                 decimal totalPendiente = 0;
+                int     totalDocs      = 0;
+                int     clienteCount   = 0;
 
                 foreach (var r in datos)
                 {
@@ -67,21 +71,21 @@ namespace SistemaPOS.Forms.Finanzas
                     row.Cells["colTotalPagado"].Value    = $"S/ {r.TotalPagado:N2}";
                     row.Cells["colTotalPendiente"].Value = $"S/ {r.TotalPendiente:N2}";
                     row.Cells["colEstado"].Value         = r.Estado;
-                    row.Cells["colDetalle"].Value        = "Detalle";
+                    row.Cells["colDetalle"].Value        = "Ver detalle";
 
                     row.Tag = r.ClienteID;
 
                     totalPendiente += r.TotalPendiente;
-
-                    Color estadoColor = r.Estado == "PENDIENTE"
-                        ? Color.FromArgb(243, 156, 18)   // naranja
-                        : Color.FromArgb(39, 174, 96);   // verde
-                    row.Cells["colEstado"].Style.ForeColor = estadoColor;
-                    row.Cells["colEstado"].Style.Font      = new Font(dgvCuentas.Font, FontStyle.Bold);
+                    totalDocs      += r.CantidadDocumentos;
+                    clienteCount++;
                 }
 
-                lblTotalRegistros.Text = $"Total: {dgvCuentas.Rows.Count} clientes";
+                lblTotalRegistros.Text = $"{dgvCuentas.Rows.Count} clientes";
                 txtTotalPendiente.Text = $"S/ {totalPendiente:N2}";
+                // KPI cards
+                lblKpi1Val.Text = $"S/ {totalPendiente:N2}";
+                lblKpi2Val.Text = clienteCount.ToString();
+                lblKpi3Val.Text = totalDocs.ToString();
             }
             catch (Exception ex)
             {
@@ -90,9 +94,39 @@ namespace SistemaPOS.Forms.Finanzas
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // Eventos
-        // ─────────────────────────────────────────────────────────────
+        private void DgvCuentas_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+            if (dgvCuentas.Columns[e.ColumnIndex].Name != "colEstado") return;
+
+            e.PaintBackground(e.ClipBounds, true);
+
+            string estado = e.Value?.ToString() ?? "";
+            Color bgColor, fgColor;
+            switch (estado)
+            {
+                case "PENDIENTE":  bgColor = Color.FromArgb(254, 243, 199); fgColor = Color.FromArgb(146, 64, 14);  break;
+                case "PARCIAL":    bgColor = Color.FromArgb(219, 234, 254); fgColor = Color.FromArgb(30, 64, 175);  break;
+                case "CANCELADO":  bgColor = Color.FromArgb(209, 250, 229); fgColor = Color.FromArgb(6, 95, 70);    break;
+                default:           bgColor = Color.FromArgb(241, 245, 249); fgColor = Color.FromArgb(100, 116, 139); break;
+            }
+
+            var g  = e.Graphics;
+            var cb = e.CellBounds;
+            int bH = 22; int bW = Math.Min(estado.Length * 8 + 18, cb.Width - 16);
+            int bx = cb.X + (cb.Width - bW) / 2;
+            int by = cb.Y + (cb.Height - bH) / 2;
+            var badge = new Rectangle(bx, by, bW, bH);
+
+            using (var br = new SolidBrush(bgColor)) g.FillRectangle(br, badge);
+            using (var font = new Font("Segoe UI", 7.5F, FontStyle.Bold))
+            using (var tb   = new SolidBrush(fgColor))
+            {
+                var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(estado, font, tb, badge, sf);
+            }
+            e.Handled = true;
+        }
 
         private void BtnFiltrar_Click(object sender, EventArgs e)
         {

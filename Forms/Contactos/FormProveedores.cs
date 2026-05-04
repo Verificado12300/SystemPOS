@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Contactos
 {
@@ -11,6 +12,7 @@ namespace SistemaPOS.Forms.Contactos
     {
         private int? _proveedorIDEdicion;
         private bool _modoEdicion;
+        private Label _lblModo;
 
         public FormProveedores()
         {
@@ -19,6 +21,36 @@ namespace SistemaPOS.Forms.Contactos
             ConfigurarEventos();
             ConfigurarControles();
             CargarProveedores();
+        }
+
+        private void AgregarLabelModo()
+        {
+            _lblModo = new Label
+            {
+                AutoSize  = false,
+                Size      = new Size(380, 20),
+                Location  = new Point(230, 10),   // dentro del header oscuro pnlHdrDatos
+                Font      = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(168, 230, 198),  // verde claro sobre fondo oscuro
+                Text      = "Nuevo proveedor"
+            };
+            pnlHdrDatos.Controls.Add(_lblModo);
+            _lblModo.BringToFront();
+        }
+
+        private void ActualizarLabelModo()
+        {
+            if (_lblModo == null) return;
+            if (_modoEdicion && !string.IsNullOrWhiteSpace(txtRazonSocial.Text))
+            {
+                _lblModo.Text      = $"Editando: {txtRazonSocial.Text.Trim()}";
+                _lblModo.ForeColor = Color.FromArgb(144, 202, 249);  // azul claro sobre fondo oscuro
+            }
+            else
+            {
+                _lblModo.Text      = "Nuevo proveedor";
+                _lblModo.ForeColor = Color.FromArgb(168, 230, 198);  // verde claro sobre fondo oscuro
+            }
         }
 
         private void ConfigurarEventos()
@@ -47,6 +79,7 @@ namespace SistemaPOS.Forms.Contactos
         private void ConfigurarControles()
         {
             dgvProveedores.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvProveedores);
             dgvProveedores.AllowUserToAddRows = false;
             dgvProveedores.ReadOnly = true;
             dgvProveedores.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -54,6 +87,7 @@ namespace SistemaPOS.Forms.Contactos
             chkProveedorActivo.Checked = true;
             chkProveedorActivo.Text = "Proveedor activo";
 
+            AgregarLabelModo();
             LimpiarFormulario();
         }
 
@@ -71,16 +105,27 @@ namespace SistemaPOS.Forms.Contactos
                     int index = dgvProveedores.Rows.Add();
                     DataGridViewRow row = dgvProveedores.Rows[index];
 
-                    row.Cells["colNumero"].Value = numero++;
-                    row.Cells["colRUC"].Value = prov.RUC;
+                    row.Cells["colNumero"].Value    = numero++;
+                    row.Cells["colRUC"].Value       = prov.RUC;
                     row.Cells["colRazonSocial"].Value = prov.RazonSocial;
-                    row.Cells["colTelefono"].Value = prov.Telefono;
-                    row.Cells["colEmail"].Value = prov.Email;
-                    row.Cells["colEstado"].Value = prov.Activo ? "Activo" : "Inactivo";
-                    row.Cells["colEstado"].Style.ForeColor = prov.Activo ? Color.Green : Color.Red;
+                    row.Cells["colTelefono"].Value  = prov.Telefono;
+                    row.Cells["colEmail"].Value     = prov.Email;
+
+                    if (prov.Activo)
+                    {
+                        row.Cells["colEstado"].Value            = "ACTIVO";
+                        row.Cells["colEstado"].Style.ForeColor  = Color.FromArgb(39, 174, 96);
+                    }
+                    else
+                    {
+                        row.Cells["colEstado"].Value            = "INACTIVO";
+                        row.Cells["colEstado"].Style.ForeColor  = Color.FromArgb(150, 160, 170);
+                    }
 
                     row.Tag = prov.ProveedorID;
                 }
+
+                lblMostrar.Text = $"Mostrando {proveedores.Count} proveedor{(proveedores.Count != 1 ? "es" : "")}";
             }
             catch (Exception ex)
             {
@@ -94,6 +139,7 @@ namespace SistemaPOS.Forms.Contactos
             LimpiarFormulario();
             _modoEdicion = false;
             _proveedorIDEdicion = null;
+            ActualizarLabelModo();
             txtRUC.Focus();
         }
 
@@ -218,6 +264,8 @@ namespace SistemaPOS.Forms.Contactos
             txtTelefono.Text = proveedor.Telefono;
             txtEmail.Text = proveedor.Email;
             chkProveedorActivo.Checked = proveedor.Activo;
+
+            ActualizarLabelModo();
         }
 
         private void EliminarProveedor(int proveedorID)
@@ -299,6 +347,7 @@ namespace SistemaPOS.Forms.Contactos
             txtTelefono.Clear();
             txtEmail.Clear();
             chkProveedorActivo.Checked = true;
+            ActualizarLabelModo();
         }
 
         private void TxtRUC_KeyPress(object sender, KeyPressEventArgs e)

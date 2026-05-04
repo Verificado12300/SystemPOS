@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
@@ -16,18 +17,18 @@ namespace SistemaPOS.Forms.Configuracion
             InitializeComponent();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime) return;
             ConfigurarEventos();
-            ConfigurarControles();
+            chkActivo.Checked = true;
             CargarCategorias();
             LimpiarFormulario();
         }
 
         private void ConfigurarEventos()
         {
-            btnGuardar.Click += BtnGuardar_Click;
-            btnCancelar.Click += BtnCancelar_Click;
-            txtBuscar.TextChanged += TxtBuscar_TextChanged;
-            txtBuscar.KeyDown += TxtBuscar_KeyDown;
-            dgvCategorias.CellClick += DgvCategorias_CellClick;
+            btnGuardar.Click                 += BtnGuardar_Click;
+            btnCancelar.Click                += BtnCancelar_Click;
+            txtBuscar.TextChanged            += (s, e) => CargarCategorias(txtBuscar.Text);
+            txtBuscar.KeyDown                += TxtBuscar_KeyDown;
+            dgvCategorias.CellClick          += DgvCategorias_CellClick;
         }
 
         private void TxtBuscar_KeyDown(object sender, KeyEventArgs e)
@@ -40,16 +41,6 @@ namespace SistemaPOS.Forms.Configuracion
             }
         }
 
-        private void ConfigurarControles()
-        {
-            dgvCategorias.AutoGenerateColumns = false;
-            dgvCategorias.AllowUserToAddRows = false;
-            dgvCategorias.ReadOnly = true;
-            dgvCategorias.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-
-            chkActivo.Checked = true;
-        }
-
         private void CargarCategorias(string busqueda = null)
         {
             var categorias = CategoriaRepository.Listar(busqueda);
@@ -60,22 +51,32 @@ namespace SistemaPOS.Forms.Configuracion
             foreach (var cat in categorias)
             {
                 int index = dgvCategorias.Rows.Add();
-                var row = dgvCategorias.Rows[index];
+                var row   = dgvCategorias.Rows[index];
 
-                row.Cells["colNumero"].Value = numero++;
-                row.Cells["colNombre"].Value = cat.Nombre;
+                row.Cells["colNumero"].Value   = numero++;
+                row.Cells["colNombre"].Value   = cat.Nombre;
                 row.Cells["colProducto"].Value = cat.CantidadProductos.ToString();
-                row.Cells["colEstado"].Value = cat.Activo ? "Activo" : "Inactivo";
 
-                if (!cat.Activo)
+                if (cat.Activo)
                 {
-                    row.DefaultCellStyle.ForeColor = Color.Gray;
+                    row.Cells["colEstado"].Value            = "ACTIVO";
+                    row.Cells["colEstado"].Style.ForeColor  = Color.FromArgb(39, 174, 96);
+                }
+                else
+                {
+                    row.Cells["colEstado"].Value            = "INACTIVO";
+                    row.Cells["colEstado"].Style.ForeColor  = Color.FromArgb(150, 160, 170);
+                    row.DefaultCellStyle.ForeColor          = Color.FromArgb(150, 160, 170);
                 }
 
                 row.Tag = cat.CategoriaID;
             }
 
-            lblCantidadCategoria.Text = $"Mostrando {categorias.Count} Categorías";
+            // Actualizar tarjetas de métricas
+            lblCardVal1.Text = categorias.Count.ToString();
+            lblCardVal2.Text = categorias.Count(c => c.Activo).ToString();
+            lblCardVal3.Text = categorias.Count(c => c.CantidadProductos > 0).ToString();
+            lblMostrar.Text  = $"Mostrando {categorias.Count} categoría{(categorias.Count != 1 ? "s" : "")}";
         }
 
         private void LimpiarFormulario()
@@ -84,8 +85,8 @@ namespace SistemaPOS.Forms.Configuracion
             txtNombre.Clear();
             chkActivo.Checked = true;
 
-            btnGuardar.Text = "Guardar";
-            lblSubTitulo.Text = "NUEVA / EDITAR CATEGORÍA";
+            lblFormTitle.Text = "Nueva Categoría";
+            btnGuardar.Text   = "Guardar";
             txtNombre.Focus();
         }
 
@@ -94,17 +95,17 @@ namespace SistemaPOS.Forms.Configuracion
             var categoria = CategoriaRepository.ObtenerPorID(categoriaID);
             if (categoria == null)
             {
-                MessageBox.Show("No se encontró la categoría", "Error",
+                MessageBox.Show("No se encontró la categoría.", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            _categoriaEditandoID = categoriaID;
-            txtNombre.Text = categoria.Nombre;
-            chkActivo.Checked = categoria.Activo;
+            _categoriaEditandoID  = categoriaID;
+            txtNombre.Text        = categoria.Nombre;
+            chkActivo.Checked     = categoria.Activo;
 
-            btnGuardar.Text = "Actualizar";
-            lblSubTitulo.Text = "EDITANDO CATEGORÍA";
+            lblFormTitle.Text = "Editando Categoría";
+            btnGuardar.Text   = "Actualizar";
             txtNombre.Focus();
         }
 
@@ -112,7 +113,7 @@ namespace SistemaPOS.Forms.Configuracion
         {
             if (string.IsNullOrWhiteSpace(txtNombre.Text))
             {
-                MessageBox.Show("Ingrese el nombre de la categoría", "Validación",
+                MessageBox.Show("Ingrese el nombre de la categoría.", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtNombre.Focus();
                 return false;
@@ -120,16 +121,15 @@ namespace SistemaPOS.Forms.Configuracion
 
             if (txtNombre.Text.Trim().Length < 2)
             {
-                MessageBox.Show("El nombre debe tener al menos 2 caracteres", "Validación",
+                MessageBox.Show("El nombre debe tener al menos 2 caracteres.", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtNombre.Focus();
                 return false;
             }
 
-            // Validar nombre único
             if (CategoriaRepository.ExisteNombre(txtNombre.Text.Trim(), _categoriaEditandoID))
             {
-                MessageBox.Show("Ya existe una categoría con ese nombre", "Validación",
+                MessageBox.Show("Ya existe una categoría con ese nombre.", "Validación",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtNombre.Focus();
                 return false;
@@ -140,49 +140,45 @@ namespace SistemaPOS.Forms.Configuracion
 
         private void BtnGuardar_Click(object sender, EventArgs e)
         {
-            if (!ValidarFormulario())
-                return;
+            if (!ValidarFormulario()) return;
 
             try
             {
                 var categoria = new Categoria
                 {
-                    Nombre = txtNombre.Text.Trim(),
+                    Nombre      = txtNombre.Text.Trim(),
                     Descripcion = "",
-                    Activo = chkActivo.Checked
+                    Activo      = chkActivo.Checked
                 };
 
                 if (_categoriaEditandoID.HasValue)
                 {
-                    // Actualizar
                     categoria.CategoriaID = _categoriaEditandoID.Value;
-
                     if (CategoriaRepository.Actualizar(categoria))
                     {
-                        MessageBox.Show("Categoría actualizada exitosamente", "Éxito",
+                        MessageBox.Show("Categoría actualizada exitosamente.", "Éxito",
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                         CargarCategorias(txtBuscar.Text);
                         LimpiarFormulario();
                     }
                     else
                     {
-                        MessageBox.Show("No se pudo actualizar la categoría", "Error",
+                        MessageBox.Show("No se pudo actualizar la categoría.", "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
                 {
-                    // Crear nueva
                     if (CategoriaRepository.Crear(categoria))
                     {
-                        MessageBox.Show("Categoría creada exitosamente", "Éxito",
+                        MessageBox.Show("Categoría creada exitosamente.", "Éxito",
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
                         CargarCategorias(txtBuscar.Text);
                         LimpiarFormulario();
                     }
                     else
                     {
-                        MessageBox.Show("No se pudo crear la categoría", "Error",
+                        MessageBox.Show("No se pudo crear la categoría.", "Error",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
@@ -199,26 +195,17 @@ namespace SistemaPOS.Forms.Configuracion
             LimpiarFormulario();
         }
 
-        private void TxtBuscar_TextChanged(object sender, EventArgs e)
-        {
-            CargarCategorias(txtBuscar.Text);
-        }
-
         private void DgvCategorias_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
 
-            int categoriaID = Convert.ToInt32(dgvCategorias.Rows[e.RowIndex].Tag);
-            string columnName = dgvCategorias.Columns[e.ColumnIndex].Name;
+            int    categoriaID = Convert.ToInt32(dgvCategorias.Rows[e.RowIndex].Tag);
+            string columnName  = dgvCategorias.Columns[e.ColumnIndex].Name;
 
             if (columnName == "colEditar")
-            {
                 CargarCategoriaParaEditar(categoriaID);
-            }
             else if (columnName == "colEliminar")
-            {
                 EliminarCategoria(categoriaID);
-            }
         }
 
         private void EliminarCategoria(int categoriaID)
@@ -238,14 +225,14 @@ namespace SistemaPOS.Forms.Configuracion
             {
                 if (CategoriaRepository.Eliminar(categoriaID))
                 {
-                    MessageBox.Show("Categoría eliminada/desactivada exitosamente", "Éxito",
+                    MessageBox.Show("Categoría eliminada/desactivada exitosamente.", "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     CargarCategorias(txtBuscar.Text);
                     LimpiarFormulario();
                 }
                 else
                 {
-                    MessageBox.Show("No se pudo eliminar la categoría", "Error",
+                    MessageBox.Show("No se pudo eliminar la categoría.", "Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }

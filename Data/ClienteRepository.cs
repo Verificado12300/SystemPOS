@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Text;
-using System.Windows.Forms;
 
 namespace SistemaPOS.Data
 {
@@ -46,8 +45,7 @@ namespace SistemaPOS.Data
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al crear cliente: {ex.Message}\n\nDetalles: {ex.ToString()}", "Error");
-                return false;
+                throw new Exception($"Error al crear cliente: {ex.Message}", ex);
             }
         }
 
@@ -174,6 +172,7 @@ namespace SistemaPOS.Data
                         FROM PagoVenta pv
                         INNER JOIN Ventas v ON pv.VentaID = v.VentaID
                         WHERE v.ClienteID = c.ClienteID AND v.MetodoPago = 'CREDITO'
+                          AND (pv.Anulado IS NULL OR pv.Anulado = 0)
                     ), 0) as SaldoPendiente
                 FROM Clientes c
                 WHERE c.ClienteID != 1";
@@ -203,12 +202,12 @@ namespace SistemaPOS.Data
                         if (filtroEstado == "PAGADO")
                             query += @" AND (
                         COALESCE((SELECT SUM(v.Total - v.MontoEfectivo - v.MontoYape - v.MontoTransferencia - v.MontoTarjeta) FROM Ventas v WHERE v.ClienteID = c.ClienteID AND v.MetodoPago = 'CREDITO' AND v.Estado != 'ANULADA'), 0)
-                        - COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv INNER JOIN Ventas v ON pv.VentaID = v.VentaID WHERE v.ClienteID = c.ClienteID AND v.MetodoPago = 'CREDITO'), 0)
+                        - COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv INNER JOIN Ventas v ON pv.VentaID = v.VentaID WHERE v.ClienteID = c.ClienteID AND v.MetodoPago = 'CREDITO' AND (pv.Anulado IS NULL OR pv.Anulado = 0)), 0)
                     ) <= 0";
                         else if (filtroEstado == "PENDIENTE")
                             query += @" AND (
                         COALESCE((SELECT SUM(v.Total - v.MontoEfectivo - v.MontoYape - v.MontoTransferencia - v.MontoTarjeta) FROM Ventas v WHERE v.ClienteID = c.ClienteID AND v.MetodoPago = 'CREDITO' AND v.Estado != 'ANULADA'), 0)
-                        - COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv INNER JOIN Ventas v ON pv.VentaID = v.VentaID WHERE v.ClienteID = c.ClienteID AND v.MetodoPago = 'CREDITO'), 0)
+                        - COALESCE((SELECT SUM(pv.MontoAplicado) FROM PagoVenta pv INNER JOIN Ventas v ON pv.VentaID = v.VentaID WHERE v.ClienteID = c.ClienteID AND v.MetodoPago = 'CREDITO' AND (pv.Anulado IS NULL OR pv.Anulado = 0)), 0)
                     ) > 0";
                     }
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 using SistemaPOS.Data;
+using SistemaPOS.Utils;
 
 namespace SistemaPOS.Forms.Configuracion
 {
@@ -22,6 +23,7 @@ namespace SistemaPOS.Forms.Configuracion
             btnGuardar.Click += BtnGuardar_Click;
             btnCancelar.Click += BtnCancelar_Click;
             btnExaminarTemp.Click += BtnExaminarTemp_Click;
+            btnLimpiarSistema.Click += BtnLimpiarSistema_Click;
         }
 
         private void ConfigurarControles()
@@ -48,6 +50,10 @@ namespace SistemaPOS.Forms.Configuracion
             // Información del sistema (solo lectura)
             txtUbicacion.ReadOnly = true;
             txtNombreArchivo.ReadOnly = true;
+
+            // Mantenimiento: solo visible para administradores
+            bool esAdmin = SesionActual.Usuario?.RolID == 1;
+            pnlMantenimiento.Visible = esAdmin;
         }
 
         private void CargarDatos()
@@ -55,7 +61,7 @@ namespace SistemaPOS.Forms.Configuracion
             try
             {
                 // Información del sistema
-                txtUbicacion.Text = "SistemaPOS";
+                txtUbicacion.Text = "SystemPOS";
                 txtNombreArchivo.Text = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
 
                 // Ubicación de la base de datos
@@ -124,6 +130,7 @@ namespace SistemaPOS.Forms.Configuracion
                 chkMostrarMensajesAyuda.Checked = EmpresaRepository.ObtenerConfiguracion("MOSTRAR_AYUDA", "true") == "true";
                 chkModoDesarrollo.Checked = EmpresaRepository.ObtenerConfiguracion("MODO_DESARROLLO", "false") == "true";
                 txtDirectorioTemp.Text = EmpresaRepository.ObtenerConfiguracion("DIRECTORIO_TEMP", Path.GetTempPath());
+
             }
             catch (Exception ex)
             {
@@ -193,6 +200,18 @@ namespace SistemaPOS.Forms.Configuracion
                     txtDirectorioTemp.Text = folderDialog.SelectedPath;
                 }
             }
+        }
+
+        private void BtnLimpiarSistema_Click(object sender, EventArgs e)
+        {
+            if (SesionActual.Usuario?.RolID != 1)
+            {
+                MessageBox.Show("Solo el Administrador puede acceder a Limpiar Sistema.",
+                    "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            using (var f = new FormLimpiarSistema())
+                f.ShowDialog(this);
         }
     }
 }

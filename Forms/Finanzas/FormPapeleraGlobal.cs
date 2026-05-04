@@ -45,24 +45,29 @@ namespace SistemaPOS.Forms.Finanzas
 
                 dgvPapelera.Rows.Clear();
 
-                foreach (var e in lista)
+                foreach (var item in lista)
                 {
                     int idx = dgvPapelera.Rows.Add();
-                    var row = dgvPapelera.Rows[idx];
+                    var row  = dgvPapelera.Rows[idx];
 
-                    row.Cells["colEntidad"].Value     = e.Entidad;
-                    row.Cells["colId"].Value          = e.EntidadId;
-                    row.Cells["colReferencia"].Value  = e.Referencia;
-                    row.Cells["colFechaElim"].Value   = e.FechaEliminado != DateTime.MinValue
-                        ? e.FechaEliminado.ToString("dd/MM/yyyy HH:mm")
+                    row.Cells["colEntidad"].Value     = item.Entidad;
+                    row.Cells["colId"].Value          = item.EntidadId;
+                    row.Cells["colReferencia"].Value  = item.Referencia;
+                    row.Cells["colMonto"].Value       = item.Monto > 0
+                        ? $"S/ {item.Monto:N2}"
+                        : "";
+                    row.Cells["colFechaElim"].Value   = item.FechaEliminado != DateTime.MinValue
+                        ? item.FechaEliminado.ToString("dd/MM/yyyy HH:mm")
                         : "-";
-                    row.Cells["colUsuarioElim"].Value = string.IsNullOrEmpty(e.UsuarioElimino)
+                    row.Cells["colUsuarioElim"].Value = string.IsNullOrEmpty(item.UsuarioElimino)
                         ? "Sistema"
-                        : e.UsuarioElimino;
-                    row.Tag = e;
+                        : item.UsuarioElimino;
+                    row.Tag = item;
                 }
 
-                lblConteo.Text = $"Total: {lista.Count} registro(s) en papelera";
+                lblConteo.Text = lista.Count == 0
+                    ? "Sin registros en papelera"
+                    : $"{lista.Count} registro(s) en papelera";
             }
             catch (Exception ex)
             {
@@ -71,8 +76,17 @@ namespace SistemaPOS.Forms.Finanzas
             }
         }
 
-        private void BtnFiltrar_Click(object sender, EventArgs e)
+        private void BtnBuscar_Click(object sender, EventArgs e)
         {
+            CargarDatos();
+        }
+
+        private void BtnLimpiar_Click(object sender, EventArgs e)
+        {
+            dtpDesde.Value = DateTime.Today.AddDays(-30);
+            dtpHasta.Value = DateTime.Today;
+            cmbEntidad.SelectedIndex = 0;
+            txtBuscar.Clear();
             CargarDatos();
         }
 
@@ -111,9 +125,5 @@ namespace SistemaPOS.Forms.Finanzas
             }
         }
 
-        private void BtnCerrar_Click(object sender, EventArgs e)
-        {
-            this.Close();
-        }
     }
 }

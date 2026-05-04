@@ -14,6 +14,7 @@ namespace SistemaPOS.Forms.Inventario
     public partial class FormProductos : Form
     {
         private List<Categoria> _categorias = new List<Categoria>();
+        private Timer _timerDebounce;
 
         public FormProductos()
         {
@@ -27,6 +28,14 @@ namespace SistemaPOS.Forms.Inventario
 
         private void ConfigurarEventos()
         {
+            // Debounce de 400ms en búsqueda
+            _timerDebounce = new Timer { Interval = 400 };
+            _timerDebounce.Tick += (s, e) =>
+            {
+                _timerDebounce.Stop();
+                CargarProductos(txtBuscar.Text.Trim());
+            };
+
             btnNuevo.Click += BtnNuevo_Click;
             txtBuscar.TextChanged += TxtBuscar_TextChanged;
             txtBuscar.KeyDown += TxtBuscar_KeyDown;
@@ -50,22 +59,11 @@ namespace SistemaPOS.Forms.Inventario
         private void ConfigurarDataGridView()
         {
             dgvProductos.AutoGenerateColumns = false;
-            dgvProductos.AllowUserToAddRows = false;
-            dgvProductos.ReadOnly = true;
-            dgvProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvProductos.AllowUserToAddRows  = false;
+            dgvProductos.ReadOnly            = true;
+            DgvStyleHelper.Aplicar(dgvProductos);
 
-            // Permitir saltos de línea en columnas
-            if (dgvProductos.Columns["colPresentaciones"] != null)
-            {
-                dgvProductos.Columns["colPresentaciones"].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            }
-
-            if (dgvProductos.Columns["colPrecio"] != null)
-            {
-                dgvProductos.Columns["colPrecio"].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            }
-
-            // Ajustar altura de filas automáticamente
+            // WrapMode already set in Designer; keep AutoSizeRows for multi-line cells
             dgvProductos.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
 
             // Configurar combo de filtro de stock
@@ -145,6 +143,9 @@ namespace SistemaPOS.Forms.Inventario
                     // Guardar ID oculto en Tag
                     row.Tag = producto.ProductoID;
                 }
+
+                int total = productos.Count;
+                lblRegistros.Text = $"{total} producto{(total != 1 ? "s" : "")} encontrado{(total != 1 ? "s" : "")}";
             }
             catch (Exception ex)
             {
@@ -155,7 +156,8 @@ namespace SistemaPOS.Forms.Inventario
 
         private void TxtBuscar_TextChanged(object sender, EventArgs e)
         {
-            CargarProductos(txtBuscar.Text.Trim());
+            _timerDebounce.Stop();
+            _timerDebounce.Start();
         }
 
         private void Filtros_Changed(object sender, EventArgs e)
@@ -210,6 +212,16 @@ namespace SistemaPOS.Forms.Inventario
 
         private void BtnImportar_Click(object sender, EventArgs e)
         {
+            var confirm = MessageBox.Show(
+                "La importación masiva de productos puede sobreescribir datos existentes.\n\n" +
+                "Asegúrese de tener un respaldo antes de continuar.\n\n" +
+                "¿Desea iniciar la importación?",
+                "Confirmar importación",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (confirm != DialogResult.Yes) return;
+
             MessageBox.Show("La función de importación estará disponible próximamente.", "Información",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

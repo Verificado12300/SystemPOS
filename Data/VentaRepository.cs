@@ -1,9 +1,7 @@
 ﻿using SistemaPOS.Models;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data.SQLite;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace SistemaPOS.Data
 {
@@ -27,9 +25,10 @@ namespace SistemaPOS.Data
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return $"{DateTime.Now.Year}-{DateTime.Now.ToString("yyyyMMddHHmmss")}";
+                System.Diagnostics.Debug.WriteLine($"[GenerarNumeroVenta] Error al consultar correlativo: {ex.Message}. Usando timestamp como fallback.");
+                return $"{DateTime.Now.Year}-{DateTime.Now:yyyyMMddHHmmss}";
             }
         }
 
@@ -51,12 +50,12 @@ namespace SistemaPOS.Data
                             string queryVenta = @"
                                 INSERT INTO Ventas (
                                 NumeroVenta, Fecha, Hora, ClienteID, TipoComprobante, Serie, Numero,
-                                SubTotal, IGV, TipoIGV, BaseImponible, Total,
+                                SubTotal, Descuento, IGV, TipoIGV, BaseImponible, Total,
                                 MetodoPago, MontoEfectivo, MontoYape, MontoTarjeta,
                                 MontoTransferencia, Estado, CajaID, UsuarioID
                             ) VALUES (
                                 @NumeroVenta, @Fecha, @Hora, @ClienteID, @TipoComprobante, @Serie, @Numero,
-                                @SubTotal, @IGV, @TipoIGV, @BaseImponible, @Total,
+                                @SubTotal, @Descuento, @IGV, @TipoIGV, @BaseImponible, @Total,
                                 @MetodoPago, @MontoEfectivo, @MontoYape, @MontoTarjeta,
                                 @MontoTransferencia, @Estado, @CajaID, @UsuarioID
                             )";
@@ -71,6 +70,7 @@ namespace SistemaPOS.Data
                                 cmd.Parameters.AddWithValue("@Serie", venta.Serie);
                                 cmd.Parameters.AddWithValue("@Numero", venta.Numero);
                                 cmd.Parameters.AddWithValue("@SubTotal",      venta.SubTotal);
+                                cmd.Parameters.AddWithValue("@Descuento",     venta.Descuento);
                                 cmd.Parameters.AddWithValue("@IGV",           venta.IGV);
                                 cmd.Parameters.AddWithValue("@TipoIGV",       venta.TipoIGV);
                                 cmd.Parameters.AddWithValue("@BaseImponible", venta.BaseImponible);
@@ -351,6 +351,16 @@ namespace SistemaPOS.Data
                             cmd.ExecuteNonQuery();
                         }
 
+                        // Cancelar crédito asociado si existía
+                        using (var cmd = new SQLiteCommand(
+                            "UPDATE CreditosVentas SET Estado='CANCELADO', FechaPago=@f WHERE VentaID=@id AND Estado!='CANCELADO'",
+                            connection, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@f", DateTime.Now.ToString("yyyy-MM-dd"));
+                            cmd.Parameters.AddWithValue("@id", ventaID);
+                            cmd.ExecuteNonQuery();
+                        }
+
                         // Asiento de reversión (Anulación) — combinado o split según histórico
                         ContabilidadService.ReversarVentaConCosto(ventaID, connection, transaction);
 
@@ -475,13 +485,14 @@ namespace SistemaPOS.Data
                                     NumeroVenta = reader.GetString(reader.GetOrdinal("NumeroVenta")),
                                     Fecha = DateTime.Parse(reader.GetString(reader.GetOrdinal("Fecha"))),
                                     Hora = TimeSpan.Parse(reader.GetString(reader.GetOrdinal("Hora"))),
-                                    ClienteID = reader.GetInt32(reader.GetOrdinal("ClienteID")),
+                                    ClienteID = reader.IsDBNull(reader.GetOrdinal("ClienteID")) ? 0 : reader.GetInt32(reader.GetOrdinal("ClienteID")),
                                     TipoComprobante = reader.GetString(reader.GetOrdinal("TipoComprobante")),
                                     Serie = reader.IsDBNull(reader.GetOrdinal("Serie")) ? "" : reader.GetString(reader.GetOrdinal("Serie")),
                                     Numero = reader.IsDBNull(reader.GetOrdinal("Numero")) ? "" : reader.GetString(reader.GetOrdinal("Numero")),
-                                    SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
-                                    IGV = reader.GetDecimal(reader.GetOrdinal("IGV")),
-                                    Total = reader.GetDecimal(reader.GetOrdinal("Total")),
+                                    SubTotal  = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
+                                    Descuento = reader.IsDBNull(reader.GetOrdinal("Descuento")) ? 0m : reader.GetDecimal(reader.GetOrdinal("Descuento")),
+                                    IGV       = reader.GetDecimal(reader.GetOrdinal("IGV")),
+                                    Total     = reader.GetDecimal(reader.GetOrdinal("Total")),
                                     MetodoPago = reader.GetString(reader.GetOrdinal("MetodoPago")),
                                     MontoEfectivo = reader.GetDecimal(reader.GetOrdinal("MontoEfectivo")),
                                     MontoYape = reader.GetDecimal(reader.GetOrdinal("MontoYape")),
@@ -505,22 +516,15 @@ namespace SistemaPOS.Data
 
         public static int ObtenerVentaIDPorNumero(string numeroVenta)
         {
-            try
+            using (var connection = DatabaseConnection.GetConnection())
             {
-                using (var connection = DatabaseConnection.GetConnection())
+                string query = "SELECT VentaID FROM Ventas WHERE NumeroVenta = @NumeroVenta";
+                using (var cmd = new SQLiteCommand(query, connection))
                 {
-                    string query = "SELECT VentaID FROM Ventas WHERE NumeroVenta = @NumeroVenta";
-                    using (var cmd = new SQLiteCommand(query, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@NumeroVenta", numeroVenta);
-                        var result = cmd.ExecuteScalar();
-                        return result != null ? Convert.ToInt32(result) : 0;
-                    }
+                    cmd.Parameters.AddWithValue("@NumeroVenta", numeroVenta);
+                    var result = cmd.ExecuteScalar();
+                    return result != null ? Convert.ToInt32(result) : 0;
                 }
-            }
-            catch
-            {
-                return 0;
             }
         }
 

@@ -1,6 +1,6 @@
 -- ============================================================
 -- SCRIPT COMPLETO DE BASE DE DATOS
--- Sistema POS Agropecuario
+-- SystemPOS
 -- Motor: SQLite
 -- Fecha: 27 de Enero 2026
 -- ============================================================
@@ -247,6 +247,7 @@ CREATE TABLE IF NOT EXISTS Ventas (
     Serie TEXT(10),
     Numero TEXT(20),
     SubTotal      REAL    NOT NULL CHECK(SubTotal >= 0),
+    Descuento     REAL    NOT NULL DEFAULT 0,
     IGV           REAL    NOT NULL CHECK(IGV >= 0),
     TipoIGV       INTEGER NOT NULL DEFAULT 0,
     BaseImponible REAL    NOT NULL DEFAULT 0,
@@ -344,6 +345,7 @@ CREATE TABLE IF NOT EXISTS Compras (
     SubTotal REAL NOT NULL CHECK(SubTotal >= 0),
     IGV REAL NOT NULL CHECK(IGV >= 0),
     Total REAL NOT NULL CHECK(Total >= 0),
+    Flete REAL NOT NULL DEFAULT 0,
     MetodoPago TEXT(20) NOT NULL CHECK(MetodoPago IN ('EFECTIVO','TRANSFERENCIA','CREDITO')),
     Estado TEXT(20) DEFAULT 'COMPLETADA' CHECK(Estado IN ('COMPLETADA','ANULADA','CREDITO')),
     UsuarioID INTEGER NOT NULL,

@@ -50,7 +50,7 @@ namespace SistemaPOS.Forms.Compras
         private void ConfigurarEventos()
         {
             cmbBuscarProveedor.SelectionChangeCommitted += CmbBuscarProveedor_SelectionChangeCommitted;
-            btnBuscarCliente.Click += BtnBuscarProveedor_Click;
+            btnBuscarProveedor.Click += BtnBuscarProveedor_Click;
 
             // TextUpdate solo se dispara cuando el usuario escribe, no al cambiar Items programaticamente
             cmbBuscarProducto.TextUpdate += CmbBuscarProducto_TextUpdate;
@@ -64,6 +64,8 @@ namespace SistemaPOS.Forms.Compras
             btnAgregarProducto.Click += BtnAgregarProducto_Click;
             dgvProductos.CellClick += DgvProductos_CellClick;
             cboIGV.SelectedIndexChanged += (_, __) => CalcularTotales();
+            txtFlete.TextChanged += (_, __) => CalcularTotales();
+            txtFlete.KeyPress += TxtSoloNumeros_KeyPress;
             rbCredito.CheckedChanged += RbCredito_CheckedChanged;
             btnGuardar.Click += BtnGuardar_Click;
             btnCancelar.Click += BtnCancelar_Click;
@@ -84,9 +86,45 @@ namespace SistemaPOS.Forms.Compras
         private void ConfigurarControles()
         {
             dgvProductos.AutoGenerateColumns = false;
-            dgvProductos.AllowUserToAddRows = false;
-            dgvProductos.ReadOnly = true;
-            dgvProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvProductos.AllowUserToAddRows  = false;
+            dgvProductos.ReadOnly            = true;
+            dgvProductos.SelectionMode       = DataGridViewSelectionMode.FullRowSelect;
+
+            // ── Estilo profesional ──────────────────────────────────────
+            dgvProductos.BorderStyle            = System.Windows.Forms.BorderStyle.None;
+            dgvProductos.BackgroundColor        = System.Drawing.Color.White;
+            dgvProductos.GridColor              = System.Drawing.Color.FromArgb(235, 237, 240);
+            dgvProductos.RowHeadersVisible      = false;
+            dgvProductos.RowTemplate.Height     = 36;
+            dgvProductos.Font                   = new System.Drawing.Font("Segoe UI", 9F);
+            dgvProductos.DefaultCellStyle.Font  = new System.Drawing.Font("Segoe UI", 9F);
+            dgvProductos.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(45, 52, 54);
+            dgvProductos.DefaultCellStyle.Padding   = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            dgvProductos.AlternatingRowsDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(248, 249, 250);
+
+            dgvProductos.ColumnHeadersDefaultCellStyle.BackColor  = System.Drawing.Color.FromArgb(45, 52, 54);
+            dgvProductos.ColumnHeadersDefaultCellStyle.ForeColor  = System.Drawing.Color.White;
+            dgvProductos.ColumnHeadersDefaultCellStyle.Font       = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            dgvProductos.ColumnHeadersDefaultCellStyle.Padding    = new System.Windows.Forms.Padding(6, 0, 4, 0);
+            dgvProductos.ColumnHeadersHeight                       = 36;
+            dgvProductos.ColumnHeadersHeightSizeMode               = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            dgvProductos.EnableHeadersVisualStyles                 = false;
+
+            // ── Hover sin selección fija ─────────────────────────────────
+            dgvProductos.RowPrePaint += (s, e) =>
+            {
+                e.PaintParts &= ~System.Windows.Forms.DataGridViewPaintParts.SelectionBackground;
+            };
+            dgvProductos.CellMouseEnter += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                dgvProductos.Rows[e.RowIndex].DefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(245, 248, 255);
+            };
+            dgvProductos.CellMouseLeave += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                dgvProductos.Rows[e.RowIndex].DefaultCellStyle.BackColor = System.Drawing.Color.Empty;
+            };
 
             txtSubtotal.ReadOnly = true;
             txtIGV.ReadOnly = true;
@@ -108,9 +146,6 @@ namespace SistemaPOS.Forms.Compras
             AplicarConfiguracionSeguraCombo(cmbPresentacion, false);
             AplicarConfiguracionSeguraCombo(cmbBuscarProducto, true);
             ValidarConfiguracionesCombo();
-
-            dtpVencimiento.Visible = false;
-            lblVencimiento.Visible = false;
 
             txtCantidadBase.ReadOnly = true;
             txtCantidadBase.Font = new System.Drawing.Font(txtCantidadBase.Font, System.Drawing.FontStyle.Bold);
@@ -252,16 +287,14 @@ namespace SistemaPOS.Forms.Compras
 
         private void CmbBuscarProducto_DropDown(object sender, EventArgs e)
         {
+            // El catálogo ya está cargado desde InicializarFormulario.
+            // NO limpiar/recargar items mientras el dropdown está abierto:
+            // hacerlo mientras DroppedDown=true causa que la lista se vea vacía.
             if (_actualizandoBusqueda) return;
             if (_productosCatalogo == null || _productosCatalogo.Count == 0)
                 CargarCatalogoProductos();
-
-            string busqueda = (cmbBuscarProducto.Text ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(busqueda))
-            {
+            else
                 _productosEncontrados = new List<Producto>(_productosCatalogo);
-                RefrescarComboProductosManteniendoTexto(_productosEncontrados, busqueda, false);
-            }
         }
 
         private void CargarPresentaciones(int productoID)
@@ -464,31 +497,41 @@ namespace SistemaPOS.Forms.Compras
                 subtotal += (decimal)item.CantidadBase * (decimal)item.CostoUnitarioBase;
             }
 
+            decimal.TryParse(txtFlete.Text, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out decimal flete);
+            if (flete < 0m) flete = 0m;
+
             int tipoIGV = cboIGV.SelectedIndex < 0 ? 0 : cboIGV.SelectedIndex;
             decimal baseImp, igv, total;
 
             if (tipoIGV == 1)           // IGV INCLUIDO: el precio ya lleva IGV
             {
-                total   = subtotal;
-                baseImp = Math.Round(total / (1m + _tasaIGV), 2);
-                igv     = total - baseImp;
+                decimal goodsTotal = subtotal;
+                baseImp = Math.Round(goodsTotal / (1m + _tasaIGV), 2);
+                igv     = goodsTotal - baseImp;
+                total   = goodsTotal + flete;
             }
             else if (tipoIGV == 2)      // IGV ADICIONAL: se suma encima del precio
             {
                 baseImp = subtotal;
                 igv     = Math.Round(subtotal * _tasaIGV, 2);
-                total   = subtotal + igv;
+                total   = subtotal + igv + flete;
             }
             else                        // SIN IGV
             {
                 baseImp = subtotal;
                 igv     = 0m;
-                total   = subtotal;
+                total   = subtotal + flete;
             }
 
-            txtSubtotal.Text = baseImp.ToString("N2");   // muestra base imponible
+            txtSubtotal.Text = baseImp.ToString("N2");   // muestra base imponible (solo mercadería)
             txtIGV.Text      = igv.ToString("N2");
             txtTotal.Text    = total.ToString("N2");
+
+            // Actualizar métricas del panel resumen
+            lblResumenLineasVal.Text = dgvProductos.Rows.Count.ToString();
+            lblResumenBaseVal.Text   = "S/ " + baseImp.ToString("N2");
+            lblResumenTotalVal.Text  = "S/ " + total.ToString("N2");
         }
 
         private void RbCredito_CheckedChanged(object sender, EventArgs e)
@@ -521,6 +564,10 @@ namespace SistemaPOS.Forms.Compras
                     return;
                 }
 
+                decimal.TryParse(txtFlete.Text, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out decimal flete);
+                if (flete < 0m) flete = 0m;
+
                 var compra = new Compra
                 {
                     NumeroCompra = CompraRepository.GenerarNumeroCompra(),
@@ -532,10 +579,11 @@ namespace SistemaPOS.Forms.Compras
                     Numero = txtNumero.Text.Trim(),
                     IncluyeIGV = cboIGV.SelectedIndex > 0,
                     TipoIGV    = cboIGV.SelectedIndex < 0 ? 0 : cboIGV.SelectedIndex,
-                    BaseImponible = subTotal,   // txtSubtotal ya muestra la base imponible
+                    BaseImponible = subTotal,   // base imponible de la mercadería (sin flete)
                     SubTotal = subTotal,
                     IGV = igv,
-                    Total = total,
+                    Flete = flete,
+                    Total = total,              // total = base + igv + flete
                     MetodoPago = rbContado.Checked ? "EFECTIVO" : "CREDITO",
                     Estado = rbCredito.Checked ? "CREDITO" : "COMPLETADA",
                     UsuarioID = SesionActual.Usuario.UsuarioID,
@@ -625,11 +673,14 @@ namespace SistemaPOS.Forms.Compras
             LimpiarCamposProducto();
 
             txtNumero.Clear();
-            txtNumero.Clear();
             txtObservaciones.Clear();
             txtSubtotal.Text = "0.00";
             txtIGV.Text = "0.00";
+            txtFlete.Text = "0.00";
             txtTotal.Text = "0.00";
+            lblResumenLineasVal.Text = "0";
+            lblResumenBaseVal.Text   = "S/ 0.00";
+            lblResumenTotalVal.Text  = "S/ 0.00";
             cboIGV.SelectedIndex = 0;
             rbContado.Checked = true;
             dtpFecha.Value = DateTime.Now;
@@ -650,7 +701,7 @@ namespace SistemaPOS.Forms.Compras
 
         private void CargarCatalogoProductos()
         {
-            _productosCatalogo = ProductoRepository.BuscarProductos("");
+            _productosCatalogo = ProductoRepository.ObtenerCatalogoBusqueda();
             _productosEncontrados = new List<Producto>(_productosCatalogo);
             RefrescarComboProductosManteniendoTexto(_productosEncontrados, string.Empty, false);
         }

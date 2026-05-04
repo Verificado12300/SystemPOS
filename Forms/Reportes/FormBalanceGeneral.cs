@@ -20,6 +20,7 @@ namespace SistemaPOS.Forms.Reportes
         {
             dtpFecha.Value = DateTime.Now;
             dgvBalance.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvBalance);
             dgvBalance.AllowUserToAddRows = false;
             dgvBalance.ReadOnly = true;
             btnExportar.Click += BtnExportar_Click;

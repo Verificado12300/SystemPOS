@@ -117,4 +117,12 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="lblSeriesInfoTxt.Text" xml:space="preserve">
+    <value>ℹ  Información sobre series
+
+La serie identifica el punto de emisión (ej. NV01, B001, F001). El correlativo se incrementa automáticamente con cada comprobante emitido.
+
+Nota de Venta: uso interno sin valor fiscal.
+Boleta / Factura: requieren serie habilitada en SUNAT.</value>
+  </data>
 </root>

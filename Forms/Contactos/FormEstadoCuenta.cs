@@ -14,6 +14,8 @@ namespace SistemaPOS.Forms.Contactos
     {
         private readonly int _clienteID;
 
+        public FormEstadoCuenta() { InitializeComponent(); }
+
         public FormEstadoCuenta(int clienteID)
         {
             InitializeComponent();
@@ -34,6 +36,7 @@ namespace SistemaPOS.Forms.Contactos
             dtpHasta.Value = DateTime.Now;
 
             dgvMovimientos.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvMovimientos);
             dgvMovimientos.AllowUserToAddRows  = false;
             dgvMovimientos.ReadOnly            = false; // botones en col Acción
 

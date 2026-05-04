@@ -1,8 +1,27 @@
+# Visual Studio artifacts
 .vs/
 bin/
 obj/
 *.user
 *.suo
 *.cache
+
+# Logs y salida de compilación
 *.log
+*.txt
+
+# Base de datos local
 *.db
+*.db-shm
+*.db-wal
+
+# NuGet
+packages/
+
+# Instaladores compilados
+Installer/*.exe
+
+# Archivos temporales del sistema
+null
+Correo
+General

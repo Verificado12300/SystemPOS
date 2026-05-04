@@ -47,11 +47,11 @@ namespace SistemaPOS.Data
                             string queryCompra = @"
                                 INSERT INTO Compras (
                                     NumeroCompra, Fecha, Hora, ProveedorID, TipoComprobante, Serie, Numero,
-                                    IncluyeIGV, TipoIGV, BaseImponible, SubTotal, IGV, Total,
+                                    IncluyeIGV, TipoIGV, BaseImponible, SubTotal, IGV, Flete, Total,
                                     MetodoPago, Estado, UsuarioID, Observaciones
                                 ) VALUES (
                                     @NumeroCompra, @Fecha, @Hora, @ProveedorID, @TipoComprobante, @Serie, @Numero,
-                                    @IncluyeIGV, @TipoIGV, @BaseImponible, @SubTotal, @IGV, @Total,
+                                    @IncluyeIGV, @TipoIGV, @BaseImponible, @SubTotal, @IGV, @Flete, @Total,
                                     @MetodoPago, @Estado, @UsuarioID, @Observaciones
                                 )";
 
@@ -69,6 +69,7 @@ namespace SistemaPOS.Data
                                 cmd.Parameters.AddWithValue("@BaseImponible", compra.BaseImponible);
                                 cmd.Parameters.AddWithValue("@SubTotal", compra.SubTotal);
                                 cmd.Parameters.AddWithValue("@IGV", compra.IGV);
+                                cmd.Parameters.AddWithValue("@Flete", compra.Flete);
                                 cmd.Parameters.AddWithValue("@Total", compra.Total);
                                 cmd.Parameters.AddWithValue("@MetodoPago", compra.MetodoPago);
                                 cmd.Parameters.AddWithValue("@Estado", compra.Estado);
@@ -79,25 +80,62 @@ namespace SistemaPOS.Data
 
                             long compraID = connection.LastInsertRowId;
 
-                            // Factor para escalar costos a base imponible (sin IGV) cuando IGV está incluido en el precio
-                            decimal factorBase = (compra.TipoIGV == 1 && compra.Total > 0m)
-                                ? compra.BaseImponible / compra.Total
+                            // Factor para escalar costos a base imponible (sin IGV) cuando IGV está incluido.
+                            // Cuando hay flete: goodsTotal = Total - Flete, que es el precio de mercadería.
+                            decimal goodsTotal = compra.Total - compra.Flete;
+                            decimal factorBase = (compra.TipoIGV == 1 && goodsTotal > 0m)
+                                ? compra.BaseImponible / goodsTotal
                                 : 1m;
 
-                            foreach (var detalle in detalles)
+                            // Primera pasada: calcular el subtotal total de mercadería (normalizado, sin IGV, sin flete)
+                            // para distribuir el flete proporcionalmente.
+                            decimal totalSubtotalMercaderia = 0m;
+                            foreach (var d in detalles)
+                                totalSubtotalMercaderia += d.CantidadUnidadesBase * (d.CostoUnitario * factorBase);
+
+                            decimal flete = compra.Flete;
+                            decimal fleteRestante = flete;
+
+                            string queryDetalle = @"
+                                INSERT INTO CompraDetalles (
+                                    CompraID, ProductoID, ProductoPresentacionID, Cantidad,
+                                    CostoUnitario, CostoPresentacion, Subtotal, CantidadUnidadesBase
+                                ) VALUES (
+                                    @CompraID, @ProductoID, @ProductoPresentacionID, @Cantidad,
+                                    @CostoUnitario, @CostoPresentacion, @Subtotal, @CantidadUnidadesBase
+                                )";
+
+                            for (int i = 0; i < detalles.Count; i++)
                             {
+                                var detalle = detalles[i];
                                 decimal costoUnitBase = detalle.CostoUnitario * factorBase;
                                 decimal costoPres     = detalle.CostoPresentacion * factorBase;
-                                decimal subtotalBase  = detalle.CantidadUnidadesBase * costoUnitBase;
+                                decimal lineSubtotal  = detalle.CantidadUnidadesBase * costoUnitBase;
 
-                                string queryDetalle = @"
-                                    INSERT INTO CompraDetalles (
-                                        CompraID, ProductoID, ProductoPresentacionID, Cantidad,
-                                        CostoUnitario, CostoPresentacion, Subtotal, CantidadUnidadesBase
-                                    ) VALUES (
-                                        @CompraID, @ProductoID, @ProductoPresentacionID, @Cantidad,
-                                        @CostoUnitario, @CostoPresentacion, @Subtotal, @CantidadUnidadesBase
-                                    )";
+                                // Distribuir flete proporcional al subtotal de la línea
+                                decimal lineFleteShare;
+                                if (i == detalles.Count - 1)
+                                {
+                                    lineFleteShare = fleteRestante; // último ítem absorbe diferencia de redondeo
+                                }
+                                else if (totalSubtotalMercaderia > 0m)
+                                {
+                                    lineFleteShare = Math.Round(flete * lineSubtotal / totalSubtotalMercaderia, 4);
+                                    fleteRestante -= lineFleteShare;
+                                }
+                                else
+                                {
+                                    // Sin costos de mercadería: dividir flete equitativamente
+                                    lineFleteShare = Math.Round(flete / detalles.Count, 4);
+                                    fleteRestante -= lineFleteShare;
+                                }
+
+                                // Costo unitario y por presentación con flete incluido
+                                decimal costoUnitConFlete = costoUnitBase
+                                    + (detalle.CantidadUnidadesBase > 0m ? lineFleteShare / detalle.CantidadUnidadesBase : 0m);
+                                decimal costoPresentConFlete = costoPres
+                                    + (detalle.Cantidad > 0m ? lineFleteShare / detalle.Cantidad : 0m);
+                                decimal subtotalConFlete = lineSubtotal + lineFleteShare;
 
                                 using (var cmd = new SQLiteCommand(queryDetalle, connection, transaction))
                                 {
@@ -105,9 +143,9 @@ namespace SistemaPOS.Data
                                     cmd.Parameters.AddWithValue("@ProductoID", detalle.ProductoID);
                                     cmd.Parameters.AddWithValue("@ProductoPresentacionID", detalle.ProductoPresentacionID);
                                     cmd.Parameters.AddWithValue("@Cantidad", detalle.Cantidad);
-                                    cmd.Parameters.AddWithValue("@CostoUnitario", costoUnitBase);
-                                    cmd.Parameters.AddWithValue("@CostoPresentacion", costoPres);
-                                    cmd.Parameters.AddWithValue("@Subtotal", subtotalBase);
+                                    cmd.Parameters.AddWithValue("@CostoUnitario", costoUnitConFlete);
+                                    cmd.Parameters.AddWithValue("@CostoPresentacion", costoPresentConFlete);
+                                    cmd.Parameters.AddWithValue("@Subtotal", subtotalConFlete);
                                     cmd.Parameters.AddWithValue("@CantidadUnidadesBase", detalle.CantidadUnidadesBase);
                                     cmd.ExecuteNonQuery();
                                 }
@@ -300,6 +338,7 @@ namespace SistemaPOS.Data
                                     IncluyeIGV = reader.GetInt32(reader.GetOrdinal("IncluyeIGV")) == 1,
                                     SubTotal = reader.GetDecimal(reader.GetOrdinal("SubTotal")),
                                     IGV = reader.GetDecimal(reader.GetOrdinal("IGV")),
+                                    Flete = reader.IsDBNull(reader.GetOrdinal("Flete")) ? 0m : reader.GetDecimal(reader.GetOrdinal("Flete")),
                                     Total = reader.GetDecimal(reader.GetOrdinal("Total")),
                                     MetodoPago = reader.GetString(reader.GetOrdinal("MetodoPago")),
                                     Estado = reader.GetString(reader.GetOrdinal("Estado")),
@@ -413,7 +452,7 @@ namespace SistemaPOS.Data
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error al obtener crÃ©dito de compra: {ex.Message}");
+                throw new Exception($"Error al obtener crédito de compra: {ex.Message}");
             }
         }
 

@@ -74,7 +74,10 @@ namespace SistemaPOS.Data
             {
                 string query = @"
                     SELECT GastoID, Fecha, Hora, Concepto, Monto, Categoria, MetodoPago,
-                           Comprobante, Observaciones, CajaID, UsuarioID
+                           Comprobante, Observaciones, CajaID, UsuarioID,
+                           COALESCE(TipoIGV, 0) AS TipoIGV,
+                           COALESCE(BaseImponible, Monto) AS BaseImponible,
+                           ProveedorID
                     FROM Gastos WHERE (Eliminado IS NULL OR Eliminado = 0)
                       AND (Anulado IS NULL OR Anulado = 0)";
 
@@ -116,8 +119,11 @@ namespace SistemaPOS.Data
                                 MetodoPago = reader.GetString(6),
                                 Comprobante = reader.IsDBNull(7) ? "" : reader.GetString(7),
                                 Observaciones = reader.IsDBNull(8) ? "" : reader.GetString(8),
-                                CajaID = reader.IsDBNull(9) ? (int?)null : reader.GetInt32(9),
-                                UsuarioID = reader.GetInt32(10)
+                                CajaID        = reader.IsDBNull(9)  ? (int?)null : reader.GetInt32(9),
+                                UsuarioID     = reader.GetInt32(10),
+                                TipoIGV       = reader.GetInt32(11),
+                                BaseImponible = reader.GetDecimal(12),
+                                ProveedorID   = reader.IsDBNull(13) ? (int?)null : reader.GetInt32(13)
                             });
                         }
                     }
@@ -125,6 +131,87 @@ namespace SistemaPOS.Data
             }
 
             return gastos;
+        }
+
+        public static Gasto ObtenerPorID(int gastoID)
+        {
+            using (var connection = DatabaseConnection.GetConnection())
+            {
+                string query = @"
+                    SELECT GastoID, Fecha, Hora, Concepto, Monto, Categoria, MetodoPago,
+                           Comprobante, Observaciones, CajaID, UsuarioID, TipoIGV, BaseImponible, ProveedorID
+                    FROM Gastos WHERE GastoID = @GastoID
+                      AND (Eliminado IS NULL OR Eliminado = 0)
+                      AND (Anulado IS NULL OR Anulado = 0)";
+
+                using (var cmd = new SQLiteCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@GastoID", gastoID);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new Gasto
+                            {
+                                GastoID       = reader.GetInt32(0),
+                                Fecha         = DateTime.Parse(reader.GetString(1)),
+                                Hora          = TimeSpan.Parse(reader.GetString(2)),
+                                Concepto      = reader.GetString(3),
+                                Monto         = reader.GetDecimal(4),
+                                Categoria     = reader.GetString(5),
+                                MetodoPago    = reader.GetString(6),
+                                Comprobante   = reader.IsDBNull(7) ? "" : reader.GetString(7),
+                                Observaciones = reader.IsDBNull(8) ? "" : reader.GetString(8),
+                                CajaID        = reader.IsDBNull(9) ? (int?)null : reader.GetInt32(9),
+                                UsuarioID     = reader.GetInt32(10),
+                                TipoIGV       = reader.GetInt32(11),
+                                BaseImponible = reader.GetDecimal(12),
+                                ProveedorID   = reader.IsDBNull(13) ? (int?)null : reader.GetInt32(13)
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        public static bool ActualizarDescriptivos(int gastoID, string concepto, string categoria,
+            string comprobante, string observaciones)
+        {
+            using (var connection = DatabaseConnection.GetConnection())
+            {
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        string query = @"
+                            UPDATE Gastos SET
+                                Concepto      = @Concepto,
+                                Categoria     = @Categoria,
+                                Comprobante   = @Comprobante,
+                                Observaciones = @Observaciones
+                            WHERE GastoID = @GastoID";
+
+                        using (var cmd = new SQLiteCommand(query, connection, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Concepto", concepto);
+                            cmd.Parameters.AddWithValue("@Categoria", categoria);
+                            cmd.Parameters.AddWithValue("@Comprobante", (object)comprobante ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Observaciones", (object)observaciones ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@GastoID", gastoID);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                        return true;
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
         }
 
         public static bool Eliminar(int gastoID)
@@ -254,6 +341,7 @@ namespace SistemaPOS.Data
                     FROM Gastos
                     WHERE Fecha >= @FechaDesde AND Fecha <= @FechaHasta
                       AND (Eliminado IS NULL OR Eliminado = 0)
+                      AND (Anulado IS NULL OR Anulado = 0)
                     GROUP BY Categoria ORDER BY Total DESC";
 
                 using (var cmd = new SQLiteCommand(query, connection))

@@ -22,12 +22,17 @@ namespace SistemaPOS.Forms.Finanzas
             {
                 cmbEstado.SelectedIndex = 0;
                 dgvCuentas.AutoGenerateColumns = false;
+                DgvStyleHelper.Aplicar(dgvCuentas);
                 dgvCuentas.AllowUserToAddRows  = false;
                 dgvCuentas.ReadOnly = true;
                 dgvCuentas.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
-                txtBuscar.KeyDown += (s, ev) => { if (ev.KeyCode == Keys.Enter) CargarCuentas(); };
-                btnExportar.Click += BtnExportar_Click;
+                txtBuscar.KeyDown              += (s, ev) => { if (ev.KeyCode == Keys.Enter) CargarCuentas(); };
+                btnExportar.Click              += BtnExportar_Click;
+                cmbEstado.SelectedIndexChanged += (s, ev) => CargarCuentas();
+                dtpDesde.ValueChanged          += (s, ev) => CargarCuentas();
+                dtpHasta.ValueChanged          += (s, ev) => CargarCuentas();
+                dgvCuentas.CellPainting        += DgvCuentas_CellPainting;
 
                 CargarCuentas();
             }
@@ -44,14 +49,16 @@ namespace SistemaPOS.Forms.Finanzas
             {
                 dgvCuentas.Rows.Clear();
 
-                string busqueda = txtBuscar.Text.Trim();
+                string busqueda    = txtBuscar.Text.Trim();
                 string estadoFiltro = cmbEstado.SelectedIndex > 0 ? cmbEstado.Text : null;
 
                 var datos = CuentaPorPagarRepository.ListarAgrupadoPorProveedor(
                     string.IsNullOrWhiteSpace(busqueda) ? null : busqueda);
 
-                int numero = 1;
+                int     numero         = 1;
                 decimal totalPendiente = 0;
+                int     totalDocs      = 0;
+                int     provCount      = 0;
 
                 foreach (var r in datos)
                 {
@@ -68,28 +75,62 @@ namespace SistemaPOS.Forms.Finanzas
                     row.Cells["colTotalPagado"].Value    = $"S/ {r.TotalPagado:N2}";
                     row.Cells["colTotalPendiente"].Value = $"S/ {r.TotalPendiente:N2}";
                     row.Cells["colEstado"].Value         = r.Estado;
-                    row.Cells["colDetalle"].Value        = "Detalle";
+                    row.Cells["colDetalle"].Value        = "Ver detalle";
 
-                    // Tag = ProveedorID (int? serializado como object)
                     row.Tag = r.ProveedorID.HasValue ? (object)r.ProveedorID.Value : null;
 
                     totalPendiente += r.TotalPendiente;
-
-                    Color estadoColor = r.Estado == "PENDIENTE"
-                        ? Color.FromArgb(243, 156, 18)   // naranja
-                        : Color.FromArgb(39, 174, 96);   // verde
-                    row.Cells["colEstado"].Style.ForeColor = estadoColor;
-                    row.Cells["colEstado"].Style.Font = new Font(dgvCuentas.Font, FontStyle.Bold);
+                    totalDocs      += r.CantidadDocumentos;
+                    provCount++;
                 }
 
-                lblTotalRegistros.Text = $"Total: {dgvCuentas.Rows.Count} proveedores";
-                txtTotalPendiente.Text = $"S/ {totalPendiente:N2}";
+                lblTotalRegistros.Text  = $"{dgvCuentas.Rows.Count} proveedores";
+                txtTotalPendiente.Text  = $"S/ {totalPendiente:N2}";
+                // KPI cards
+                lblKpi1Val.Text = $"S/ {totalPendiente:N2}";
+                lblKpi2Val.Text = provCount.ToString();
+                lblKpi3Val.Text = totalDocs.ToString();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error al cargar cuentas: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void DgvCuentas_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+            if (dgvCuentas.Columns[e.ColumnIndex].Name != "colEstado") return;
+
+            e.PaintBackground(e.ClipBounds, true);
+
+            string estado = e.Value?.ToString() ?? "";
+            Color bgColor, fgColor;
+            switch (estado)
+            {
+                case "PENDIENTE": bgColor = Color.FromArgb(254, 243, 199); fgColor = Color.FromArgb(146, 64, 14);  break;
+                case "PARCIAL":   bgColor = Color.FromArgb(219, 234, 254); fgColor = Color.FromArgb(30, 64, 175);  break;
+                case "PAGADO":    bgColor = Color.FromArgb(209, 250, 229); fgColor = Color.FromArgb(6, 95, 70);    break;
+                case "ANULADO":   bgColor = Color.FromArgb(254, 226, 226); fgColor = Color.FromArgb(153, 27, 27);  break;
+                default:          bgColor = Color.FromArgb(241, 245, 249); fgColor = Color.FromArgb(100, 116, 139); break;
+            }
+
+            var g = e.Graphics;
+            var cb = e.CellBounds;
+            int bH = 22; int bW = Math.Min(estado.Length * 8 + 18, cb.Width - 16);
+            int bx = cb.X + (cb.Width - bW) / 2;
+            int by = cb.Y + (cb.Height - bH) / 2;
+            var badge = new Rectangle(bx, by, bW, bH);
+
+            using (var br = new SolidBrush(bgColor)) g.FillRectangle(br, badge);
+            using (var font = new Font("Segoe UI", 7.5F, FontStyle.Bold))
+            using (var tb = new SolidBrush(fgColor))
+            {
+                var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(estado, font, tb, badge, sf);
+            }
+            e.Handled = true;
         }
 
         private void BtnFiltrar_Click(object sender, EventArgs e)
@@ -107,8 +148,6 @@ namespace SistemaPOS.Forms.Finanzas
             try
             {
                 string estado = cmbEstado.SelectedIndex > 0 ? cmbEstado.Text : null;
-
-                // El reporte existente sigue usando la vista plana por documento
                 var dt = ReportDataSourceHelper.ObtenerDatosCuentasPorPagar(null, estado);
 
                 if (dt.Rows.Count == 0)
@@ -119,14 +158,12 @@ namespace SistemaPOS.Forms.Finanzas
                 }
 
                 var dataSources = new Dictionary<string, DataTable> { { "DsCuentasPagar", dt } };
-                var parametros = ReportHelper.GetCompanyParameters();
+                var parametros  = ReportHelper.GetCompanyParameters();
                 parametros["pFiltro"] = $"Estado: {cmbEstado.Text}";
 
                 ReportHelper.MostrarDialogoExportacion(
                     ReportHelper.GetRdlcPath(@"Tabular\RptCuentasPorPagar.rdlc"),
-                    dataSources,
-                    parametros,
-                    "cuentas_por_pagar");
+                    dataSources, parametros, "cuentas_por_pagar");
             }
             catch (Exception ex)
             {
@@ -142,7 +179,7 @@ namespace SistemaPOS.Forms.Finanzas
                 if (e.RowIndex < 0) return;
                 if (dgvCuentas.Columns[e.ColumnIndex].Name != "colDetalle") return;
 
-                var row = dgvCuentas.Rows[e.RowIndex];
+                var row       = dgvCuentas.Rows[e.RowIndex];
                 int? proveedorID = row.Tag != null ? (int?)Convert.ToInt32(row.Tag) : null;
                 string nombre = row.Cells["colProveedor"].Value?.ToString() ?? "Sin proveedor";
 

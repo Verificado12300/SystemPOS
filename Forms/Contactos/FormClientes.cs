@@ -37,6 +37,7 @@ namespace SistemaPOS.Forms.Contactos
         private void ConfigurarDataGridView()
         {
             dgvClientes.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvClientes);
             dgvClientes.AllowUserToAddRows = false;
             dgvClientes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvClientes.MultiSelect = false;
@@ -46,6 +47,7 @@ namespace SistemaPOS.Forms.Contactos
         private void ConfigurarEventos()
         {
             txtBuscar.KeyPress += TxtBuscar_KeyPress;
+            txtBuscar.TextChanged += (s, e) => CargarClientes(); // auto-trigger igual que los combos
             btnNuevoCliente.Click += BtnNuevoCliente_Click;
             dgvClientes.CellClick += DgvClientes_CellClick;
             cmbFiltrar.SelectedIndexChanged += Filtros_Changed;
@@ -56,13 +58,17 @@ namespace SistemaPOS.Forms.Contactos
         {
             try
             {
-                string buscar = string.IsNullOrWhiteSpace(txtBuscar.Text) ? null : txtBuscar.Text.Trim();
-                string filtroTipo = cmbFiltrar.SelectedIndex == 0 ? null : cmbFiltrar.Text;
+                string buscar       = string.IsNullOrWhiteSpace(txtBuscar.Text) ? null : txtBuscar.Text.Trim();
+                string filtroTipo   = cmbFiltrar.SelectedIndex == 0 ? null : cmbFiltrar.Text;
                 string filtroEstado = cmbEstado.SelectedIndex == 0 ? null : cmbEstado.Text;
 
                 var clientes = ClienteRepository.Listar(buscar, filtroTipo, filtroEstado);
 
                 dgvClientes.Rows.Clear();
+
+                int     totalActivos  = 0;
+                int     conDeuda      = 0;
+                decimal totalDeuda    = 0m;
 
                 int numero = 1;
                 foreach (var cliente in clientes)
@@ -70,37 +76,54 @@ namespace SistemaPOS.Forms.Contactos
                     int index = dgvClientes.Rows.Add();
                     DataGridViewRow row = dgvClientes.Rows[index];
 
-                    row.Cells["colNumero"].Value = numero++;
+                    row.Cells["colNumero"].Value    = numero++;
                     row.Cells["colDocumento"].Value = cliente.TipoDocumento + " - " + cliente.NumeroDocumento;
-                    row.Cells["colCliente"].Value = cliente.NombreCompleto;
-                    row.Cells["colEmail"].Value = cliente.Email;
-                    row.Cells["colTelefono"].Value = cliente.Telefono;
+                    row.Cells["colCliente"].Value   = cliente.NombreCompleto;
+                    row.Cells["colEmail"].Value     = cliente.Email;
+                    row.Cells["colTelefono"].Value  = cliente.Telefono;
                     row.Cells["colDireccion"].Value = cliente.Direccion;
 
                     decimal saldo = cliente.SaldoPendiente;
                     if (saldo > 0)
                     {
-                        row.Cells["colSaldo"].Value = "S/ " + saldo.ToString("N2");
-                        row.Cells["colSaldo"].Style.ForeColor = Color.Red;
+                        row.Cells["colSaldo"].Value            = "S/ " + saldo.ToString("N2");
+                        row.Cells["colSaldo"].Style.ForeColor  = Color.FromArgb(211, 47, 47);
+                        conDeuda++;
+                        totalDeuda += saldo;
                     }
                     else if (saldo < 0)
                     {
-                        row.Cells["colSaldo"].Value = "-S/ " + Math.Abs(saldo).ToString("N2");
-                        row.Cells["colSaldo"].Style.ForeColor = Color.Green;
+                        row.Cells["colSaldo"].Value            = "-S/ " + Math.Abs(saldo).ToString("N2");
+                        row.Cells["colSaldo"].Style.ForeColor  = Color.FromArgb(39, 174, 96);
                     }
                     else
                     {
-                        row.Cells["colSaldo"].Value = "S/ 0.00";
-                        row.Cells["colSaldo"].Style.ForeColor = Color.Black;
+                        row.Cells["colSaldo"].Value            = "S/ 0.00";
+                        row.Cells["colSaldo"].Style.ForeColor  = Color.FromArgb(100, 110, 120);
                     }
 
-                    row.Cells["colEstado"].Value = cliente.Activo ? "● Activo" : "○ Inactivo";
-                    row.Cells["colEstado"].Style.ForeColor = cliente.Activo ? Color.Green : Color.Gray;
+                    if (cliente.Activo)
+                    {
+                        row.Cells["colEstado"].Value            = "ACTIVO";
+                        row.Cells["colEstado"].Style.ForeColor  = Color.FromArgb(39, 174, 96);
+                        totalActivos++;
+                    }
+                    else
+                    {
+                        row.Cells["colEstado"].Value            = "INACTIVO";
+                        row.Cells["colEstado"].Style.ForeColor  = Color.FromArgb(150, 160, 170);
+                    }
 
                     row.Tag = cliente.ClienteID;
                 }
 
-                lblMostrar.Text = $"Mostrando {clientes.Count} clientes";
+                // Actualizar tarjetas de métricas
+                lblCardVal1.Text = clientes.Count.ToString();
+                lblCardVal2.Text = totalActivos.ToString();
+                lblCardVal3.Text = conDeuda.ToString();
+                lblCardVal4.Text = "S/ " + totalDeuda.ToString("N2");
+
+                lblMostrar.Text = $"Mostrando {clientes.Count} cliente{(clientes.Count != 1 ? "s" : "")}";
             }
             catch (Exception ex)
             {

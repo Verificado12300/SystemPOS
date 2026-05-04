@@ -280,11 +280,10 @@ namespace SistemaPOS.Forms.Contactos
             this.dgvMovimientos.AutoGenerateColumns    = false;
             this.dgvMovimientos.ReadOnly               = false;
 
-            var hStyle = this.dgvMovimientos.ColumnHeadersDefaultCellStyle;
-            hStyle.BackColor = System.Drawing.Color.FromArgb(44, 62, 80);
-            hStyle.ForeColor = System.Drawing.Color.White;
-            hStyle.Font      = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
-            hStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            this.dgvMovimientos.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(44, 62, 80);
+            this.dgvMovimientos.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            this.dgvMovimientos.ColumnHeadersDefaultCellStyle.Font      = new System.Drawing.Font("Segoe UI", 8.5F, System.Drawing.FontStyle.Bold);
+            this.dgvMovimientos.ColumnHeadersDefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             this.dgvMovimientos.ColumnHeadersHeight          = 30;
             this.dgvMovimientos.ColumnHeadersHeightSizeMode  =
                 System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;

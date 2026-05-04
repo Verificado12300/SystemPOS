@@ -34,6 +34,7 @@ namespace SistemaPOS.Forms.Compras
             btnExportar.Click += BtnExportar_Click;
             btnCerrar.Click += (s, e) => this.Close();
             dgvCompras.CellClick += DgvCompras_CellClick;
+            dgvCompras.CellPainting += DgvCompras_CellPainting;
 
             // Buscar al presionar Enter en los filtros
             cmbProveedor.KeyDown += Filtros_KeyDown;
@@ -63,9 +64,55 @@ namespace SistemaPOS.Forms.Compras
         private void ConfigurarDataGridView()
         {
             dgvCompras.AutoGenerateColumns = false;
-            dgvCompras.AllowUserToAddRows = false;
-            dgvCompras.ReadOnly = true;
-            dgvCompras.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvCompras.AllowUserToAddRows  = false;
+            dgvCompras.ReadOnly            = true;
+            dgvCompras.SelectionMode       = DataGridViewSelectionMode.FullRowSelect;
+
+            // ── Estilo profesional ──────────────────────────────────────
+            dgvCompras.BorderStyle            = BorderStyle.None;
+            dgvCompras.BackgroundColor        = Color.White;
+            dgvCompras.GridColor              = Color.FromArgb(235, 237, 240);
+            dgvCompras.RowHeadersVisible      = false;
+            dgvCompras.RowTemplate.Height     = 44;
+            dgvCompras.Font                   = new Font("Segoe UI", 9.5F);
+            dgvCompras.DefaultCellStyle.Font  = new Font("Segoe UI", 9.5F);
+            dgvCompras.DefaultCellStyle.ForeColor = Color.FromArgb(45, 52, 54);
+            dgvCompras.DefaultCellStyle.Padding   = new Padding(8, 0, 4, 0);
+            dgvCompras.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 253);
+
+            dgvCompras.ColumnHeadersDefaultCellStyle.BackColor  = Color.FromArgb(30, 36, 40);
+            dgvCompras.ColumnHeadersDefaultCellStyle.ForeColor  = Color.FromArgb(200, 210, 215);
+            dgvCompras.ColumnHeadersDefaultCellStyle.Font       = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            dgvCompras.ColumnHeadersDefaultCellStyle.Padding    = new Padding(8, 0, 4, 0);
+            dgvCompras.ColumnHeadersHeight                       = 40;
+            dgvCompras.ColumnHeadersHeightSizeMode               = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            dgvCompras.EnableHeadersVisualStyles                 = false;
+
+            // ── Imagen transparente en columnas de acción (evita FormatException en ImageColumn con null) ──
+            var imgAccion = new Bitmap(1, 1);
+            imgAccion.SetPixel(0, 0, Color.Transparent);
+            colVerDetalle.Image = imgAccion;
+            colImprimir.Image   = imgAccion;
+            colAnular.Image     = imgAccion;
+
+            // ── DataError silencioso (evita diálogo del sistema ante errores de celda) ──
+            dgvCompras.DataError += (s, e) => { e.ThrowException = false; };
+
+            // ── Hover sin selección fija ─────────────────────────────────
+            dgvCompras.RowPrePaint += (s, e) =>
+            {
+                e.PaintParts &= ~DataGridViewPaintParts.SelectionBackground;
+            };
+            dgvCompras.CellMouseEnter += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                dgvCompras.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(235, 240, 255);
+            };
+            dgvCompras.CellMouseLeave += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                dgvCompras.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.Empty;
+            };
         }
 
         private void InicializarFiltros()
@@ -145,12 +192,11 @@ namespace SistemaPOS.Forms.Compras
                     row.Cells["colTotal"].Value = "S/ " + compra.Total.ToString("N2");
                     row.Cells["colEstado"].Value = compra.Estado;
 
-                    if (compra.Estado == "COMPLETADA")
-                        row.Cells["colEstado"].Style.ForeColor = Color.Green;
-                    else if (compra.Estado == "CREDITO")
-                        row.Cells["colEstado"].Style.ForeColor = Color.Orange;
-                    else if (compra.Estado == "ANULADA")
-                        row.Cells["colEstado"].Style.ForeColor = Color.Red;
+                    if (compra.Estado == "ANULADA")
+                    {
+                        row.DefaultCellStyle.ForeColor = Color.FromArgb(160, 160, 160);
+                        row.DefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250);
+                    }
 
                     row.Tag = compra.CompraID;
 
@@ -168,7 +214,7 @@ namespace SistemaPOS.Forms.Compras
                     }
                 }
 
-                lblOperaciones.Text = $"Compras del perÃ­odo: {compras.Count}";
+                lblOperaciones.Text = $"# Compras del período: {compras.Count}";
                 txtEfectivoCantidad.Text = $"S/ {totalEfectivo:N2}";
                 txtYapeCantidad.Text = "S/ 0.00";
                 txtTransferenciaCantidad.Text = $"S/ {totalTransferencia:N2}";
@@ -255,6 +301,57 @@ namespace SistemaPOS.Forms.Compras
                 MessageBox.Show($"Error al imprimir: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void DgvCompras_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+            string col = dgvCompras.Columns[e.ColumnIndex].Name;
+            if (col != "colEstado" && col != "colMetodoPago") return;
+
+            e.PaintBackground(e.ClipBounds, true);
+
+            string val = e.Value?.ToString() ?? "";
+            Color bg, fg;
+
+            if (col == "colEstado")
+            {
+                switch (val)
+                {
+                    case "COMPLETADA": bg = Color.FromArgb(209, 250, 229); fg = Color.FromArgb(6, 95, 70);    break;
+                    case "CREDITO":    bg = Color.FromArgb(254, 243, 199); fg = Color.FromArgb(146, 64, 14);  break;
+                    case "ANULADA":    bg = Color.FromArgb(254, 226, 226); fg = Color.FromArgb(153, 27, 27);  break;
+                    default:           bg = Color.FromArgb(241, 245, 249); fg = Color.FromArgb(100, 116, 139); break;
+                }
+            }
+            else // colMetodoPago
+            {
+                switch (val)
+                {
+                    case "EFECTIVO":      bg = Color.FromArgb(241, 245, 249); fg = Color.FromArgb(51, 65, 85);   break;
+                    case "YAPE":          bg = Color.FromArgb(237, 233, 254); fg = Color.FromArgb(91, 33, 182);  break;
+                    case "TRANSFERENCIA": bg = Color.FromArgb(219, 234, 254); fg = Color.FromArgb(30, 64, 175);  break;
+                    case "TARJETA":       bg = Color.FromArgb(204, 251, 241); fg = Color.FromArgb(17, 94, 89);   break;
+                    case "CREDITO":       bg = Color.FromArgb(254, 243, 199); fg = Color.FromArgb(146, 64, 14);  break;
+                    default:              bg = Color.FromArgb(241, 245, 249); fg = Color.FromArgb(100, 116, 139); break;
+                }
+            }
+
+            var g = e.Graphics;
+            var cb = e.CellBounds;
+            int bH = 22; int bW = Math.Min(val.Length * 8 + 18, cb.Width - 12);
+            int bx = cb.X + (cb.Width - bW) / 2;
+            int by = cb.Y + (cb.Height - bH) / 2;
+            var badge = new Rectangle(bx, by, bW, bH);
+
+            using (var br = new SolidBrush(bg)) g.FillRectangle(br, badge);
+            using (var font = new Font("Segoe UI", 7.5F, FontStyle.Bold))
+            using (var tb   = new SolidBrush(fg))
+            {
+                var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(val, font, tb, badge, sf);
+            }
+            e.Handled = true;
         }
 
         private void BtnBuscar_Click(object sender, EventArgs e)

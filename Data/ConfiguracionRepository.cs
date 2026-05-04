@@ -148,7 +148,7 @@ namespace SistemaPOS.Data
                         ReporteCuentasCobrar INTEGER DEFAULT 0,
                         EnviarPorCorreo INTEGER DEFAULT 0,
                         DestinatariosCorreo TEXT,
-                        AsuntoCorreo TEXT DEFAULT 'Reporte Automático - SistemaPOS',
+                        AsuntoCorreo TEXT DEFAULT 'Reporte Automático - SystemPOS',
                         FormatoReporte TEXT DEFAULT 'PDF',
                         AlertaStockBajo INTEGER DEFAULT 0,
                         NotificarVentasMayores INTEGER DEFAULT 0,
@@ -184,7 +184,7 @@ namespace SistemaPOS.Data
         // Notificaciones por correo
         public bool EnviarPorCorreo { get; set; }
         public string DestinatariosCorreo { get; set; }
-        public string AsuntoCorreo { get; set; } = "Reporte Automático - SistemaPOS";
+        public string AsuntoCorreo { get; set; } = "Reporte Automático - SystemPOS";
         public string FormatoReporte { get; set; } = "PDF";
 
         // Alertas

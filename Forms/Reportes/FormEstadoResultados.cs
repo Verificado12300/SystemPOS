@@ -21,6 +21,7 @@ namespace SistemaPOS.Forms.Reportes
             dtpDesde.Value = DateTime.Now.AddMonths(-1);
             dtpHasta.Value = DateTime.Now;
             dgvEstadoResultados.AutoGenerateColumns = false;
+            DgvStyleHelper.Aplicar(dgvEstadoResultados);
             dgvEstadoResultados.AllowUserToAddRows = false;
             dgvEstadoResultados.ReadOnly = true;
             btnExportar.Click += BtnExportar_Click;

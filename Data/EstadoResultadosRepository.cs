@@ -38,67 +38,61 @@ namespace SistemaPOS.Data
 
             using (var connection = DatabaseConnection.GetConnection())
             {
-                // Ventas brutas
-                er.VentasBrutas = ObtenerDecimal(connection,
-                    "SELECT COALESCE(SUM(Total), 0) FROM Ventas WHERE Fecha >= @FD AND Fecha <= @FH AND Estado != 'ANULADA'", fd, fh);
+                // Ventas (400), COGS (500) y Gastos totales (600) desde asientos contables
+                const string sqlAsientos = @"
+                    SELECT
+                        COALESCE(SUM(CASE WHEN cc.Codigo = '400' THEN ad.Haber - ad.Debe ELSE 0 END), 0),
+                        COALESCE(SUM(CASE WHEN cc.Codigo = '500' THEN ad.Debe - ad.Haber ELSE 0 END), 0),
+                        COALESCE(SUM(CASE WHEN cc.Codigo = '600' THEN ad.Debe - ad.Haber ELSE 0 END), 0)
+                    FROM   AsientosDetalle ad
+                    JOIN   CuentasContables cc ON ad.CuentaID  = cc.CuentaID
+                    JOIN   Asientos a          ON ad.AsientoID = a.AsientoID
+                    WHERE  a.Fecha >= @FD AND a.Fecha <= @FH";
 
-                // Devoluciones (ventas anuladas)
-                er.DevolucionesVentas = ObtenerDecimal(connection,
-                    "SELECT COALESCE(SUM(Total), 0) FROM Ventas WHERE FechaAnulacion >= @FD AND FechaAnulacion <= @FH AND Estado = 'ANULADA'", fd, fh);
+                using (var cmd = new SQLiteCommand(sqlAsientos, connection))
+                {
+                    cmd.Parameters.AddWithValue("@FD", fd);
+                    cmd.Parameters.AddWithValue("@FH", fh);
+                    using (var r = cmd.ExecuteReader())
+                    {
+                        if (r.Read())
+                        {
+                            er.VentasBrutas    = r.IsDBNull(0) ? 0m : r.GetDecimal(0);
+                            er.CostoMercaderia = r.IsDBNull(1) ? 0m : r.GetDecimal(1);
+                            er.TotalGastos     = r.IsDBNull(2) ? 0m : r.GetDecimal(2);
+                        }
+                    }
+                }
 
-                er.VentasNetas = er.VentasBrutas - er.DevolucionesVentas;
+                // Account 400 ya es neto (las anulaciones generan asientos inversos)
+                er.VentasNetas       = er.VentasBrutas;
+                er.UtilidadBruta     = er.VentasNetas - er.CostoMercaderia;
+                er.GastosOperativos  = er.TotalGastos;
+                er.UtilidadOperativa = er.UtilidadBruta - er.TotalGastos;
+                er.UtilidadNeta      = er.UtilidadOperativa;
 
-                // Costo de mercadería vendida (basado en costo de productos vendidos)
-                er.CostoMercaderia = ObtenerDecimal(connection, @"
-                    SELECT COALESCE(SUM(vd.Cantidad * pp.CostoBase), 0)
-                    FROM VentaDetalles vd
-                    INNER JOIN Ventas v ON vd.VentaID = v.VentaID
-                    INNER JOIN ProductoPresentaciones pp ON vd.ProductoPresentacionID = pp.ProductoPresentacionID
-                    WHERE v.Fecha >= @FD AND v.Fecha <= @FH AND v.Estado != 'ANULADA'", fd, fh);
+                // Desglose por categoría desde Gastos.BaseImponible (informativo)
+                const string sqlCategorias = @"
+                    SELECT Categoria, COALESCE(SUM(BaseImponible), 0)
+                    FROM   Gastos
+                    WHERE  Fecha >= @FD AND Fecha <= @FH
+                      AND  (Eliminado IS NULL OR Eliminado = 0)
+                    GROUP  BY Categoria";
 
-                er.UtilidadBruta = er.VentasNetas - er.CostoMercaderia;
-
-                // Gastos operativos por categoría
-                // Servicios = LUZ + AGUA + INTERNET + TELEFONO
-                er.GastosServicios = ObtenerDecimal(connection,
-                    "SELECT COALESCE(SUM(Monto), 0) FROM Gastos WHERE Fecha >= @FD AND Fecha <= @FH AND Categoria IN ('LUZ','AGUA','INTERNET','TELEFONO')", fd, fh);
-
-                er.GastosAlquiler = ObtenerDecimal(connection,
-                    "SELECT COALESCE(SUM(Monto), 0) FROM Gastos WHERE Fecha >= @FD AND Fecha <= @FH AND Categoria = 'ALQUILER'", fd, fh);
-
-                er.GastosSueldos = ObtenerDecimal(connection,
-                    "SELECT COALESCE(SUM(Monto), 0) FROM Gastos WHERE Fecha >= @FD AND Fecha <= @FH AND Categoria = 'SUELDOS'", fd, fh);
-
-                er.GastosOtros = ObtenerDecimal(connection,
-                    "SELECT COALESCE(SUM(Monto), 0) FROM Gastos WHERE Fecha >= @FD AND Fecha <= @FH AND Categoria NOT IN ('LUZ','AGUA','INTERNET','TELEFONO','ALQUILER','SUELDOS')", fd, fh);
-
-                // Llenar gastos por categoría
-                string queryGastos = "SELECT Categoria, COALESCE(SUM(Monto), 0) as Total FROM Gastos WHERE Fecha >= @FD AND Fecha <= @FH GROUP BY Categoria";
-                using (var cmd = new SQLiteCommand(queryGastos, connection))
+                using (var cmd = new SQLiteCommand(sqlCategorias, connection))
                 {
                     cmd.Parameters.AddWithValue("@FD", fd);
                     cmd.Parameters.AddWithValue("@FH", fh);
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
-                        {
-                            string categoria = reader.GetString(0);
-                            decimal monto = reader.GetDecimal(1);
-                            er.GastosPorCategoria[categoria] = monto;
-                        }
+                            er.GastosPorCategoria[reader.GetString(0)] = reader.GetDecimal(1);
                     }
                 }
 
-                er.TotalGastos = er.GastosServicios + er.GastosAlquiler + er.GastosSueldos + er.GastosOtros;
-                er.GastosOperativos = er.TotalGastos;
-                er.UtilidadOperativa = er.UtilidadBruta - er.GastosOperativos;
-
-                // Otros ingresos (cobros de créditos) - solo informativo, no se suma
-                // porque VentasBrutas ya incluye las ventas a crédito
+                // OtrosIngresos: cobros de créditos, solo informativo
                 er.OtrosIngresos = ObtenerDecimal(connection,
                     "SELECT COALESCE(SUM(Monto), 0) FROM Pagos WHERE FechaPago >= @FD AND FechaPago <= @FH", fd, fh);
-
-                er.UtilidadNeta = er.UtilidadOperativa;
             }
 
             return er;

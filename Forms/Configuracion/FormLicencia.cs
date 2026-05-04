@@ -14,6 +14,7 @@ namespace SistemaPOS.Forms.Configuracion
         public FormLicencia()
         {
             InitializeComponent();
+            if (DesignMode) return;
             ConfigurarEventos();
             CargarDatos();
         }
@@ -30,7 +31,7 @@ namespace SistemaPOS.Forms.Configuracion
             {
                 // Información de versión
                 var version = Assembly.GetExecutingAssembly().GetName().Version;
-                lblVersion.Text = $"Versión:      {version?.ToString() ?? "1.0.0"}";
+                lblVersion.Text       = $"{version?.Major ?? 1}.{version?.Minor ?? 0}.{version?.Build ?? 0}";
                 lblActualizacion.Text = $"Última actualización: {DateTime.Now:dd/MM/yyyy}";
 
                 // Cargar datos de licencia
@@ -62,43 +63,55 @@ namespace SistemaPOS.Forms.Configuracion
         {
             if (_licenciaActiva && _fechaVencimiento.HasValue)
             {
-                // Licencia activa
-                lblEstado.Text = "Estado:                     Activo";
-                lblEstado.ForeColor = Color.Green;
-                lblVencimiento.Text = $"Vencimiento:          {_fechaVencimiento.Value:dd/MM/yyyy}";
-
                 int diasRestantes = (_fechaVencimiento.Value - DateTime.Today).Days;
-                lblDiasRestantes.Text = $"Días restantes:       {diasRestantes}";
 
-                if (diasRestantes <= 30)
-                {
-                    lblDiasRestantes.ForeColor = Color.Orange;
-                }
-                else
-                {
-                    lblDiasRestantes.ForeColor = Color.Black;
-                }
+                // Badge: verde si quedan >30 días, naranja si está próxima a vencer
+                bool proxima = diasRestantes <= 30;
+                pnlEstadoBadge.BackColor    = proxima
+                    ? Color.FromArgb(230, 126, 34)   // naranja → próxima a vencer
+                    : Color.FromArgb(27, 153, 82);    // verde → activa OK
+                lblEstado.Text              = proxima ? "ACTIVO  —  PRÓXIMO A VENCER" : "ACTIVO";
+                lblIconShield.ForeColor     = pnlEstadoBadge.BackColor;
 
-                btnActivar.Text = "Renovar Licencia";
+                lblVencimiento.Text         = _fechaVencimiento.Value.ToString("dd/MM/yyyy");
+                lblVencimiento.ForeColor    = Color.FromArgb(45, 52, 54);
+                lblDiasRestantes.Text       = diasRestantes.ToString();
+                lblDiasRestantes.ForeColor  = proxima
+                    ? Color.FromArgb(230, 126, 34)
+                    : Color.FromArgb(27, 153, 82);
+
+                btnActivar.Text             = "Renovar Licencia";
+                btnActivar.BackColor        = Color.FromArgb(27, 153, 82);
             }
             else if (_fechaVencimiento.HasValue && _fechaVencimiento.Value < DateTime.Today)
             {
-                // Licencia vencida
-                lblEstado.Text = "Estado:                     Licencia vencida";
-                lblEstado.ForeColor = Color.Red;
-                lblVencimiento.Text = $"Vencimiento:          {_fechaVencimiento.Value:dd/MM/yyyy}";
-                lblDiasRestantes.Text = "Días restantes:       0";
-                lblDiasRestantes.ForeColor = Color.Red;
-                btnActivar.Text = "Renovar Licencia";
+                // Vencida
+                pnlEstadoBadge.BackColor   = Color.FromArgb(192, 57, 43);
+                lblEstado.Text             = "LICENCIA VENCIDA";
+                lblIconShield.ForeColor    = Color.FromArgb(192, 57, 43);
+
+                lblVencimiento.Text        = _fechaVencimiento.Value.ToString("dd/MM/yyyy");
+                lblVencimiento.ForeColor   = Color.FromArgb(192, 57, 43);
+                lblDiasRestantes.Text      = "0";
+                lblDiasRestantes.ForeColor = Color.FromArgb(192, 57, 43);
+
+                btnActivar.Text            = "Renovar Licencia";
+                btnActivar.BackColor       = Color.FromArgb(192, 57, 43);
             }
             else
             {
                 // Sin licencia
-                lblEstado.Text = "Estado:                     Sistema no activado";
-                lblEstado.ForeColor = Color.Orange;
-                lblVencimiento.Text = "Vencimiento:          --/--/----";
-                lblDiasRestantes.Text = "Días restantes:       --";
-                btnActivar.Text = "Activar Licencia";
+                pnlEstadoBadge.BackColor   = Color.FromArgb(149, 165, 166);
+                lblEstado.Text             = "SISTEMA NO ACTIVADO";
+                lblIconShield.ForeColor    = Color.FromArgb(149, 165, 166);
+
+                lblVencimiento.Text        = "--/--/----";
+                lblVencimiento.ForeColor   = Color.FromArgb(45, 52, 54);
+                lblDiasRestantes.Text      = "--";
+                lblDiasRestantes.ForeColor = Color.FromArgb(45, 52, 54);
+
+                btnActivar.Text            = "Activar Licencia";
+                btnActivar.BackColor       = Color.FromArgb(52, 152, 219);
             }
         }
 

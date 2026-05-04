@@ -140,9 +140,9 @@ namespace SistemaPOS.Data
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                throw new Exception($"Error al guardar el logo: {ex.Message}", ex);
             }
         }
 

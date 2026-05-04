@@ -1,7 +1,9 @@
 using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
@@ -35,6 +37,27 @@ namespace SistemaPOS.Forms.Configuracion
             cmbMoneda.SelectedIndexChanged += CmbMoneda_SelectedIndexChanged;
             txtRUC.KeyPress += TxtRUC_KeyPress;
             txtTelefono.KeyPress += TxtTelefono_KeyPress;
+
+            // Live preview in sidebar
+            txtNombre.TextChanged += (s, ev) => ActualizarPreview();
+            txtRUC.TextChanged    += (s, ev) => ActualizarPreview();
+
+            // Ctrl+S shortcut
+            this.KeyDown += (s, ev) =>
+            {
+                if (ev.Control && ev.KeyCode == Keys.S)
+                    BtnGuardar_Click(s, ev);
+            };
+        }
+
+        private void ActualizarPreview()
+        {
+            lblPreviewNombre.Text = string.IsNullOrWhiteSpace(txtNombre.Text)
+                ? "Nombre del negocio"
+                : txtNombre.Text.Trim();
+            lblPreviewRUC.Text = string.IsNullOrWhiteSpace(txtRUC.Text)
+                ? "RUC: —"
+                : $"RUC: {txtRUC.Text.Trim()}";
         }
 
         private void ConfigurarControles()
@@ -124,6 +147,8 @@ namespace SistemaPOS.Forms.Configuracion
                 txtNumeroB.Text = _configFacturacion.CorrelativoBoleta.ToString().PadLeft(8, '0');
                 txtSerieF.Text = _configFacturacion.SerieFactura ?? "F001";
                 txtNumeroF.Text = _configFacturacion.CorrelativoFactura.ToString().PadLeft(8, '0');
+
+                ActualizarPreview();
             }
             catch (Exception ex)
             {
@@ -134,22 +159,33 @@ namespace SistemaPOS.Forms.Configuracion
 
         private void MostrarLogo()
         {
+            var old = pbLogo.Image;
+            pbLogo.Image = null;
+            old?.Dispose();
+
             if (_logoActual != null && _logoActual.Length > 0)
             {
                 try
                 {
+                    // Renderizar en un Bitmap independiente (sin dependencia del stream)
+                    // para evitar el lazy-decoding de GDI+ sobre un stream ya cerrado.
+                    Bitmap standalone;
                     using (var ms = new MemoryStream(_logoActual))
-                        pbLogo.Image = new System.Drawing.Bitmap(ms);
+                    using (var tmp = Image.FromStream(ms, false, false))
+                    {
+                        standalone = new Bitmap(tmp.Width, tmp.Height, PixelFormat.Format32bppArgb);
+                        using (var g = Graphics.FromImage(standalone))
+                            g.DrawImage(tmp, 0, 0, tmp.Width, tmp.Height);
+                    }
+                    pbLogo.Image = standalone;
                 }
                 catch
                 {
                     pbLogo.Image = null;
                 }
             }
-            else
-            {
-                pbLogo.Image = null;
-            }
+
+            pbLogo.Invalidate();
         }
 
         private bool ValidarFormulario()
@@ -300,27 +336,50 @@ namespace SistemaPOS.Forms.Configuracion
                 openDialog.Filter = "Imágenes|*.png;*.jpg;*.jpeg;*.bmp;*.gif|Todos los archivos|*.*";
                 openDialog.FilterIndex = 1;
 
-                if (openDialog.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        // Validar tamaño del archivo (máx 2MB)
-                        var fileInfo = new FileInfo(openDialog.FileName);
-                        if (fileInfo.Length > 2 * 1024 * 1024)
-                        {
-                            MessageBox.Show("El archivo es demasiado grande. Máximo 2MB permitido.", "Advertencia",
-                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return;
-                        }
+                if (openDialog.ShowDialog() != DialogResult.OK) return;
 
-                        // Cargar imagen
-                        _logoActual = File.ReadAllBytes(openDialog.FileName);
-                        MostrarLogo();
-                    }
-                    catch (Exception ex)
+                try
+                {
+                    byte[] fileBytes = File.ReadAllBytes(openDialog.FileName);
+                    _logoActual = NormalizarLogoParaTicket(fileBytes);
+                    MostrarLogo();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al cargar la imagen: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private static byte[] NormalizarLogoParaTicket(byte[] fileBytes)
+        {
+            const int maxW = 576, maxH = 400;
+
+            // Stream debe vivir durante todo el DrawImage (GDI+ lazy-decode de PNG/GIF/TIFF).
+            using (var fileMs = new MemoryStream(fileBytes))
+            using (var img = Image.FromStream(fileMs, false, false))
+            {
+                double scale = 1.0;
+                if (img.Width > maxW || img.Height > maxH)
+                    scale = Math.Min((double)maxW / img.Width, (double)maxH / img.Height);
+
+                int w = Math.Max(1, (int)Math.Round(img.Width  * scale));
+                int h = Math.Max(1, (int)Math.Round(img.Height * scale));
+
+                using (var bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb))
+                {
+                    using (var g = Graphics.FromImage(bmp))
                     {
-                        MessageBox.Show($"Error al cargar la imagen: {ex.Message}", "Error",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        g.Clear(Color.White);
+                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                        g.SmoothingMode     = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                        g.DrawImage(img, 0, 0, w, h);
+                    }
+                    using (var outMs = new MemoryStream())
+                    {
+                        bmp.Save(outMs, ImageFormat.Png);
+                        return outMs.ToArray();
                     }
                 }
             }
@@ -390,6 +449,70 @@ namespace SistemaPOS.Forms.Configuracion
             {
                 e.Handled = true;
             }
+        }
+
+        // ── Paint handlers (movidos desde Designer.cs) ────────────────────────
+
+        private void PbLogo_Paint(object sender, System.Windows.Forms.PaintEventArgs pe)
+        {
+            var pb = (System.Windows.Forms.PictureBox)sender;
+            if (pb.Image != null) return;
+            var g = pe.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            int cx = pb.Width / 2, cy = pb.Height / 2 - 10;
+            var ir = new System.Drawing.Rectangle(cx - 26, cy - 22, 52, 42);
+            using (var br = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(224, 231, 255)))
+                g.FillRectangle(br, ir);
+            using (var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(165, 180, 252), 1.5f))
+                g.DrawRectangle(pen, ir);
+            var sf = new System.Drawing.StringFormat
+            {
+                Alignment     = System.Drawing.StringAlignment.Center,
+                LineAlignment = System.Drawing.StringAlignment.Center
+            };
+            using (var f  = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Bold))
+            using (var b  = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(99, 102, 241)))
+                g.DrawString("LOGO", f, b, new System.Drawing.RectangleF(0, cy + 28, pb.Width, 16), sf);
+            using (var f2 = new System.Drawing.Font("Segoe UI", 7.5F))
+            using (var b2 = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(148, 163, 184)))
+                g.DrawString("Clic para cargar", f2, b2, new System.Drawing.RectangleF(0, cy + 44, pb.Width, 14), sf);
+        }
+
+        private void PbLogo_Click(object sender, EventArgs e)
+        {
+            btnCargar.PerformClick();
+        }
+
+        private void PnlPreview_Paint(object sender, System.Windows.Forms.PaintEventArgs pe)
+        {
+            var p = (System.Windows.Forms.Panel)sender;
+            pe.Graphics.DrawRectangle(
+                new System.Drawing.Pen(System.Drawing.Color.FromArgb(203, 213, 225)),
+                0, 0, p.Width - 1, p.Height - 1);
+        }
+
+        private void PnlSOLNote_Paint(object sender, System.Windows.Forms.PaintEventArgs pe)
+        {
+            var p = (System.Windows.Forms.Panel)sender;
+            pe.Graphics.DrawRectangle(
+                new System.Drawing.Pen(System.Drawing.Color.FromArgb(253, 230, 138)),
+                0, 0, p.Width - 1, p.Height - 1);
+        }
+
+        private void PnlTableHdrRow_Paint(object sender, System.Windows.Forms.PaintEventArgs pe)
+        {
+            var p = (System.Windows.Forms.Panel)sender;
+            pe.Graphics.DrawLine(
+                new System.Drawing.Pen(System.Drawing.Color.FromArgb(226, 232, 240)),
+                0, p.Height - 1, p.Width, p.Height - 1);
+        }
+
+        private void PnlSeriesInfo_Paint(object sender, System.Windows.Forms.PaintEventArgs pe)
+        {
+            var p = (System.Windows.Forms.Panel)sender;
+            pe.Graphics.DrawRectangle(
+                new System.Drawing.Pen(System.Drawing.Color.FromArgb(196, 181, 253)),
+                0, 0, p.Width - 1, p.Height - 1);
         }
     }
 }

@@ -337,56 +337,27 @@ namespace SistemaPOS.Data
             return operaciones;
         }
 
-        /// <summary>
-        /// Calcula Ventas (Ventas.Total), Costo de Ventas (cuenta 500 de asientos)
-        /// y Gastos Operativos (Gastos.Monto) del período, y deriva la Utilidad Neta.
-        /// </summary>
         public static (decimal Ventas, decimal CostoVentas, decimal Gastos, decimal Utilidad) ObtenerUtilidadReal(string periodo)
         {
             ObtenerRangoFechas(periodo, out string inicio, out string fin);
-            decimal ventas = 0, costoVentas = 0, gastos = 0;
+            var dto = ContabilidadService.ObtenerEstadoResultados(
+                DateTime.ParseExact(inicio, "yyyy-MM-dd", null),
+                DateTime.ParseExact(fin,    "yyyy-MM-dd", null));
+            return (dto.Ventas, dto.CostoVentas, dto.Gastos, dto.UtilidadOperativa);
+        }
 
+        public static (decimal Total, int Cantidad) ObtenerCxPPendiente()
+        {
             using (var conn = DatabaseConnection.GetConnection())
+            using (var cmd = new SQLiteCommand(
+                "SELECT COALESCE(SUM(MontoPendiente),0), COUNT(*) FROM CuentasPorPagar " +
+                "WHERE Estado IN ('PENDIENTE','PARCIAL')", conn))
+            using (var r = cmd.ExecuteReader())
             {
-                // 1. Ventas totales del período (monto real cobrado, incluye IGV si aplica)
-                using (var cmd = new SQLiteCommand(
-                    "SELECT COALESCE(SUM(Total), 0) FROM Ventas " +
-                    "WHERE Fecha >= @Inicio AND Fecha <= @Fin AND Estado != 'ANULADA'", conn))
-                {
-                    cmd.Parameters.AddWithValue("@Inicio", inicio);
-                    cmd.Parameters.AddWithValue("@Fin", fin);
-                    var r = cmd.ExecuteScalar();
-                    ventas = r != null && r != DBNull.Value ? Convert.ToDecimal(r) : 0;
-                }
-
-                // 2. Costo de ventas: movimientos Debe de cuenta 500 en asientos del período
-                using (var cmd = new SQLiteCommand(@"
-                    SELECT COALESCE(SUM(ad.Debe - ad.Haber), 0)
-                    FROM AsientosDetalle ad
-                    JOIN CuentasContables cc ON ad.CuentaID = cc.CuentaID
-                    JOIN Asientos a ON ad.AsientoID = a.AsientoID
-                    WHERE cc.Codigo = '500'
-                      AND a.Fecha >= @Inicio AND a.Fecha <= @Fin", conn))
-                {
-                    cmd.Parameters.AddWithValue("@Inicio", inicio);
-                    cmd.Parameters.AddWithValue("@Fin", fin);
-                    var r = cmd.ExecuteScalar();
-                    costoVentas = r != null && r != DBNull.Value ? Convert.ToDecimal(r) : 0;
-                }
-
-                // 3. Gastos operativos del período (monto real, directo de tabla Gastos)
-                using (var cmd = new SQLiteCommand(
-                    "SELECT COALESCE(SUM(Monto), 0) FROM Gastos " +
-                    "WHERE Fecha >= @Inicio AND Fecha <= @Fin AND (Eliminado IS NULL OR Eliminado = 0)", conn))
-                {
-                    cmd.Parameters.AddWithValue("@Inicio", inicio);
-                    cmd.Parameters.AddWithValue("@Fin", fin);
-                    var r = cmd.ExecuteScalar();
-                    gastos = r != null && r != DBNull.Value ? Convert.ToDecimal(r) : 0;
-                }
+                if (r.Read())
+                    return (Convert.ToDecimal(r[0]), Convert.ToInt32(r[1]));
+                return (0, 0);
             }
-
-            return (ventas, costoVentas, gastos, ventas - costoVentas - gastos);
         }
 
         public static string ObtenerEstadoCaja()

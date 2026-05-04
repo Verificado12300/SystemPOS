@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using SistemaPOS.Data;
@@ -54,11 +56,11 @@ namespace SistemaPOS.Controls
 
             // Usar el ancho medido exacto para Consolas (no el piso W*7 que era para Courier New).
             // +4 = pequeño margen para evitar wrap accidental de la última letra.
-            int rtbWidth  = sz.Width + 3;
-            int ctrlWidth = rtbWidth + 4;  // 2px izq + 2px der
+            int rtbWidth  = sz.Width + 4;   // +4 para evitar wrap accidental
+            int ctrlWidth = rtbWidth + 4;   // 2px izq + 2px der
 
             rtbTicket.Width  = rtbWidth;
-            rtbTicket.Left   = 3;
+            rtbTicket.Left   = 2;           // margen simétrico: 2px izq, 2px der
             pbLogo.Left      = 0;
             pbLogo.Width     = ctrlWidth;
             lblEmpresa.Left  = 0;
@@ -122,10 +124,14 @@ namespace SistemaPOS.Controls
         public void Reflow()
         {
             AjustarAncho();
-            int topY = 3;
+            int topY = 4;
             if (pbLogo.Visible)    { pbLogo.Top    = topY; topY = pbLogo.Bottom    + 2; }
             if (lblEmpresa.Visible){ lblEmpresa.Top = topY; topY = lblEmpresa.Bottom + 2; }
             rtbTicket.Location = new System.Drawing.Point(2, topY);
+            // Recalcular altura: el ancho real (post-DPI) puede cambiar el conteo de líneas
+            int lh = rtbTicket.Font.Height + 1;
+            rtbTicket.Height = Math.Max(1, rtbTicket.Lines.Length * lh + 4);
+            this.Height = rtbTicket.Bottom + 3;
         }
 
         /// <summary>Alto del control tras el último Renderizar.</summary>
@@ -142,6 +148,7 @@ namespace SistemaPOS.Controls
             CreateControl(); // garantiza que el HWND exista antes de DrawToBitmap
             var bmp = new Bitmap(w, h);
             DrawToBitmap(bmp, new Rectangle(0, 0, w, h));
+            DibujarLogoEnBitmap(bmp, h);
             return bmp;
         }
 
@@ -154,6 +161,8 @@ namespace SistemaPOS.Controls
             using (var bmp = new Bitmap(Math.Max(1, Width), logH))
             {
                 DrawToBitmap(bmp, new Rectangle(0, 0, Math.Max(1, Width), logH));
+                // PictureBox no siempre responde a WM_PRINTCLIENT — dibujar logo explícitamente.
+                DibujarLogoEnBitmap(bmp, logH);
                 g.DrawImage(bmp, destino);
             }
         }
@@ -161,6 +170,28 @@ namespace SistemaPOS.Controls
         // ═══════════════════════════════════════════════════════════════════════
         // RENDERIZADO MONOESPACIADO
         // ═══════════════════════════════════════════════════════════════════════
+
+        // PictureBox no siempre emite contenido con DrawToBitmap (WM_PRINTCLIENT).
+        // Este método lo dibuja manualmente en el bitmap resultante usando SizeMode.Zoom.
+        private void DibujarLogoEnBitmap(Bitmap bmp, int logH)
+        {
+            if (!pbLogo.Visible || pbLogo.Image == null || pbLogo.Top >= logH) return;
+            using (var g2 = Graphics.FromImage(bmp))
+            {
+                g2.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                g2.InterpolationMode  = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g2.SmoothingMode      = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                float rw    = pbLogo.Width  / (float)Math.Max(1, pbLogo.Image.Width);
+                float rh    = pbLogo.Height / (float)Math.Max(1, pbLogo.Image.Height);
+                float ratio = Math.Min(rw, rh);
+                int   iw    = Math.Max(1, (int)Math.Round(pbLogo.Image.Width  * ratio));
+                int   ih    = Math.Max(1, (int)Math.Round(pbLogo.Image.Height * ratio));
+                int   ix    = pbLogo.Left + (pbLogo.Width  - iw) / 2;
+                int   iy    = pbLogo.Top  + (pbLogo.Height - ih) / 2;
+                g2.FillRectangle(Brushes.White, pbLogo.Left, pbLogo.Top, pbLogo.Width, pbLogo.Height);
+                g2.DrawImage(pbLogo.Image, new Rectangle(ix, iy, iw, ih));
+            }
+        }
 
         private void Renderizar(DataTable detalle, Dictionary<string, string> p)
         {
@@ -173,8 +204,12 @@ namespace SistemaPOS.Controls
                     byte[] bytes = EmpresaRepository.ObtenerEmpresa()?.Logo;
                     if (bytes != null && bytes.Length > 0)
                     {
-                        pbLogo.Image   = Image.FromStream(new MemoryStream(bytes));
+                        Bitmap cropped = AutoCropImage(bytes);
+                        var oldImg = pbLogo.Image;
+                        pbLogo.Height  = Math.Max(20, _config.LogoAltura);
+                        pbLogo.Image   = cropped;
                         pbLogo.Visible = true;
+                        oldImg?.Dispose();
                     }
                 }
                 catch { }
@@ -189,8 +224,8 @@ namespace SistemaPOS.Controls
             lblEmpresa.Height  = lblEmpresa.Font.Height + 6;
             lblEmpresa.Visible = !string.IsNullOrWhiteSpace(empresa);
 
-            // ── Apilar controles: 3px arriba, logo → nombre → cuerpo ──────────
-            int topY = 3;
+            // ── Apilar controles: 4px arriba, logo → nombre → cuerpo ──────────
+            int topY = 4;
             if (pbLogo.Visible)    { pbLogo.Top    = topY; topY = pbLogo.Bottom    + 2; }
             if (lblEmpresa.Visible){ lblEmpresa.Top = topY; topY = lblEmpresa.Bottom + 2; }
             rtbTicket.Location = new Point(2, topY);
@@ -282,17 +317,34 @@ namespace SistemaPOS.Controls
                 sb.AppendLine(TwoColumns("IGV:", FormatMoney(Get(p, "pIGV", "0.00"))));
             sb.AppendLine(TwoColumns("TOTAL:", FormatMoney(Get(p, "pTotal", "0.00"))));
 
-            // Info de pago
+            // Info de pago — solo si hay datos reales (omite bloque en vista previa pre-venta)
             if (_config.MostrarInfoPago)
             {
+                string metodoPago = Get(p, "pMetodoPago");
                 decimal.TryParse(Get(p, "pMontoRecibido"), out decimal recibido);
                 decimal.TryParse(Get(p, "pVuelto"),        out decimal vuelto);
-                sb.AppendLine(Sep());
-                sb.AppendLine(TwoColumns("Metodo de Pago:", Get(p, "pMetodoPago")));
-                if (recibido > 0)
-                    sb.AppendLine(TwoColumns("Recibido:", "S/" + recibido.ToString("N2")));
-                if (vuelto > 0)
-                    sb.AppendLine(TwoColumns("Vuelto:", "S/" + vuelto.ToString("N2")));
+                bool hayInfoPago = !string.IsNullOrEmpty(metodoPago) || recibido > 0 || vuelto > 0;
+                if (hayInfoPago)
+                {
+                    sb.AppendLine(Sep());
+                    if (!string.IsNullOrEmpty(metodoPago))
+                        sb.AppendLine(TwoColumns("Metodo de Pago:", metodoPago));
+                    if (metodoPago == "Mixto")
+                    {
+                        decimal.TryParse(Get(p, "pMontoEfectivo"),     out decimal mEf);
+                        decimal.TryParse(Get(p, "pMontoYape"),          out decimal mYp);
+                        decimal.TryParse(Get(p, "pMontoTransferencia"), out decimal mTr);
+                        decimal.TryParse(Get(p, "pMontoTarjeta"),       out decimal mTj);
+                        if (mEf > 0) sb.AppendLine(TwoColumns("  Efectivo:",  "S/" + mEf.ToString("N2")));
+                        if (mYp > 0) sb.AppendLine(TwoColumns("  Yape:",      "S/" + mYp.ToString("N2")));
+                        if (mTr > 0) sb.AppendLine(TwoColumns("  Transfer.:", "S/" + mTr.ToString("N2")));
+                        if (mTj > 0) sb.AppendLine(TwoColumns("  Tarjeta:",   "S/" + mTj.ToString("N2")));
+                    }
+                    if (recibido > 0)
+                        sb.AppendLine(TwoColumns("Recibido:", "S/" + recibido.ToString("N2")));
+                    if (vuelto > 0)
+                        sb.AppendLine(TwoColumns("Vuelto:", "S/" + vuelto.ToString("N2")));
+                }
             }
 
             // Pie de página (centrado)
@@ -362,6 +414,55 @@ namespace SistemaPOS.Controls
             {
                 rtb.Select(0, 0);
                 boldFont.Dispose();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // AUTO-CROP DE LOGO
+        // ═══════════════════════════════════════════════════════════════════════
+
+        // Elimina márgenes blancos de la imagen y devuelve un nuevo Bitmap recortado.
+        // Si no encuentra contenido (imagen completamente blanca), devuelve la imagen original.
+        private static Bitmap AutoCropImage(byte[] imageBytes)
+        {
+            using (var ms = new MemoryStream(imageBytes))
+            using (var original = Image.FromStream(ms, false, true))
+            using (var bmp = new Bitmap(original.Width, original.Height, PixelFormat.Format32bppArgb))
+            {
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.Clear(Color.White);
+                    g.DrawImage(original, 0, 0, original.Width, original.Height);
+                }
+
+                const byte thr = 240;
+                int left = bmp.Width, right = -1, top = bmp.Height, bottom = -1;
+
+                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
+                    ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+                try
+                {
+                    int stride = Math.Abs(data.Stride);
+                    var raw    = new byte[stride * bmp.Height];
+                    Marshal.Copy(data.Scan0, raw, 0, raw.Length);
+                    for (int y = 0; y < bmp.Height; y++)
+                        for (int x = 0; x < bmp.Width; x++)
+                        {
+                            int off = y * stride + x * 4; // B G R A
+                            if (raw[off + 2] >= thr && raw[off + 1] >= thr && raw[off] >= thr) continue;
+                            if (x < left)   left   = x;
+                            if (x > right)  right  = x;
+                            if (y < top)    top    = y;
+                            if (y > bottom) bottom = y;
+                        }
+                }
+                finally { bmp.UnlockBits(data); }
+
+                if (right < 0)
+                    return new Bitmap(original); // imagen completamente blanca — devolver sin cambios
+
+                var crop = new Rectangle(left, top, right - left + 1, bottom - top + 1);
+                return bmp.Clone(crop, PixelFormat.Format32bppArgb);
             }
         }
 

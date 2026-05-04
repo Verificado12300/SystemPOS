@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
@@ -54,16 +56,21 @@ namespace SistemaPOS.Utils
             // ── Logo ──────────────────────────────────────────────────────────────
             if (config.MostrarLogo)
             {
-                try
+                byte[] logoBytes = EmpresaRepository.ObtenerEmpresa()?.Logo;
+                if (logoBytes != null && logoBytes.Length > 0)
                 {
-                    byte[] logoBytes = EmpresaRepository.ObtenerEmpresa()?.Logo;
-                    if (logoBytes != null && logoBytes.Length > 0)
+                    try
                     {
                         int maxDots = _lineWidth >= 42 ? 576 : 384;
-                        PrintLogo(logoBytes, maxDots);
+                        PrintLogo(logoBytes, maxDots, config.LogoAltura);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Logo falló — continuar imprimiendo el resto del ticket sin logo.
+                        // El error queda visible en la consola de depuración de Visual Studio.
+                        System.Diagnostics.Debug.WriteLine("[TicketESCPOS] PrintLogo falló: " + ex.Message);
                     }
                 }
-                catch { }
             }
 
             // ── Company Header (centered) ──
@@ -197,63 +204,127 @@ namespace SistemaPOS.Utils
         /// <summary>
         /// Convierte una imagen a ESC/POS raster bitmap (GS v 0) y la escribe centrada.
         /// maxWidthDots: ancho máximo imprimible en puntos (576 para 80mm, 384 para 58mm).
+        /// Lanza excepción si la imagen no es válida; el llamador decide si continuar sin logo.
         /// </summary>
-        private void PrintLogo(byte[] imageBytes, int maxWidthDots)
+        private void PrintLogo(byte[] imageBytes, int maxWidthDots, int logoAlturaPx = 60)
         {
-            Image img;
-            try { img = Image.FromStream(new MemoryStream(imageBytes)); }
-            catch { return; }
-
-            using (img)
+            // Stream debe vivir durante DrawImage (GDI+ lazy-decode de PNG/GIF/TIFF).
+            using (var ms = new MemoryStream(imageBytes))
             {
-                // Escalar manteniendo proporción para que quepa en el ancho del papel
-                int targetWidth  = Math.Min(img.Width, maxWidthDots);
-                int targetHeight = (int)Math.Round((double)img.Height * targetWidth / img.Width);
-                if (targetWidth < 1 || targetHeight < 1) return;
-
-                using (var bmp = new Bitmap(targetWidth, targetHeight))
+                Image img;
+                try { img = Image.FromStream(ms, false, false); }
+                catch (Exception ex)
                 {
-                    using (var g = Graphics.FromImage(bmp))
-                    {
-                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                        g.DrawImage(img, 0, 0, targetWidth, targetHeight);
-                    }
+                    throw new InvalidOperationException("Logo: imagen no válida — " + ex.Message, ex);
+                }
 
-                    // Convertir a 1 bit por píxel.
-                    // Regla: imprimir cualquier píxel que NO sea blanco/casi-blanco ni transparente.
-                    // Esto preserva colores como amarillo, rojo, azul, etc. que la fórmula de
-                    // luminancia eliminaría por ser "claros" visualmente pero sí deben aparecer en negro.
-                    int bytesPerRow = (targetWidth + 7) / 8;
-                    var pixData     = new byte[bytesPerRow * targetHeight];
-
-                    for (int y = 0; y < targetHeight; y++)
+                using (img)
+                {
+                    // Paso 1: componer sobre blanco para aplanar transparencia.
+                    // Resultado: bitmap 100% en RAM, sin dependencia del stream original.
+                    using (var src = new Bitmap(img.Width, img.Height, PixelFormat.Format32bppArgb))
                     {
-                        for (int x = 0; x < targetWidth; x++)
+                        using (var g = Graphics.FromImage(src))
                         {
-                            Color c = bmp.GetPixel(x, y);
-                            // Transparente → no imprimir
-                            if (c.A < 128) continue;
-                            // Blanco o casi-blanco (R,G,B todos > 230) → no imprimir
-                            if (c.R > 230 && c.G > 230 && c.B > 230) continue;
-                            // Todo lo demás (negro, colores, amarillo, etc.) → imprimir
-                            int byteIdx = y * bytesPerRow + x / 8;
-                            int bitPos  = 7 - (x % 8);
-                            pixData[byteIdx] |= (byte)(1 << bitPos);
+                            g.Clear(Color.White);
+                            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                            g.DrawImage(img, 0, 0, img.Width, img.Height);
                         }
-                    }
 
-                    // GS v 0 (raster bit image): 1D 76 30 00 xL xH yL yH [data]
-                    Write(ALIGN_CENTER);
-                    Write(new byte[]
-                    {
-                        0x1D, 0x76, 0x30, 0x00,
-                        (byte)(bytesPerRow & 0xFF), (byte)((bytesPerRow >> 8) & 0xFF),
-                        (byte)(targetHeight & 0xFF), (byte)((targetHeight >> 8) & 0xFF)
-                    });
-                    Write(pixData);
-                    Write(FEED_LINES_1);
+                        // Paso 2: autocrop — recortar márgenes blancos.
+                        // Opera sobre 'src' que ya está en RAM, sin tocar el stream.
+                        Rectangle crop = AutoCropBounds(src);
+
+                        // Paso 3: escalar usando la altura configurada por el usuario.
+                        // logoAlturaPx está en px de pantalla (96 DPI); convertir a dots ESC/POS
+                        // (180 DPI típico): factor ≈ 180/96 = 1.875.
+                        // safeWidth: −24 dots de margen para no llegar al borde físico.
+                        int safeWidth = Math.Max(1, maxWidthDots - 24);
+                        int maxH      = Math.Max(30, (int)Math.Round(logoAlturaPx * 180.0 / 96.0));
+                        double scale  = Math.Min(
+                            (double)safeWidth / crop.Width,
+                            (double)maxH      / crop.Height);
+                        if (scale > 1.0) scale = 1.0; // no ampliar raster
+
+                        int targetWidth  = Math.Max(1, (int)Math.Round(crop.Width  * scale));
+                        int targetHeight = Math.Max(1, (int)Math.Round(crop.Height * scale));
+
+                        int bytesPerRow = (targetWidth + 7) / 8;
+                        var pixData     = new byte[bytesPerRow * targetHeight];
+
+                        // Paso 4: renderizar al tamaño final y convertir a 1-bit.
+                        using (var bmp = new Bitmap(targetWidth, targetHeight, PixelFormat.Format32bppArgb))
+                        {
+                            using (var g = Graphics.FromImage(bmp))
+                            {
+                                g.Clear(Color.White);
+                                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                                g.DrawImage(src, new Rectangle(0, 0, targetWidth, targetHeight),
+                                    crop, GraphicsUnit.Pixel);
+                            }
+
+                            var bmpData = bmp.LockBits(
+                                new Rectangle(0, 0, targetWidth, targetHeight),
+                                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+                            try
+                            {
+                                int stride = Math.Abs(bmpData.Stride);
+                                var raw    = new byte[stride * targetHeight];
+                                Marshal.Copy(bmpData.Scan0, raw, 0, raw.Length);
+                                for (int y = 0; y < targetHeight; y++)
+                                    for (int x = 0; x < targetWidth; x++)
+                                    {
+                                        int off = y * stride + x * 4;
+                                        // Format32bppArgb en memoria: B G R A
+                                        if (raw[off+2] > 230 && raw[off+1] > 230 && raw[off] > 230)
+                                            continue; // blanco → papel
+                                        pixData[y * bytesPerRow + x / 8] |= (byte)(0x80 >> (x % 8));
+                                    }
+                            }
+                            finally { bmp.UnlockBits(bmpData); }
+                        }
+
+                        // GS v 0 — raster bit image
+                        Write(ALIGN_CENTER);
+                        Write(new byte[]
+                        {
+                            0x1D, 0x76, 0x30, 0x00,
+                            (byte)(bytesPerRow & 0xFF),  (byte)((bytesPerRow  >> 8) & 0xFF),
+                            (byte)(targetHeight & 0xFF), (byte)((targetHeight >> 8) & 0xFF)
+                        });
+                        Write(pixData);
+                        Write(FEED_LINES_1);
+                    }
                 }
             }
+        }
+
+        private static Rectangle AutoCropBounds(Bitmap bmp)
+        {
+            const byte thr = 240;
+            int left = bmp.Width, right = -1, top = bmp.Height, bottom = -1;
+            var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
+                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            try
+            {
+                int stride = Math.Abs(data.Stride);
+                var raw    = new byte[stride * bmp.Height];
+                Marshal.Copy(data.Scan0, raw, 0, raw.Length);
+                for (int y = 0; y < bmp.Height; y++)
+                    for (int x = 0; x < bmp.Width; x++)
+                    {
+                        int off = y * stride + x * 4; // B G R A
+                        if (raw[off+2] >= thr && raw[off+1] >= thr && raw[off] >= thr) continue;
+                        if (x < left)   left   = x;
+                        if (x > right)  right  = x;
+                        if (y < top)    top    = y;
+                        if (y > bottom) bottom = y;
+                    }
+            }
+            finally { bmp.UnlockBits(data); }
+
+            if (right < 0) return new Rectangle(0, 0, bmp.Width, bmp.Height);
+            return new Rectangle(left, top, right - left + 1, bottom - top + 1);
         }
 
         private void Write(byte[] data) => _buffer.Write(data, 0, data.Length);

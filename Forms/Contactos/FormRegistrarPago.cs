@@ -11,6 +11,8 @@ namespace SistemaPOS.Forms.Contactos
         private int _clienteID;
         private decimal _saldoActual;
 
+        public FormRegistrarPago() { InitializeComponent(); }
+
         public FormRegistrarPago(int clienteID, decimal saldoActual)
         {
             InitializeComponent();

@@ -20,11 +20,36 @@ namespace SistemaPOS.Forms.Ventas
         private string _clienteDoc    = "00000000";
         private int _cajaID;
         private List<dynamic> _todosLosClientes;
-        private bool _actualizandoDesdeEdicion;
         private decimal _tasaIGV = 0.18m;
         private decimal _rawCartTotal = 0m;
         private bool _vistaCards = false;
+        private int? _categoriaFiltro = null;
         private int _ultimaVentaID = 0;
+        private readonly List<CartItem> _cartItems = new List<CartItem>();
+
+        // ── Estado de pago ────────────────────────────────────────────────────
+        private bool    _esperandoConfirmacion   = false;
+        private string  _pagoMetodo              = "";
+        private decimal _pagoMontoEfectivo;
+        private decimal _pagoMontoYape;
+        private decimal _pagoMontoTarjeta;
+        private decimal _pagoMontoTransferencia;
+        private decimal _pagoRecibido;
+
+        private class CartItem
+        {
+            public int     ProductoID         { get; set; }
+            public int     PresentacionID     { get; set; }
+            public string  Nombre             { get; set; }
+            public string  NombrePresentacion { get; set; }
+            public decimal PrecioUnitario     { get; set; }
+            public decimal CantidadUnidades   { get; set; }
+            public decimal Cantidad           { get; set; }
+            public string  UnidadSimbolo      { get; set; }
+            public bool    PrecioIncluyeIGV   { get; set; }
+            public decimal CantPres => CantidadUnidades > 0 ? Cantidad / CantidadUnidades : 0;
+            public decimal Total    => CantPres * PrecioUnitario;
+        }
 
         // placeholder
         private const string PLACEHOLDER_BUSCAR = "Buscar productos...";
@@ -48,6 +73,14 @@ namespace SistemaPOS.Forms.Ventas
             txtDescuento.ReadOnly = !puedeDescontar;
             txtDescuento.BackColor = puedeDescontar
                 ? Color.FromArgb(248, 249, 250) : Color.FromArgb(235, 236, 238);
+
+            // Tooltips para campos bloqueados
+            var tooltip = new ToolTip();
+            if (!puedeDescontar)
+                tooltip.SetToolTip(txtDescuento, "No tiene permiso para aplicar descuentos. Contacte al administrador.");
+            tooltip.SetToolTip(txtSubtotal, "Campo de solo lectura. Calculado automáticamente.");
+            tooltip.SetToolTip(txtIGV, "Campo de solo lectura. Calculado según el tipo de IGV seleccionado.");
+            tooltip.SetToolTip(txtTotalPagar, "Campo de solo lectura. Total a cobrar al cliente.");
 
             // Leer tasa IGV
             try
@@ -86,11 +119,6 @@ namespace SistemaPOS.Forms.Ventas
             dgvProductos.CellValueChanged += DgvProductos_CellValueChanged;
             dgvProductos.CurrentCellDirtyStateChanged += DgvProductos_CurrentCellDirtyStateChanged;
 
-            // carrito
-            dgvCarritoVenta.CellClick += DgvCarritoVenta_CellClick;
-            dgvCarritoVenta.CellEndEdit += DgvCarritoVenta_CellEndEdit;
-            dgvCarritoVenta.CellFormatting += DgvCarritoVenta_CellFormatting;
-
             // totales
             cboIGV.SelectedIndexChanged += (s, e) => CalcularTotales();
             txtDescuento.KeyPress += TxtDescuento_KeyPress;
@@ -116,9 +144,31 @@ namespace SistemaPOS.Forms.Ventas
             dgvProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvProductos.EditMode = DataGridViewEditMode.EditOnEnter;
 
-            dgvCarritoVenta.AutoGenerateColumns = false;
-            dgvCarritoVenta.AllowUserToAddRows = false;
-            dgvCarritoVenta.SelectionMode = DataGridViewSelectionMode.CellSelect;
+
+
+            // Eliminar fondo de selección y alternado de WinForms
+            dgvProductos.AlternatingRowsDefaultCellStyle.BackColor = Color.White;
+            dgvProductos.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.White;
+            dgvProductos.AlternatingRowsDefaultCellStyle.ForeColor = Color.FromArgb(45, 52, 54);
+            dgvProductos.AlternatingRowsDefaultCellStyle.SelectionForeColor = Color.FromArgb(45, 52, 54);
+
+            dgvProductos.RowPrePaint += (s, e) =>
+            {
+                e.PaintParts &= ~DataGridViewPaintParts.SelectionBackground;
+            };
+
+            dgvProductos.CellMouseEnter += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                dgvProductos.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(245, 248, 255);
+            };
+            dgvProductos.CellMouseLeave += (s, e) =>
+            {
+                if (e.RowIndex < 0) return;
+                dgvProductos.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
+            };
+
+            pnlScrollCarrito.Resize += (s, e) => RenderCarrito();
         }
 
         private void ConfigurarComboClientes()
@@ -142,8 +192,6 @@ namespace SistemaPOS.Forms.Ventas
             var caja = CajaRepository.ObtenerCajaAbierta();
             if (caja != null)
                 _cajaID = caja.CajaID;
-            else
-            { MessageBox.Show("No hay caja abierta", "Error"); this.Close(); return; }
 
             txtSubtotal.Text   = "0.00";
             txtIGV.Text        = "0.00";
@@ -214,6 +262,11 @@ namespace SistemaPOS.Forms.Ventas
             pnlListaProductos.Visible = true;
             pnlProductos.PerformLayout();
 
+            dgvProductos.Columns["colNumero"].Width      = 60;
+            dgvProductos.Columns["colImagen"].Width      = 80;
+            dgvProductos.Columns["colPresentacion"].Width = 310;
+            dgvProductos.Columns["colPrecioUnit"].Width  = 160;
+
             btnVistaLista.BackColor = Color.FromArgb(67, 97, 238);
             btnVistaLista.ForeColor = Color.White;
             btnVistaLista.FlatAppearance.BorderColor = Color.FromArgb(67, 97, 238);
@@ -232,11 +285,20 @@ namespace SistemaPOS.Forms.Ventas
         private void CargarCategorias()
         {
             flpCategorias.Controls.Clear();
-            AgregarChipCategoria("Todos", true);
+            AgregarChipCategoria("Todos", null);
+
+            try
+            {
+                var categorias = CategoriaRepository.ObtenerTodas();
+                foreach (var cat in categorias)
+                    AgregarChipCategoria(cat.Nombre, cat.CategoriaID);
+            }
+            catch { }
         }
 
-        private void AgregarChipCategoria(string nombre, bool activo)
+        private void AgregarChipCategoria(string nombre, int? categoriaID)
         {
+            bool activo = categoriaID == _categoriaFiltro;
             var btn = new Button
             {
                 Text = nombre,
@@ -248,10 +310,29 @@ namespace SistemaPOS.Forms.Ventas
                 Font = new Font("Segoe UI", 9F, activo ? FontStyle.Bold : FontStyle.Regular),
                 BackColor = activo ? Color.FromArgb(67, 97, 238) : Color.FromArgb(245, 247, 252),
                 ForeColor = activo ? Color.White : Color.FromArgb(60, 70, 90),
+                Tag = categoriaID
             };
             btn.FlatAppearance.BorderColor = activo
                 ? Color.FromArgb(50, 82, 220) : Color.FromArgb(200, 210, 230);
             btn.FlatAppearance.BorderSize = 1;
+            btn.Click += (s, e) =>
+            {
+                _categoriaFiltro = categoriaID;
+                // Actualizar estilo de todos los chips
+                foreach (Control c in flpCategorias.Controls)
+                {
+                    if (!(c is Button b)) continue;
+                    bool sel = (b.Tag as int?) == _categoriaFiltro;
+                    b.BackColor = sel ? Color.FromArgb(67, 97, 238) : Color.FromArgb(245, 247, 252);
+                    b.ForeColor = sel ? Color.White : Color.FromArgb(60, 70, 90);
+                    b.Font = new Font("Segoe UI", 9F, sel ? FontStyle.Bold : FontStyle.Regular);
+                    b.FlatAppearance.BorderColor = sel
+                        ? Color.FromArgb(50, 82, 220) : Color.FromArgb(200, 210, 230);
+                }
+                string q = txtBuscar.Text == PLACEHOLDER_BUSCAR ? "" : txtBuscar.Text.Trim();
+                if (_vistaCards) CargarCards(q);
+                else CargarProductos(q);
+            };
             flpCategorias.Controls.Add(btn);
         }
 
@@ -266,7 +347,7 @@ namespace SistemaPOS.Forms.Ventas
 
             try
             {
-                var productos = ProductoRepository.BuscarProductos(busqueda);
+                var productos = ProductoRepository.BuscarProductos(busqueda, _categoriaFiltro);
                 int count = 0;
                 foreach (var producto in productos)
                 {
@@ -460,7 +541,7 @@ namespace SistemaPOS.Forms.Ventas
             try
             {
                 dgvProductos.Rows.Clear();
-                var productos = ProductoRepository.BuscarProductos(busqueda);
+                var productos = ProductoRepository.BuscarProductos(busqueda, _categoriaFiltro);
                 int numero = 1;
                 foreach (var producto in productos)
                 {
@@ -614,20 +695,12 @@ namespace SistemaPOS.Forms.Ventas
         private void AgregarAlCarrito(int productoID, string nombreProducto,
                                        ProductoPresentacion presentacion, string unidadSimbolo)
         {
-            decimal enCarrito = 0;
-            foreach (DataGridViewRow r in dgvCarritoVenta.Rows)
-            {
-                if (r.Tag == null) continue;
-                var it = (dynamic)r.Tag;
-                if (it.ProductoID == productoID)
-                {
-                    var v = r.Cells["colCantidad"].Value;
-                    enCarrito += (v != null && decimal.TryParse(v.ToString(), out decimal cv)) ? cv : 0m;
-                }
-            }
+            decimal enCarrito = _cartItems
+                .Where(i => i.ProductoID == productoID)
+                .Sum(i => i.Cantidad);
 
             var prod = ProductoRepository.ObtenerPorID(productoID);
-            decimal stock = prod?.StockTotal ?? 0;
+            decimal stock    = prod?.StockTotal ?? 0;
             decimal unidades = presentacion.CantidadUnidades;
 
             if (enCarrito + unidades > stock)
@@ -638,158 +711,236 @@ namespace SistemaPOS.Forms.Ventas
                 return;
             }
 
-            // Si ya existe en carrito, sumar
-            foreach (DataGridViewRow r in dgvCarritoVenta.Rows)
+            // Si ya existe el mismo producto+presentación, sumar cantidad
+            var existing = _cartItems.FirstOrDefault(i =>
+                i.ProductoID == productoID && i.PresentacionID == presentacion.ProductoPresentacionID);
+            if (existing != null)
             {
-                if (r.Tag == null) continue;
-                var it = (dynamic)r.Tag;
-                if (it.ProductoID == productoID && it.PresentacionID == presentacion.ProductoPresentacionID)
-                {
-                    var v = r.Cells["colCantidad"].Value;
-                    decimal cant = (v != null && decimal.TryParse(v.ToString(), out decimal cv)) ? cv : 0m;
-                    r.Cells["colCantidad"].Value = cant + presentacion.CantidadUnidades;
-                    ActualizarTotalFila(r.Index);
-                    return;
-                }
+                existing.Cantidad += unidades;
+                RenderCarrito();
+                SonidoHelper.ReproducirCarrito();
+                return;
             }
 
-            if (dgvCarritoVenta.Rows.Count == 0 && presentacion.PrecioIncluyeIGV && cboIGV.SelectedIndex == 0)
+            if (_cartItems.Count == 0 && presentacion.PrecioIncluyeIGV && cboIGV.SelectedIndex == 0)
                 cboIGV.SelectedIndex = 1;
 
-            int idx = dgvCarritoVenta.Rows.Add();
-            var row = dgvCarritoVenta.Rows[idx];
-            string nomPres = ObtenerNombrePresentacion(presentacion.PresentacionID);
-
-            row.Cells["colProductoDV"].Value   = nombreProducto;
-            row.Cells["colPresentacionDV"].Value = nomPres;
-            row.Cells["colCantidad"].Value     = presentacion.CantidadUnidades;
-            row.Cells["colTotalDV"].Value      = "S/ " + presentacion.PrecioVenta.ToString("N2");
-
-            row.Tag = new
+            _cartItems.Add(new CartItem
             {
-                ProductoID      = productoID,
-                PresentacionID  = presentacion.ProductoPresentacionID,
-                PrecioUnitario  = presentacion.PrecioVenta,
-                CantidadUnidades = presentacion.CantidadUnidades,
-                UnidadSimbolo   = unidadSimbolo,
-                PrecioIncluyeIGV = presentacion.PrecioIncluyeIGV
+                ProductoID         = productoID,
+                PresentacionID     = presentacion.ProductoPresentacionID,
+                Nombre             = nombreProducto,
+                NombrePresentacion = ObtenerNombrePresentacion(presentacion.PresentacionID),
+                PrecioUnitario     = presentacion.PrecioVenta,
+                CantidadUnidades   = unidades,
+                Cantidad           = unidades,
+                UnidadSimbolo      = unidadSimbolo,
+                PrecioIncluyeIGV   = presentacion.PrecioIncluyeIGV
+            });
+            RenderCarrito();
+            SonidoHelper.ReproducirCarrito();
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // CARRITO – RENDER (ecommerce-style)
+        // ══════════════════════════════════════════════════════════════
+
+        private void RenderCarrito()
+        {
+            pnlScrollCarrito.SuspendLayout();
+            pnlScrollCarrito.Controls.Clear();
+
+            int w = Math.Max(340, pnlScrollCarrito.ClientSize.Width);
+            int y = 0;
+            for (int i = 0; i < _cartItems.Count; i++)
+            {
+                var row = CrearFilaCarrito(_cartItems[i], i, w);
+                row.Location = new Point(0, y);
+                pnlScrollCarrito.Controls.Add(row);
+                y += row.Height;
+            }
+            pnlScrollCarrito.ResumeLayout(true);
+            CalcularTotales();
+        }
+
+        private Panel CrearFilaCarrito(CartItem item, int index, int rowW)
+        {
+            // ── Layout constants ─────────────────────────────────────────────
+            const int rowH  = 72;
+            const int pad   = 10;
+            const int btnSz = 28;
+            const int gapQ  = 4;
+
+            // Column widths – 50 / 25 / 20 / 5 %
+            int nameW = (int)(rowW * 0.50);
+            int qtyW  = (int)(rowW * 0.25);
+            int subW  = (int)(rowW * 0.20);
+            int delW  = rowW - nameW - qtyW - subW; // ~5%
+
+            // Vertical centre for qty controls & subtotal
+            int ctrlY = (rowH - btnSz) / 2;
+
+            // Qty block: [btnMinus][gap][txtCant][gap][btnPlus] centred inside qtyW
+            int txtCantW  = Math.Max(36, qtyW - btnSz * 2 - gapQ * 2);
+            int qtyContentW = btnSz + gapQ + txtCantW + gapQ + btnSz;
+            int qtyX      = nameW + (qtyW - qtyContentW) / 2;
+
+            Color bgNormal = Color.White;
+            Color bgHover  = Color.FromArgb(245, 248, 255);
+
+            var row = new Panel { Width = rowW, Height = rowH, BackColor = bgNormal, Tag = item };
+            row.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(228, 230, 238), 1))
+                    e.Graphics.DrawLine(pen, 0, row.Height - 1, row.Width, row.Height - 1);
             };
 
-            CalcularTotales();
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // CARRITO – EDICIÓN / ELIMINAR
-        // ══════════════════════════════════════════════════════════════
-
-        private void DgvCarritoVenta_CellClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0) return;
-            var row = dgvCarritoVenta.Rows[e.RowIndex];
-            string col = dgvCarritoVenta.Columns[e.ColumnIndex].Name;
-
-            if (col == "colAumentar")
+            // ── Name block (left 50%) ─────────────────────────────────────────
+            int textW = nameW - pad - 4;
+            var lblNombre = new Label
             {
-                var v = row.Cells["colCantidad"].Value;
-                decimal cant = (v != null && decimal.TryParse(v.ToString(), out decimal cv)) ? cv : 0m;
-                decimal step = (decimal)((dynamic)row.Tag).CantidadUnidades;
-                row.Cells["colCantidad"].Value = cant + step;
-                ActualizarTotalFila(e.RowIndex);
-            }
-            else if (col == "colDisminuir")
+                Text      = item.Nombre,
+                Location  = new Point(pad, 10),
+                Size      = new Size(textW, 22),
+                Font      = new Font("Segoe UI", 11F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(20, 20, 20),
+                BackColor = bgNormal,
+                AutoSize  = false,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            var lblPres = new Label
             {
-                var v = row.Cells["colCantidad"].Value;
-                decimal cant = (v != null && decimal.TryParse(v.ToString(), out decimal cv)) ? cv : 0m;
-                decimal step = (decimal)((dynamic)row.Tag).CantidadUnidades;
-                if (cant > step)
-                { row.Cells["colCantidad"].Value = cant - step; ActualizarTotalFila(e.RowIndex); }
-                else if (cant > 0.01m)
-                { row.Cells["colCantidad"].Value = Math.Max(0.01m, cant - 0.1m); ActualizarTotalFila(e.RowIndex); }
-            }
-            else if (col == "colEliminar")
+                Text      = item.NombrePresentacion,
+                Location  = new Point(pad, 33),
+                Size      = new Size(textW, 17),
+                Font      = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                BackColor = bgNormal,
+                AutoSize  = false
+            };
+            var lblPrecioU = new Label
             {
-                dgvCarritoVenta.Rows.RemoveAt(e.RowIndex);
-                CalcularTotales();
-            }
-        }
+                Text      = $"S/ {item.PrecioUnitario:N2} c/u",
+                Location  = new Point(pad, 51),
+                Size      = new Size(textW, 17),
+                Font      = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(130, 130, 130),
+                BackColor = bgNormal,
+                AutoSize  = false
+            };
 
-        private void DgvCarritoVenta_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
-        {
-            if (e.RowIndex < 0) return;
-            if (dgvCarritoVenta.Columns[e.ColumnIndex].Name != "colCantidad") return;
-            var row = dgvCarritoVenta.Rows[e.RowIndex];
-            if (row.Tag == null || e.Value == null) return;
-            if (decimal.TryParse(e.Value.ToString(), out decimal cant))
+            // ── Qty controls (centre 25%) ─────────────────────────────────────
+            var btnMinus = new Button
             {
-                var item = (dynamic)row.Tag;
-                string u = item.UnidadSimbolo ?? "";
-                e.Value = cant.ToString("0.00#") + (string.IsNullOrEmpty(u) ? "" : " " + u);
-                e.FormattingApplied = true;
-            }
-        }
+                Text      = "−",
+                Location  = new Point(qtyX, ctrlY),
+                Size      = new Size(btnSz, btnSz),
+                FlatStyle = FlatStyle.Flat,
+                Font      = new Font("Segoe UI", 12F, FontStyle.Bold),
+                BackColor = Color.FromArgb(67, 97, 238),
+                ForeColor = Color.White,
+                Cursor    = Cursors.Hand,
+                TabStop   = false
+            };
+            btnMinus.FlatAppearance.BorderSize = 0;
 
-        private void DgvCarritoVenta_CellEndEdit(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0 || _actualizandoDesdeEdicion) return;
-            var row = dgvCarritoVenta.Rows[e.RowIndex];
-            if (row.Tag == null) return;
-            var item = (dynamic)row.Tag;
-            decimal precioUnit = item.PrecioUnitario;
-            string colName = dgvCarritoVenta.Columns[e.ColumnIndex].Name;
-
-            _actualizandoDesdeEdicion = true;
-            try
+            var txtCant = new TextBox
             {
-                if (colName == "colCantidad")
-                {
-                    string s = row.Cells["colCantidad"].Value?.ToString() ?? "";
-                    s = new string(s.Where(c => char.IsDigit(c) || c == '.' || c == ',').ToArray());
-                    decimal cantUnidades = (decimal)item.CantidadUnidades;
-                    if (decimal.TryParse(s, out decimal cantBase) && cantBase > 0)
-                    {
-                        cantBase = Math.Round(cantBase, 3);
-                        row.Cells["colCantidad"].Value = cantBase;
-                        row.Cells["colTotalDV"].Value  = "S/ " + (cantBase / cantUnidades * precioUnit).ToString("N2");
-                    }
-                    else
-                    {
-                        row.Cells["colCantidad"].Value = cantUnidades;
-                        row.Cells["colTotalDV"].Value  = "S/ " + precioUnit.ToString("N2");
-                    }
-                    CalcularTotales();
-                }
-                else if (colName == "colTotalDV")
-                {
-                    string s = (row.Cells["colTotalDV"].Value?.ToString() ?? "0").Replace("S/", "").Replace("s/", "").Trim();
-                    decimal cantUnidades = (decimal)item.CantidadUnidades;
-                    if (decimal.TryParse(s, out decimal total) && total > 0 && precioUnit > 0)
-                    {
-                        decimal cantPres = Math.Round(total / precioUnit, 3);
-                        row.Cells["colCantidad"].Value = cantPres * cantUnidades;
-                        row.Cells["colTotalDV"].Value  = "S/ " + total.ToString("N2");
-                    }
-                    else
-                    {
-                        row.Cells["colCantidad"].Value = cantUnidades;
-                        row.Cells["colTotalDV"].Value  = "S/ " + precioUnit.ToString("N2");
-                    }
-                    CalcularTotales();
-                }
-            }
-            finally { _actualizandoDesdeEdicion = false; }
-        }
+                Text        = item.Cantidad.ToString("0.##"),
+                Location    = new Point(qtyX + btnSz + gapQ, ctrlY),
+                Size        = new Size(txtCantW, btnSz),
+                Font        = new Font("Segoe UI", 10F),
+                TextAlign   = HorizontalAlignment.Center,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor   = Color.White,
+                ForeColor   = Color.FromArgb(20, 20, 20)
+            };
 
-        private void ActualizarTotalFila(int rowIndex)
-        {
-            var row = dgvCarritoVenta.Rows[rowIndex];
-            var v = row.Cells["colCantidad"].Value;
-            decimal cantBase = (v != null && decimal.TryParse(v.ToString(), out decimal cv)) ? cv : 0m;
-            var item = (dynamic)row.Tag;
-            decimal cantUnidades = (decimal)item.CantidadUnidades;
-            if (cantUnidades <= 0) return;
-            decimal total = (cantBase / cantUnidades) * (decimal)item.PrecioUnitario;
-            row.Cells["colTotalDV"].Value = "S/ " + total.ToString("N2");
-            CalcularTotales();
+            var btnPlus = new Button
+            {
+                Text      = "+",
+                Location  = new Point(qtyX + btnSz + gapQ + txtCantW + gapQ, ctrlY),
+                Size      = new Size(btnSz, btnSz),
+                FlatStyle = FlatStyle.Flat,
+                Font      = new Font("Segoe UI", 12F, FontStyle.Bold),
+                BackColor = Color.FromArgb(67, 97, 238),
+                ForeColor = Color.White,
+                Cursor    = Cursors.Hand,
+                TabStop   = false
+            };
+            btnPlus.FlatAppearance.BorderSize = 0;
+
+            // ── Subtotal (right 20%) ──────────────────────────────────────────
+            int subX = nameW + qtyW;
+            var lblSubtotal = new Label
+            {
+                Text      = $"S/ {item.Total:N2}",
+                Location  = new Point(subX, ctrlY),
+                Size      = new Size(subW - 4, btnSz),
+                Font      = new Font("Segoe UI", 12F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(20, 20, 20),
+                BackColor = bgNormal,
+                TextAlign = ContentAlignment.MiddleRight,
+                AutoSize  = false
+            };
+
+            // ── Delete button (top-right ~5%) ─────────────────────────────────
+            const int delBtnSz = 22;
+            var btnDel = new Button
+            {
+                Text      = "×",
+                Location  = new Point(subX + subW + (delW - delBtnSz) / 2, 4),
+                Size      = new Size(delBtnSz, delBtnSz),
+                FlatStyle = FlatStyle.Flat,
+                Font      = new Font("Segoe UI", 10F, FontStyle.Bold),
+                BackColor = Color.FromArgb(255, 236, 234),
+                ForeColor = Color.FromArgb(192, 57, 43),
+                Cursor    = Cursors.Hand,
+                TabStop   = false
+            };
+            btnDel.FlatAppearance.BorderSize = 0;
+
+            // ── Events ───────────────────────────────────────────────────────
+            btnMinus.Click += (s, e) =>
+            {
+                decimal step = item.CantidadUnidades;
+                if (item.Cantidad > step)          item.Cantidad -= step;
+                else if (item.Cantidad > 0.01m)    item.Cantidad = Math.Max(0.01m, item.Cantidad - 0.1m);
+                BeginInvoke((Action)RenderCarrito);
+            };
+            btnPlus.Click += (s, e) =>
+            {
+                item.Cantidad += item.CantidadUnidades;
+                BeginInvoke((Action)RenderCarrito);
+            };
+            btnDel.Click += (s, e) =>
+            {
+                _cartItems.Remove(item);
+                BeginInvoke((Action)RenderCarrito);
+            };
+            txtCant.Leave += (s, e) =>
+            {
+                string raw = new string(txtCant.Text.Where(c => char.IsDigit(c) || c == '.' || c == ',').ToArray());
+                if (decimal.TryParse(raw, out decimal v) && v > 0)
+                { item.Cantidad = Math.Round(v, 3); BeginInvoke((Action)RenderCarrito); }
+                else
+                    txtCant.Text = item.Cantidad.ToString("0.##");
+            };
+            txtCant.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter) { e.Handled = true; e.SuppressKeyPress = true; row.Focus(); }
+            };
+
+            // ── Hover ────────────────────────────────────────────────────────
+            Label[] bgLabels = { lblNombre, lblPres, lblPrecioU, lblSubtotal };
+            EventHandler onEnter = (s, e) => { row.BackColor = bgHover; foreach (var l in bgLabels) l.BackColor = bgHover; };
+            EventHandler onLeave = (s, e) => { row.BackColor = bgNormal; foreach (var l in bgLabels) l.BackColor = bgNormal; };
+            foreach (Control c in new Control[] { row, lblNombre, lblPres, lblPrecioU, lblSubtotal })
+            { c.MouseEnter += onEnter; c.MouseLeave += onLeave; }
+
+            row.Controls.AddRange(new Control[]
+                { lblNombre, lblPres, lblPrecioU, btnMinus, txtCant, btnPlus, lblSubtotal, btnDel });
+            return row;
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -798,28 +949,36 @@ namespace SistemaPOS.Forms.Ventas
 
         private void CalcularTotales()
         {
-            decimal rawTotal = 0m;
-            foreach (DataGridViewRow row in dgvCarritoVenta.Rows)
-            {
-                if (row.Tag == null) continue;
-                if (TryParseMonto(row.Cells["colTotalDV"].Value?.ToString() ?? "0", out decimal f))
-                    rawTotal += f;
-            }
+            decimal rawTotal = _cartItems.Sum(i => i.Total);
             _rawCartTotal = rawTotal;
-
-            int tipo = cboIGV.SelectedIndex;
-            decimal totalBase, totalIGV, total;
-            if (tipo == 1)
-            { totalBase = Math.Round(rawTotal / (1m + _tasaIGV), 2); totalIGV = rawTotal - totalBase; total = rawTotal; }
-            else if (tipo == 2)
-            { totalBase = rawTotal; totalIGV = Math.Round(rawTotal * _tasaIGV, 2); total = rawTotal + totalIGV; }
-            else
-            { totalBase = rawTotal; totalIGV = 0m; total = rawTotal; }
 
             decimal desc = decimal.TryParse(txtDescuento.Text, out decimal d) ? d : 0m;
             if (desc < 0) desc = 0m;
-            if (desc > total) desc = total;
-            total -= desc;
+
+            int tipo = cboIGV.SelectedIndex;
+            decimal totalBase, totalIGV, total;
+
+            if (tipo == 1) // IGV incluido: el descuento se aplica al total y se recalcula la base
+            {
+                total = rawTotal - desc;
+                if (total < 0) { total = 0; desc = rawTotal; }
+                totalBase = Math.Round(total / (1m + _tasaIGV), 2);
+                totalIGV  = total - totalBase;
+            }
+            else if (tipo == 2) // IGV adicional: el descuento reduce la base imponible
+            {
+                totalBase = rawTotal - desc;
+                if (totalBase < 0) { totalBase = 0; desc = rawTotal; }
+                totalIGV = Math.Round(totalBase * _tasaIGV, 2);
+                total    = totalBase + totalIGV;
+            }
+            else // Sin IGV
+            {
+                total = rawTotal - desc;
+                if (total < 0) { total = 0; desc = rawTotal; }
+                totalBase = total;
+                totalIGV  = 0m;
+            }
 
             txtSubtotal.Text   = totalBase.ToString("N2");
             txtIGV.Text        = totalIGV.ToString("N2");
@@ -859,113 +1018,182 @@ namespace SistemaPOS.Forms.Ventas
 
         private void BtnCobrar_Click(object sender, EventArgs e)
         {
+            // Fase 2: método ya seleccionado → registrar la venta
+            if (_esperandoConfirmacion)
+            {
+                RegistrarVentaConfirmada();
+                return;
+            }
+
+            // Fase 1: seleccionar método de pago
+            AbrirSeleccionPago();
+        }
+
+        private void BtnPreviewVenta_Click(object sender, EventArgs e)
+        {
+            // Siempre abre el ticket con selección de pago (permite cambiar método)
+            AbrirSeleccionPago();
+        }
+
+        /// <summary>Abre FormCobrarConTicket para ver el ticket y seleccionar/cambiar el método de pago.</summary>
+        private void AbrirSeleccionPago()
+        {
             if (!ValidarVenta()) return;
             if (!TryParseMonto(txtTotalPagar.Text, out decimal total)) return;
             if (!TryParseMonto(txtSubtotal.Text,   out decimal baseImp)) return;
             if (!TryParseMonto(txtIGV.Text,        out decimal igv)) return;
-            decimal subTotal = _rawCartTotal;
 
-            using (var formPago = new FormPago(total))
+            var dt = new DataTable("DetalleVenta");
+            dt.Columns.Add("Numero",        typeof(string));
+            dt.Columns.Add("Producto",       typeof(string));
+            dt.Columns.Add("Presentacion",   typeof(string));
+            dt.Columns.Add("Cantidad",       typeof(decimal));
+            dt.Columns.Add("PrecioUnitario", typeof(decimal));
+            dt.Columns.Add("SubTotal",       typeof(decimal));
+            int numRow = 1;
+            foreach (var item in _cartItems)
             {
-                if (formPago.ShowDialog(this) != DialogResult.OK) return;
+                if (item.CantidadUnidades <= 0) continue;
+                dt.Rows.Add(numRow++.ToString(), item.Nombre, item.UnidadSimbolo,
+                            item.Cantidad, item.PrecioUnitario, item.Total);
+            }
 
-                if (formPago.MetodoPago == "CREDITO" && (_clienteID <= 1))
+            if (!decimal.TryParse(txtDescuento.Text, out decimal desc)) desc = 0;
+            var parametros = ReportHelper.GetCompanyParameters();
+            parametros["pTipoComprobante"] = cmbTipoComprobante.Text.Replace("_", " ");
+            parametros["pNumeroVenta"]     = "";
+            parametros["pFecha"]           = DateTime.Now.ToString("dd/MM/yyyy");
+            parametros["pHora"]            = DateTime.Now.ToString("HH:mm");
+            parametros["pEstado"]          = "";
+            parametros["pSubTotal"]        = baseImp.ToString("N2");
+            parametros["pDescuento"]       = desc.ToString("N2");
+            parametros["pIGV"]             = igv.ToString("N2");
+            parametros["pTotal"]           = total.ToString("N2");
+            parametros["pCliente"]         = _clienteNombre;
+            parametros["pDocCliente"]      = _clienteDoc;
+            parametros["pEncargado"]       = SesionActual.Usuario?.NombreCompleto ?? SesionActual.Usuario?.NombreUsuario ?? "";
+
+            using (var formCobrar = new FormCobrarConTicket(total, dt, parametros))
+            {
+                if (formCobrar.ShowDialog(this) != DialogResult.OK) return;
+
+                if (formCobrar.MetodoPago == "CREDITO" && (_clienteID <= 1))
                 {
                     MessageBox.Show("No se puede vender a crédito sin un cliente registrado.",
                         "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     cmbClientes.Focus(); return;
                 }
 
-                try
+                _pagoMetodo             = formCobrar.MetodoPago;
+                _pagoMontoEfectivo      = formCobrar.MontoEfectivo;
+                _pagoMontoYape          = formCobrar.MontoYape;
+                _pagoMontoTarjeta       = formCobrar.MontoTarjeta;
+                _pagoMontoTransferencia = formCobrar.MontoTransferencia;
+                _pagoRecibido           = formCobrar.Recibido;
+                _esperandoConfirmacion  = true;
+
+                btnCobrar.Text      = "✓  CONFIRMAR VENTA";
+                btnCobrar.BackColor = Color.FromArgb(67, 97, 238);
+            }
+        }
+
+        private void RegistrarVentaConfirmada()
+        {
+            if (!TryParseMonto(txtTotalPagar.Text, out decimal total)) return;
+            if (!TryParseMonto(txtSubtotal.Text,   out decimal baseImp)) return;
+            if (!TryParseMonto(txtIGV.Text,        out decimal igv)) return;
+            decimal subTotal = _rawCartTotal;
+            decimal descuento = decimal.TryParse(txtDescuento.Text, out decimal dv) ? Math.Max(dv, 0m) : 0m;
+
+            try
+            {
+                var configFact = EmpresaRepository.ObtenerConfiguracionFacturacion();
+                string tipoComp = cmbTipoComprobante.Text;
+                string serie;
+                int correlativo;
+                switch (tipoComp)
                 {
-                    var configFact = EmpresaRepository.ObtenerConfiguracionFacturacion();
-                    string tipoComp = cmbTipoComprobante.Text;
-                    string serie;
-                    int correlativo;
-                    switch (tipoComp)
-                    {
-                        case "BOLETA":
-                            serie = configFact.SerieBoleta;
-                            correlativo = configFact.CorrelativoBoleta + 1;
-                            configFact.CorrelativoBoleta = correlativo; break;
-                        case "FACTURA":
-                            serie = configFact.SerieFactura;
-                            correlativo = configFact.CorrelativoFactura + 1;
-                            configFact.CorrelativoFactura = correlativo; break;
-                        default:
-                            serie = configFact.SerieNotaVenta;
-                            correlativo = configFact.CorrelativoNotaVenta + 1;
-                            configFact.CorrelativoNotaVenta = correlativo; break;
-                    }
-
-                    var venta = new Venta
-                    {
-                        NumeroVenta        = VentaRepository.GenerarNumeroVenta(),
-                        Fecha              = DateTime.Now.Date,
-                        Hora               = DateTime.Now.TimeOfDay,
-                        ClienteID          = _clienteID,
-                        TipoComprobante    = tipoComp,
-                        Serie              = serie,
-                        Numero             = correlativo.ToString("D8"),
-                        SubTotal           = subTotal,
-                        IGV                = igv,
-                        TipoIGV            = cboIGV.SelectedIndex,
-                        BaseImponible      = baseImp,
-                        Total              = total,
-                        MetodoPago         = formPago.MetodoPago,
-                        MontoEfectivo      = formPago.MontoEfectivo,
-                        MontoYape          = formPago.MontoYape,
-                        MontoTarjeta       = formPago.MontoTarjeta,
-                        MontoTransferencia = formPago.MontoTransferencia,
-                        Estado             = formPago.MetodoPago == "CREDITO" ? "CREDITO" : "COMPLETADA",
-                        CajaID             = _cajaID,
-                        UsuarioID          = SesionActual.Usuario.UsuarioID
-                    };
-
-                    var detalles = new List<VentaDetalle>();
-                    foreach (DataGridViewRow row in dgvCarritoVenta.Rows)
-                    {
-                        if (row.IsNewRow) continue;
-                        var item = (dynamic)row.Tag;
-                        var cv = row.Cells["colCantidad"].Value;
-                        decimal cantBase = (cv != null && decimal.TryParse(cv.ToString(), out decimal p)) ? p : 0m;
-                        decimal cantUnidades = (decimal)item.CantidadUnidades;
-                        if (cantUnidades <= 0) continue;
-                        decimal cantPres = cantBase / cantUnidades;
-                        detalles.Add(new VentaDetalle
-                        {
-                            ProductoID             = item.ProductoID,
-                            ProductoPresentacionID = item.PresentacionID,
-                            Cantidad               = cantPres,
-                            PrecioUnitario         = item.PrecioUnitario,
-                            Subtotal               = cantPres * (decimal)item.PrecioUnitario,
-                            CantidadUnidadesBase   = cantBase
-                        });
-                    }
-
-                    if (VentaRepository.Crear(venta, detalles))
-                    {
-                        EmpresaRepository.GuardarConfiguracionFacturacion(configFact);
-                        _ultimaVentaID = VentaRepository.ObtenerVentaIDPorNumero(venta.NumeroVenta);
-
-                        decimal vuelto = formPago.MetodoPago == "EFECTIVO"
-                            ? formPago.Recibido - venta.Total : 0m;
-
-                        MostrarTicketVenta(_ultimaVentaID, formPago.Recibido, vuelto);
-                        LimpiarVenta();
-                    }
+                    case "BOLETA":
+                        serie = configFact.SerieBoleta;
+                        correlativo = configFact.CorrelativoBoleta + 1;
+                        configFact.CorrelativoBoleta = correlativo; break;
+                    case "FACTURA":
+                        serie = configFact.SerieFactura;
+                        correlativo = configFact.CorrelativoFactura + 1;
+                        configFact.CorrelativoFactura = correlativo; break;
+                    default:
+                        serie = configFact.SerieNotaVenta;
+                        correlativo = configFact.CorrelativoNotaVenta + 1;
+                        configFact.CorrelativoNotaVenta = correlativo; break;
                 }
-                catch (Exception ex)
+
+                var venta = new Venta
                 {
-                    MessageBox.Show($"Error al procesar venta: {ex.Message}",
-                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    NumeroVenta        = VentaRepository.GenerarNumeroVenta(),
+                    Fecha              = DateTime.Now.Date,
+                    Hora               = DateTime.Now.TimeOfDay,
+                    ClienteID          = _clienteID,
+                    TipoComprobante    = tipoComp,
+                    Serie              = serie,
+                    Numero             = correlativo.ToString("D8"),
+                    SubTotal           = subTotal,
+                    Descuento          = descuento,
+                    IGV                = igv,
+                    TipoIGV            = cboIGV.SelectedIndex,
+                    BaseImponible      = baseImp,
+                    Total              = total,
+                    MetodoPago         = _pagoMetodo,
+                    MontoEfectivo      = _pagoMontoEfectivo,
+                    MontoYape          = _pagoMontoYape,
+                    MontoTarjeta       = _pagoMontoTarjeta,
+                    MontoTransferencia = _pagoMontoTransferencia,
+                    Estado             = _pagoMetodo == "CREDITO" ? "CREDITO" : "COMPLETADA",
+                    CajaID             = _cajaID,
+                    UsuarioID          = SesionActual.Usuario.UsuarioID
+                };
+
+                var detalles = new List<VentaDetalle>();
+                foreach (var item in _cartItems)
+                {
+                    if (item.CantidadUnidades <= 0) continue;
+                    detalles.Add(new VentaDetalle
+                    {
+                        ProductoID             = item.ProductoID,
+                        ProductoPresentacionID = item.PresentacionID,
+                        Cantidad               = item.CantPres,
+                        PrecioUnitario         = item.PrecioUnitario,
+                        Subtotal               = item.Total,
+                        CantidadUnidadesBase   = item.Cantidad
+                    });
+                }
+
+                if (VentaRepository.Crear(venta, detalles))
+                {
+                    EmpresaRepository.GuardarConfiguracionFacturacion(configFact);
+                    _ultimaVentaID = VentaRepository.ObtenerVentaIDPorNumero(venta.NumeroVenta);
+                    SonidoHelper.ReproducirVenta();
+                    LimpiarVenta();
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al procesar venta: {ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ResetearBtnCobrar();
+            }
+        }
+
+        private void ResetearBtnCobrar()
+        {
+            _esperandoConfirmacion = false;
+            _pagoMetodo            = "";
+            btnCobrar.Text         = "✓  COBRAR";
+            btnCobrar.BackColor    = Color.FromArgb(39, 174, 96);
         }
 
         private bool ValidarVenta()
         {
-            if (dgvCarritoVenta.Rows.Count == 0)
+            if (_cartItems.Count == 0)
             { MessageBox.Show("Agrega productos al carrito", "Validación"); return false; }
             if (!TryParseMonto(txtTotalPagar.Text, out decimal total) || total <= 0)
             { MessageBox.Show("El total de la venta es inválido", "Validación"); return false; }
@@ -976,124 +1204,13 @@ namespace SistemaPOS.Forms.Ventas
         // VISTA PREVIA / IMPRIMIR
         // ══════════════════════════════════════════════════════════════
 
-        private void BtnPreviewVenta_Click(object sender, EventArgs e)
-        {
-            // Post-venta: mostrar ticket de la venta recién guardada
-            if (_ultimaVentaID > 0)
-            {
-                MostrarTicketVenta(_ultimaVentaID, 0m, 0m);
-                return;
-            }
-
-            // Pre-venta: construir DataTable desde el carrito actual
-            if (dgvCarritoVenta.Rows.Count == 0)
-            {
-                MessageBox.Show("Agrega productos al carrito para ver la vista previa.",
-                    "Vista previa", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            try
-            {
-                var dt = new DataTable("DetalleVenta");
-                dt.Columns.Add("Numero",         typeof(string));
-                dt.Columns.Add("Producto",        typeof(string));
-                dt.Columns.Add("Presentacion",    typeof(string));
-                dt.Columns.Add("Cantidad",        typeof(decimal));
-                dt.Columns.Add("PrecioUnitario",  typeof(decimal));
-                dt.Columns.Add("SubTotal",        typeof(decimal));
-
-                int num = 1;
-                foreach (DataGridViewRow row in dgvCarritoVenta.Rows)
-                {
-                    if (row.IsNewRow) continue;
-                    var item = (dynamic)row.Tag;
-                    var cv = row.Cells["colCantidad"].Value;
-                    decimal cantBase = (cv != null && decimal.TryParse(cv.ToString(), out decimal pb)) ? pb : 0m;
-                    decimal cantUnidades = (decimal)item.CantidadUnidades;
-                    if (cantUnidades <= 0) continue;
-                    decimal cantPres = cantBase / cantUnidades;
-                    decimal precio   = (decimal)item.PrecioUnitario;
-                    string nomPres   = (string)item.UnidadSimbolo;
-
-                    dt.Rows.Add(
-                        num++.ToString(),
-                        row.Cells["colProductoDV"].Value?.ToString() ?? "",
-                        nomPres,
-                         cantBase,
-                        precio,
-                        cantPres * precio);
-                }
-
-                if (!decimal.TryParse(txtSubtotal.Text,   out decimal baseImp)) baseImp = 0;
-                if (!decimal.TryParse(txtIGV.Text,        out decimal igvPrev)) igvPrev = 0;
-                if (!decimal.TryParse(txtDescuento.Text,  out decimal desc))    desc    = 0;
-                if (!decimal.TryParse(txtTotalPagar.Text, out decimal total))   total   = 0;
-
-                var parametros = ReportHelper.GetCompanyParameters();
-                parametros["pTipoComprobante"] = cmbTipoComprobante.Text.Replace("_", " ");
-                parametros["pNumeroVenta"]     = "";
-                parametros["pFecha"]           = DateTime.Now.ToString("dd/MM/yyyy");
-                parametros["pHora"]            = DateTime.Now.ToString("HH:mm");
-                parametros["pEstado"]          = "";
-                parametros["pMetodoPago"]      = "-";
-                parametros["pSubTotal"]        = baseImp.ToString("N2");
-                parametros["pDescuento"]       = desc.ToString("N2");
-                parametros["pIGV"]             = igvPrev.ToString("N2");
-                parametros["pTotal"]           = total.ToString("N2");
-                parametros["pCliente"]         = _clienteNombre;
-                parametros["pDocCliente"]      = _clienteDoc;
-                parametros["pEncargado"]       = SesionActual.Usuario?.NombreCompleto ?? SesionActual.Usuario?.NombreUsuario ?? "";
-
-                using (var preview = new FormPreviewTicket(dt, parametros))
-                    preview.ShowDialog(this);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error en vista previa: " + ex.Message, "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// Carga los datos del ticket desde la BD y abre FormPreviewTicket.
-        /// Si recibido > 0 agrega montoRecibido/vuelto al ticket.
-        /// </summary>
-        private void MostrarTicketVenta(int ventaID, decimal recibido, decimal vuelto)
-        {
-            try
-            {
-                var parametros = ReportHelper.GetCompanyParameters();
-                var dt = ReportDataSourceHelper.ObtenerDatosTicketVenta(ventaID, parametros);
-
-                if (recibido > 0)
-                    parametros["pMontoRecibido"] = recibido.ToString("N2");
-                if (vuelto > 0)
-                    parametros["pVuelto"] = vuelto.ToString("N2");
-
-                // Mensaje pie desde configuración
-                string pie1 = EmpresaRepository.ObtenerConfiguracion("TICKET_PIE_LINEA1", "¡Gracias por su compra!");
-                string pie2 = EmpresaRepository.ObtenerConfiguracion("TICKET_PIE_LINEA2", "");
-                if (!string.IsNullOrWhiteSpace(pie1)) parametros["pMensajePie1"] = pie1;
-                if (!string.IsNullOrWhiteSpace(pie2)) parametros["pMensajePie2"] = pie2;
-
-                using (var preview = new FormPreviewTicket(dt, parametros))
-                    preview.ShowDialog(this);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error al mostrar ticket: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
         // ══════════════════════════════════════════════════════════════
         // CANCELAR / HISTORIAL / LIMPIAR
         // ══════════════════════════════════════════════════════════════
 
         private void BtnCancelar_Click(object sender, EventArgs e)
         {
-            if (dgvCarritoVenta.Rows.Count > 0 &&
+            if (_cartItems.Count > 0 &&
                 MessageBox.Show("¿Cancelar venta actual?", "Confirmar",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 LimpiarVenta();
@@ -1106,7 +1223,9 @@ namespace SistemaPOS.Forms.Ventas
 
         private void LimpiarVenta()
         {
-            dgvCarritoVenta.Rows.Clear();
+            ResetearBtnCobrar();
+            _cartItems.Clear();
+            RenderCarrito();
             txtSubtotal.Text   = "0.00";
             txtIGV.Text        = "0.00";
             txtDescuento.Text  = "0.00";

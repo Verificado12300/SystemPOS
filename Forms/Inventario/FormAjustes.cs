@@ -39,6 +39,7 @@ namespace SistemaPOS.Forms.Inventario
 
             rbEntrada.Checked = true;
             rbInventarioFisico.Checked = true;
+            ActualizarEstiloTipo();
 
             numCantidadAjustar.Minimum = 0;
             numCantidadAjustar.Maximum = 99999;
@@ -49,8 +50,41 @@ namespace SistemaPOS.Forms.Inventario
             txtAjuste.ReadOnly = true;
             txtNuevoStock.ReadOnly = true;
 
+            // Configurar columnas del historial
+            dgvHistorialProducto.Columns.Clear();
+            dgvHistorialProducto.Columns.Add(new System.Windows.Forms.DataGridViewTextBoxColumn { Name = "colFecha",    HeaderText = "FECHA",          Width = 80,  ReadOnly = true });
+            dgvHistorialProducto.Columns.Add(new System.Windows.Forms.DataGridViewTextBoxColumn { Name = "colTipo",     HeaderText = "TIPO",           Width = 70,  ReadOnly = true });
+            dgvHistorialProducto.Columns.Add(new System.Windows.Forms.DataGridViewTextBoxColumn { Name = "colCantidad", HeaderText = "CANTIDAD",       Width = 80,  ReadOnly = true });
+            dgvHistorialProducto.Columns.Add(new System.Windows.Forms.DataGridViewTextBoxColumn { Name = "colAnterior", HeaderText = "STOCK ANT.",     Width = 90,  ReadOnly = true });
+            dgvHistorialProducto.Columns.Add(new System.Windows.Forms.DataGridViewTextBoxColumn { Name = "colNuevo",    HeaderText = "STOCK NUEVO",    Width = 90,  ReadOnly = true });
+            dgvHistorialProducto.Columns.Add(new System.Windows.Forms.DataGridViewTextBoxColumn { Name = "colMotivo",   HeaderText = "MOTIVO",         AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill, ReadOnly = true });
+            dgvHistorialProducto.Columns.Add(new System.Windows.Forms.DataGridViewTextBoxColumn { Name = "colUsuario",  HeaderText = "USUARIO",        Width = 90,  ReadOnly = true });
+            DgvStyleHelper.Aplicar(dgvHistorialProducto);
+
             CargarProductosEnCombo();
             LimpiarResumen();
+        }
+
+        private void ActualizarEstiloTipo()
+        {
+            if (rbEntrada.Checked)
+            {
+                rbEntrada.BackColor = System.Drawing.Color.FromArgb(39, 174, 96);
+                rbEntrada.ForeColor = System.Drawing.Color.White;
+                rbEntrada.FlatAppearance.BorderSize = 0;
+                rbSalida.BackColor  = System.Drawing.Color.FromArgb(245, 247, 250);
+                rbSalida.ForeColor  = System.Drawing.Color.FromArgb(192, 57, 43);
+                rbSalida.FlatAppearance.BorderSize = 1;
+            }
+            else
+            {
+                rbSalida.BackColor  = System.Drawing.Color.FromArgb(192, 57, 43);
+                rbSalida.ForeColor  = System.Drawing.Color.White;
+                rbSalida.FlatAppearance.BorderSize = 0;
+                rbEntrada.BackColor = System.Drawing.Color.FromArgb(245, 247, 250);
+                rbEntrada.ForeColor = System.Drawing.Color.FromArgb(39, 174, 96);
+                rbEntrada.FlatAppearance.BorderSize = 1;
+            }
         }
 
         private void CargarProductosEnCombo()
@@ -91,13 +125,18 @@ namespace SistemaPOS.Forms.Inventario
             decimal stockActual = AjusteRepository.ObtenerStockActual(_productoSeleccionado.ProductoID);
             _productoSeleccionado.StockTotal = stockActual;
 
+            lblNombreProducto.Text  = _productoSeleccionado.Nombre;
+            lblInfoProducto.Text    = $"Código: {_productoSeleccionado.Codigo}   |   Stock en sistema: {stockActual:N2}";
+
             txtStockActualResumen.Text = stockActual.ToString("N2");
             ActualizarResumen();
+            CargarHistorialProducto(_productoSeleccionado.ProductoID);
             numCantidadAjustar.Focus();
         }
 
         private void TipoAjuste_CheckedChanged(object sender, EventArgs e)
         {
+            ActualizarEstiloTipo();
             ActualizarResumen();
         }
 
@@ -145,11 +184,49 @@ namespace SistemaPOS.Forms.Inventario
             txtNuevoStock.ForeColor = nuevoStock < 0 ? Color.Red : Color.Black;
         }
 
+        private void CargarHistorialProducto(int productoID)
+        {
+            try
+            {
+                dgvHistorialProducto.Rows.Clear();
+                var lista = AjusteRepository.ObtenerAjustesPorProducto(productoID);
+                // Mostrar los más recientes primero, máximo 20
+                for (int i = lista.Count - 1; i >= 0 && dgvHistorialProducto.Rows.Count < 20; i--)
+                {
+                    var a = lista[i];
+                    var row = dgvHistorialProducto.Rows[dgvHistorialProducto.Rows.Add()];
+                    row.Cells["colFecha"].Value    = a.Fecha.ToString("dd/MM/yy");
+                    row.Cells["colTipo"].Value     = a.TipoAjuste;
+                    row.Cells["colCantidad"].Value = a.Cantidad.ToString("N2");
+                    row.Cells["colAnterior"].Value = a.StockAnterior.ToString("N2");
+                    row.Cells["colNuevo"].Value    = a.StockNuevo.ToString("N2");
+                    row.Cells["colMotivo"].Value   = a.Motivo;
+                    row.Cells["colUsuario"].Value  = a.NombreUsuario ?? a.UsuarioID.ToString();
+
+                    // Color de fila por tipo
+                    if (a.TipoAjuste == "ENTRADA")
+                        row.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(39, 174, 96);
+                    else if (a.TipoAjuste == "SALIDA")
+                        row.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(192, 57, 43);
+                }
+                if (dgvHistorialProducto.Rows.Count == 0)
+                {
+                    var row = dgvHistorialProducto.Rows[dgvHistorialProducto.Rows.Add()];
+                    row.Cells["colMotivo"].Value = "Sin ajustes previos para este producto";
+                    row.DefaultCellStyle.ForeColor = System.Drawing.Color.FromArgb(160, 170, 180);
+                }
+            }
+            catch { /* silencioso: historial es informativo */ }
+        }
+
         private void LimpiarResumen()
         {
+            lblNombreProducto.Text  = "— Seleccione un producto —";
+            lblInfoProducto.Text    = "";
             txtStockActualResumen.Text = "";
             txtAjuste.Text = "";
             txtNuevoStock.Text = "";
+            dgvHistorialProducto.Rows.Clear();
         }
 
         private string ObtenerMotivoSeleccionado()

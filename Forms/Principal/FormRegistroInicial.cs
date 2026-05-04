@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using SistemaPOS.Data;
 using SistemaPOS.Models;
@@ -14,12 +16,48 @@ namespace SistemaPOS.Forms.Principal
             ConfigurarEventos();
         }
 
+        private static readonly Color ColorAccent  = Color.FromArgb(16, 185, 129);
+        private static readonly Color ColorLinea   = Color.FromArgb(226, 232, 240);
+
         private void ConfigurarEventos()
         {
             btnRegistrarse.Click += BtnRegistrarse_Click;
             btnMostrarClave.Click += BtnMostrarClave_Click;
             btnMostrarClave2.Click += BtnMostrarClave2_Click;
-            txtNombreCompleto.KeyPress += TxtSoloTexto_KeyPress;
+
+            pnlLeft.Paint += (s, e) =>
+            {
+                using (var brush = new LinearGradientBrush(
+                    pnlLeft.ClientRectangle,
+                    Color.FromArgb(5, 46, 37), Color.FromArgb(2, 20, 16),
+                    LinearGradientMode.Vertical))
+                    e.Graphics.FillRectangle(brush, pnlLeft.ClientRectangle);
+            };
+
+            pnlDeco1.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var b = new SolidBrush(Color.FromArgb(30, 16, 185, 129)))
+                    e.Graphics.FillEllipse(b, 0, 0, pnlDeco1.Width, pnlDeco1.Height);
+            };
+
+            pnlDeco2.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var b = new SolidBrush(Color.FromArgb(20, 16, 185, 129)))
+                    e.Graphics.FillEllipse(b, 0, 0, pnlDeco2.Width, pnlDeco2.Height);
+            };
+
+            ConfigurarFocusUnderline(txtNombreUsuario,      pnlLineNombreU);
+            ConfigurarFocusUnderline(txtCorreo,             pnlLineCorreo);
+            ConfigurarFocusUnderline(txtContraseña,         pnlLineContra);
+            ConfigurarFocusUnderline(txtConfirmarContraseña, pnlLineConfirmar);
+        }
+
+        private void ConfigurarFocusUnderline(TextBox txt, Panel line)
+        {
+            txt.Enter += (s, e) => line.BackColor = ColorAccent;
+            txt.Leave += (s, e) => line.BackColor = ColorLinea;
         }
 
         private void BtnRegistrarse_Click(object sender, EventArgs e)
@@ -31,8 +69,9 @@ namespace SistemaPOS.Forms.Principal
 
                 var usuario = new Usuario
                 {
-                    NombreCompleto = txtNombreCompleto.Text.Trim(),
+                    NombreCompleto = txtNombreUsuario.Text.Trim(),
                     NombreUsuario = txtNombreUsuario.Text.Trim(),
+                    Email = string.IsNullOrWhiteSpace(txtCorreo.Text) ? null : txtCorreo.Text.Trim(),
                     Contraseña = PasswordHelper.HashPassword(txtContraseña.Text.Trim()),
                     DNI = "00000000",
                     RolID = 1,
@@ -67,20 +106,6 @@ namespace SistemaPOS.Forms.Principal
 
         private bool ValidarCampos()
         {
-            if (string.IsNullOrWhiteSpace(txtNombreCompleto.Text))
-            {
-                MessageBox.Show("Ingresa tu nombre completo", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtNombreCompleto.Focus();
-                return false;
-            }
-            if (txtNombreCompleto.Text.Trim().Length < 3)
-            {
-                MessageBox.Show("El nombre debe tener al menos 3 caracteres", "Validación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtNombreCompleto.Focus();
-                return false;
-            }
             if (string.IsNullOrWhiteSpace(txtNombreUsuario.Text))
             {
                 MessageBox.Show("Ingresa un nombre de usuario", "Validación",
@@ -102,6 +127,14 @@ namespace SistemaPOS.Forms.Principal
                 txtNombreUsuario.Focus();
                 return false;
             }
+            if (!string.IsNullOrWhiteSpace(txtCorreo.Text) && !txtCorreo.Text.Contains("@"))
+            {
+                MessageBox.Show("Ingresa un correo electrónico válido", "Validación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtCorreo.Focus();
+                return false;
+            }
+
             if (string.IsNullOrWhiteSpace(txtContraseña.Text))
             {
                 MessageBox.Show("Ingresa una contraseña", "Validación",

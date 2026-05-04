@@ -14,26 +14,12 @@ namespace SistemaPOS.Data
         /// </summary>
         public static void Initialize()
         {
-            string appPath = AppDomain.CurrentDomain.BaseDirectory;
             string databaseFileName = "sistema_pos.db";
-            string appDatabasePath = Path.Combine(appPath, databaseFileName);
-
-            if (File.Exists(appDatabasePath))
-            {
-                _databasePath = appDatabasePath;
-            }
-            else if (CanWriteDirectory(appPath))
-            {
-                _databasePath = appDatabasePath;
-            }
-            else
-            {
-                string appDataPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "SistemaPOS");
-                Directory.CreateDirectory(appDataPath);
-                _databasePath = Path.Combine(appDataPath, databaseFileName);
-            }
+            string appDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SystemPOS");
+            Directory.CreateDirectory(appDataPath);
+            _databasePath = Path.Combine(appDataPath, databaseFileName);
 
             _connectionString = $"Data Source={_databasePath};Version=3;";
 
@@ -518,10 +504,32 @@ namespace SistemaPOS.Data
                             {
                                 cmd.CommandText = "ALTER TABLE Ventas ADD COLUMN BaseImponible REAL NOT NULL DEFAULT 0";
                                 cmd.ExecuteNonQuery();
+                                // Backfill: ventas sin IGV → BaseImponible = Total
+                                cmd.CommandText = "UPDATE Ventas SET BaseImponible = Total WHERE TipoIGV = 0 AND BaseImponible = 0";
+                                cmd.ExecuteNonQuery();
                             }
                             catch (Exception ex)
                             {
                                 throw new Exception("Migración Ventas.BaseImponible falló: " + ex.Message, ex);
+                            }
+                        }
+
+                        cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Ventas') WHERE name='Descuento'";
+                        if ((long)cmd.ExecuteScalar() == 0)
+                        {
+                            try
+                            {
+                                cmd.CommandText = "ALTER TABLE Ventas ADD COLUMN Descuento REAL NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                                // Backfill: reconstruir descuento histórico = SubTotal - BaseImponible (válido para TipoIGV 0 y 2)
+                                // Para TipoIGV=1 la fórmula SubTotal-BaseImponible sobreestima; dejamos 0 para no introducir datos incorrectos
+                                cmd.CommandText = @"UPDATE Ventas SET Descuento = SubTotal - BaseImponible
+                                                    WHERE TipoIGV != 1 AND SubTotal > BaseImponible AND Descuento = 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception("Migración Ventas.Descuento falló: " + ex.Message, ex);
                             }
                         }
                     }
@@ -684,17 +692,20 @@ namespace SistemaPOS.Data
                         if (!gastosTableSql.Contains("CREDITO"))
                         {
                             // Detectar columnas opcionales que quizás ya existen
-                            bool hasTipoIGV, hasBaseImponible;
+                            bool hasTipoIGV, hasBaseImponible, hasComprobante;
                             using (var cmd = connection.CreateCommand())
                             {
                                 cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='TipoIGV'";
                                 hasTipoIGV = (long)cmd.ExecuteScalar() > 0;
                                 cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='BaseImponible'";
                                 hasBaseImponible = (long)cmd.ExecuteScalar() > 0;
+                                cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Gastos') WHERE name='Comprobante'";
+                                hasComprobante = (long)cmd.ExecuteScalar() > 0;
                             }
 
                             string selTipoIGV      = hasTipoIGV      ? "TipoIGV"      : "0";
                             string selBaseImponible = hasBaseImponible ? "BaseImponible" : "Monto";
+                            string selComprobante   = hasComprobante   ? "Comprobante"   : "NULL";
 
                             using (var cmd = connection.CreateCommand())
                             {
@@ -736,7 +747,7 @@ namespace SistemaPOS.Data
                                          ProveedorID, CajaID, UsuarioID)
                                     SELECT
                                         GastoID, Fecha, Hora, Concepto, Monto, Categoria, MetodoPago,
-                                        Comprobante, Observaciones, {selTipoIGV}, {selBaseImponible},
+                                        {selComprobante}, Observaciones, {selTipoIGV}, {selBaseImponible},
                                         NULL, CajaID, UsuarioID
                                     FROM Gastos";
                                 cmd.ExecuteNonQuery();
@@ -1105,6 +1116,76 @@ namespace SistemaPOS.Data
                         }
                     }
                     catch (Exception ex) { throw new Exception("Migración Pagos.AsientoId falló: " + ex.Message, ex); }
+
+                    // Tablas: CajaConversiones y CajaMoneteo — módulo de caja mejorado
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                CREATE TABLE IF NOT EXISTS CajaConversiones (
+                                    ConversionID  INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    CajaID        INTEGER NOT NULL,
+                                    FechaHora     TEXT    NOT NULL,
+                                    MetodoOrigen  TEXT    NOT NULL,
+                                    MetodoDestino TEXT    NOT NULL,
+                                    Monto         REAL    NOT NULL,
+                                    Observacion   TEXT,
+                                    FOREIGN KEY (CajaID) REFERENCES Cajas(CajaID)
+                                )";
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                CREATE TABLE IF NOT EXISTS CajaMoneteo (
+                                    MoneteoID    INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    CajaID       INTEGER NOT NULL,
+                                    Denominacion REAL    NOT NULL,
+                                    Cantidad     INTEGER NOT NULL DEFAULT 0,
+                                    Subtotal     REAL    NOT NULL DEFAULT 0,
+                                    FOREIGN KEY (CajaID) REFERENCES Cajas(CajaID)
+                                )";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception ex) { throw new Exception("Migración CajaConversiones/CajaMoneteo falló: " + ex.Message, ex); }
+
+                    // Migración: Compras.Flete — costo de flete/transporte proporcional al inventario.
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Compras') WHERE name='Flete'";
+                            if ((long)cmd.ExecuteScalar() == 0)
+                            {
+                                cmd.CommandText = "ALTER TABLE Compras ADD COLUMN Flete REAL NOT NULL DEFAULT 0";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    catch (Exception ex) { throw new Exception("Migración Compras.Flete falló: " + ex.Message, ex); }
+
+                    // Tabla: TokensRecuperacion — recuperación de contraseña por email
+                    try
+                    {
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+                                CREATE TABLE IF NOT EXISTS TokensRecuperacion (
+                                    TokenID         INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    UsuarioID       INTEGER NOT NULL,
+                                    Token           TEXT    NOT NULL UNIQUE,
+                                    FechaCreacion   TEXT    NOT NULL,
+                                    FechaExpiracion TEXT    NOT NULL,
+                                    Usado           INTEGER NOT NULL DEFAULT 0,
+                                    FOREIGN KEY (UsuarioID) REFERENCES Usuarios(UsuarioID)
+                                )";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception ex) { throw new Exception("Migración TokensRecuperacion falló: " + ex.Message, ex); }
                 }
             }
             catch (Exception ex)
@@ -1264,19 +1345,5 @@ namespace SistemaPOS.Data
             return _databasePath;
         }
 
-        private static bool CanWriteDirectory(string directoryPath)
-        {
-            try
-            {
-                string testFilePath = Path.Combine(directoryPath, $".write_test_{Guid.NewGuid():N}.tmp");
-                File.WriteAllText(testFilePath, "ok");
-                File.Delete(testFilePath);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }
