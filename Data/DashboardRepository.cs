@@ -162,133 +162,121 @@ namespace SistemaPOS.Data
             switch (periodo)
             {
                 case "semana":
-                    // 7 dias de la semana (Lun a Dom)
+                {
                     int diasDesdeInicio = (int)DateTime.Now.DayOfWeek;
                     if (diasDesdeInicio == 0) diasDesdeInicio = 7;
-                    DateTime lunesSemana = DateTime.Now.AddDays(-(diasDesdeInicio - 1)).Date;
+                    DateTime lunes = DateTime.Now.AddDays(-(diasDesdeInicio - 1)).Date;
+                    DateTime domingo = lunes.AddDays(6);
 
-                    string[] nombresDia = { "Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab" };
+                    // Dom=0, Lun=1 ... Sáb=6 en DayOfWeek
+                    string[] etiqDias = { "Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb" };
                     var ventasPorFecha = new Dictionary<string, decimal>();
 
-                    DateTime domingoSemana = lunesSemana.AddDays(6);
-                    using (var connection = DatabaseConnection.GetConnection())
+                    using (var conn = DatabaseConnection.GetConnection())
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT Fecha, COALESCE(SUM(Total),0) FROM Ventas " +
+                        "WHERE Fecha >= @I AND Fecha <= @F AND Estado != 'ANULADA' GROUP BY Fecha", conn))
                     {
-                        string query = @"SELECT Fecha, COALESCE(SUM(Total), 0) as Total
-                                         FROM Ventas
-                                         WHERE Fecha >= @Inicio AND Fecha <= @Fin AND Estado != 'ANULADA'
-                                         GROUP BY Fecha";
-                        using (var cmd = new SQLiteCommand(query, connection))
-                        {
-                            cmd.Parameters.AddWithValue("@Inicio", lunesSemana.ToString("yyyy-MM-dd"));
-                            cmd.Parameters.AddWithValue("@Fin", domingoSemana.ToString("yyyy-MM-dd"));
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    string fecha = reader[0]?.ToString() ?? "";
-                                    decimal total = reader[1] != DBNull.Value ? Convert.ToDecimal(reader[1]) : 0;
-                                    ventasPorFecha[fecha] = total;
-                                }
-                            }
-                        }
+                        cmd.Parameters.AddWithValue("@I", lunes.ToString("yyyy-MM-dd"));
+                        cmd.Parameters.AddWithValue("@F", domingo.ToString("yyyy-MM-dd"));
+                        using (var r = cmd.ExecuteReader())
+                            while (r.Read())
+                                ventasPorFecha[r[0]?.ToString() ?? ""] =
+                                    r[1] != DBNull.Value ? Convert.ToDecimal(r[1]) : 0;
                     }
 
                     var resultado = new List<(string, decimal)>();
                     for (int i = 0; i < 7; i++)
                     {
-                        DateTime dia = lunesSemana.AddDays(i);
-                        string fechaKey = dia.ToString("yyyy-MM-dd");
-                        string etiqueta = nombresDia[(int)dia.DayOfWeek] + " " + dia.ToString("dd");
-                        decimal valor = ventasPorFecha.ContainsKey(fechaKey) ? ventasPorFecha[fechaKey] : 0;
+                        DateTime dia = lunes.AddDays(i);
+                        string etiqueta = etiqDias[(int)dia.DayOfWeek];
+                        decimal valor = ventasPorFecha.TryGetValue(dia.ToString("yyyy-MM-dd"), out var v) ? v : 0;
                         resultado.Add((etiqueta, valor));
                     }
                     return resultado;
+                }
 
                 case "mes":
-                    DateTime primerDiaMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                    int diasEnMes = DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month);
-                    int totalSemanas = (int)Math.Ceiling(diasEnMes / 7.0);
+                {
+                    DateTime primer = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                    int diasMes = DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month);
+                    DateTime ultimo = new DateTime(DateTime.Now.Year, DateTime.Now.Month, diasMes);
 
-                    var ventasPorSemana = new Dictionary<int, decimal>();
+                    // Semana 1 = días 1-7 | Semana 2 = 8-14 | Semana 3 = 15-21 | Semana 4 = 22-31
+                    var ventasPorSem = new Dictionary<int, decimal>();
 
-                    DateTime ultimoDiaMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, diasEnMes);
-                    using (var connection = DatabaseConnection.GetConnection())
+                    using (var conn = DatabaseConnection.GetConnection())
+                    using (var cmd = new SQLiteCommand(@"
+                        SELECT CASE
+                            WHEN CAST(SUBSTR(Fecha,9,2) AS INTEGER) BETWEEN 1  AND 7  THEN 0
+                            WHEN CAST(SUBSTR(Fecha,9,2) AS INTEGER) BETWEEN 8  AND 14 THEN 1
+                            WHEN CAST(SUBSTR(Fecha,9,2) AS INTEGER) BETWEEN 15 AND 21 THEN 2
+                            ELSE 3
+                        END as NumSem,
+                        COALESCE(SUM(Total),0) as Total
+                        FROM Ventas
+                        WHERE Fecha >= @I AND Fecha <= @F AND Estado != 'ANULADA'
+                        GROUP BY NumSem ORDER BY NumSem", conn))
                     {
-                        string query = @"SELECT CAST((julianday(Fecha) - julianday(@Inicio)) / 7 AS INTEGER) as NumSemana,
-                                                COALESCE(SUM(Total), 0) as Total
-                                         FROM Ventas
-                                         WHERE Fecha >= @Inicio AND Fecha <= @Fin AND Estado != 'ANULADA'
-                                         GROUP BY NumSemana";
-                        using (var cmd = new SQLiteCommand(query, connection))
-                        {
-                            cmd.Parameters.AddWithValue("@Inicio", primerDiaMes.ToString("yyyy-MM-dd"));
-                            cmd.Parameters.AddWithValue("@Fin", ultimoDiaMes.ToString("yyyy-MM-dd"));
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    int numSem = Convert.ToInt32(reader[0]);
-                                    decimal total = reader[1] != DBNull.Value ? Convert.ToDecimal(reader[1]) : 0;
-                                    ventasPorSemana[numSem] = total;
-                                }
-                            }
-                        }
+                        cmd.Parameters.AddWithValue("@I", primer.ToString("yyyy-MM-dd"));
+                        cmd.Parameters.AddWithValue("@F", ultimo.ToString("yyyy-MM-dd"));
+                        using (var r = cmd.ExecuteReader())
+                            while (r.Read())
+                                ventasPorSem[Convert.ToInt32(r[0])] =
+                                    r[1] != DBNull.Value ? Convert.ToDecimal(r[1]) : 0;
                     }
 
                     var resultadoMes = new List<(string, decimal)>();
-                    for (int i = 0; i < totalSemanas; i++)
+                    string[] etiqSem = { "Sem 1", "Sem 2", "Sem 3", "Sem 4" };
+                    for (int i = 0; i < 4; i++)
                     {
-                        // Calcular rango de fechas de la semana
-                        int diaInicio = i * 7 + 1;
-                        int diaFin = Math.Min((i + 1) * 7, diasEnMes);
-                        string etiqueta = $"{diaInicio:D2}-{diaFin:D2}";
-                        decimal valor = ventasPorSemana.ContainsKey(i) ? ventasPorSemana[i] : 0;
-                        resultadoMes.Add((etiqueta, valor));
+                        decimal valor = ventasPorSem.TryGetValue(i, out var v) ? v : 0;
+                        resultadoMes.Add((etiqSem[i], valor));
                     }
                     return resultadoMes;
+                }
 
-                default: // "dia"
-                    string[] bloques = { "00-06", "06-10", "10-14", "14-18", "18-22", "22-24" };
-                    var ventasPorBloque = new Dictionary<string, decimal>();
+                default: // "dia" — desde la primera venta, mínimo 5 horas, crece hasta la última
+                {
+                    var ventasPorHora = new SortedDictionary<int, decimal>();
 
-                    using (var connection = DatabaseConnection.GetConnection())
+                    using (var conn = DatabaseConnection.GetConnection())
+                    using (var cmd = new SQLiteCommand(@"
+                        SELECT CAST(SUBSTR(Hora,1,2) AS INTEGER) as HoraNum,
+                               COALESCE(SUM(Total),0) as Total
+                        FROM Ventas
+                        WHERE Fecha = @Hoy AND Estado != 'ANULADA'
+                        GROUP BY HoraNum ORDER BY HoraNum", conn))
                     {
-                        string hoy = DateTime.Now.ToString("yyyy-MM-dd");
-                        string query = @"SELECT
-                                            CASE
-                                                WHEN CAST(SUBSTR(Hora, 1, 2) AS INTEGER) < 6 THEN '00-06'
-                                                WHEN CAST(SUBSTR(Hora, 1, 2) AS INTEGER) < 10 THEN '06-10'
-                                                WHEN CAST(SUBSTR(Hora, 1, 2) AS INTEGER) < 14 THEN '10-14'
-                                                WHEN CAST(SUBSTR(Hora, 1, 2) AS INTEGER) < 18 THEN '14-18'
-                                                WHEN CAST(SUBSTR(Hora, 1, 2) AS INTEGER) < 22 THEN '18-22'
-                                                ELSE '22-24'
-                                            END as Bloque,
-                                            COALESCE(SUM(Total), 0) as Total
-                                         FROM Ventas
-                                         WHERE Fecha = @Inicio AND Estado != 'ANULADA'
-                                         GROUP BY Bloque";
-                        using (var cmd = new SQLiteCommand(query, connection))
-                        {
-                            cmd.Parameters.AddWithValue("@Inicio", hoy);
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    string bloque = reader[0]?.ToString() ?? "";
-                                    decimal total = reader[1] != DBNull.Value ? Convert.ToDecimal(reader[1]) : 0;
-                                    ventasPorBloque[bloque] = total;
-                                }
-                            }
-                        }
+                        cmd.Parameters.AddWithValue("@Hoy", DateTime.Now.ToString("yyyy-MM-dd"));
+                        using (var r = cmd.ExecuteReader())
+                            while (r.Read())
+                                ventasPorHora[Convert.ToInt32(r[0])] =
+                                    r[1] != DBNull.Value ? Convert.ToDecimal(r[1]) : 0;
                     }
 
-                    var resultadoDia = new List<(string, decimal)>();
-                    foreach (var bloque in bloques)
+                    // Sin ventas → estado vacío con horas de referencia
+                    if (ventasPorHora.Count == 0)
+                        return new List<(string, decimal)>();
+
+                    // Determinar rango: desde primera venta, al menos 5 horas, hasta la última venta
+                    int horaMin = -1, horaUltima = -1;
+                    foreach (var k in ventasPorHora.Keys)
                     {
-                        decimal valor = ventasPorBloque.ContainsKey(bloque) ? ventasPorBloque[bloque] : 0;
-                        resultadoDia.Add((bloque, valor));
+                        if (horaMin < 0) horaMin = k;
+                        horaUltima = k;
+                    }
+                    int horaMax = Math.Min(Math.Max(horaUltima, horaMin + 4), 23);
+
+                    // Emitir todas las horas del rango (0 en horas sin ventas = sin marcador)
+                    var resultadoDia = new List<(string, decimal)>();
+                    for (int h = horaMin; h <= horaMax; h++)
+                    {
+                        decimal valor = ventasPorHora.TryGetValue(h, out var v) ? v : 0;
+                        resultadoDia.Add(($"{h}h", valor));
                     }
                     return resultadoDia;
+                }
             }
         }
 

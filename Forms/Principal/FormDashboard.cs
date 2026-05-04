@@ -258,7 +258,7 @@ namespace SistemaPOS.Forms.Principal
 
             area.BorderColor = Color.Transparent;
             area.BorderWidth = 0;
-            area.InnerPlotPosition = new ElementPosition(8, 5, 90, 85);
+            area.InnerPlotPosition = new ElementPosition(4, 4, 94, 88);
 
             chartVentas.ChartAreas.Add(area);
 
@@ -440,13 +440,13 @@ namespace SistemaPOS.Forms.Principal
             switch (periodoActual)
             {
                 case 1:
-                    etiquetas = new[] { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
+                    etiquetas = new[] { "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom" };
                     break;
                 case 2:
                     etiquetas = new[] { "Sem 1", "Sem 2", "Sem 3", "Sem 4" };
                     break;
                 default:
-                    etiquetas = new[] { "00-06", "06-10", "10-14", "14-18", "18-22", "22-24" };
+                    etiquetas = new[] { "8h", "10h", "12h", "14h", "16h", "18h" };
                     break;
             }
 
@@ -466,18 +466,16 @@ namespace SistemaPOS.Forms.Principal
 
             var area = chartVentas.ChartAreas["Main"];
 
+            // Día sin ventas → estado vacío con horas de referencia
             if (datos.Count == 0)
             {
                 MostrarGraficoVacio();
                 return;
             }
 
-            // Verificar si todos los valores son 0
             bool todosEnCero = true;
             foreach (var (_, total) in datos)
-            {
                 if (total > 0) { todosEnCero = false; break; }
-            }
 
             if (todosEnCero)
             {
@@ -486,24 +484,20 @@ namespace SistemaPOS.Forms.Principal
             }
             else
             {
-                area.AxisY.Maximum = double.NaN;
+                area.AxisY.Maximum  = double.NaN;
                 area.AxisY.Interval = double.NaN;
             }
 
-            // Configurar eje X
             area.AxisX.Interval = 1;
             area.AxisX.LabelStyle.Angle = 0;
+            // Modo día: eje X sin márgenes extra para aprovechar el ancho completo
+            area.AxisX.IsMarginVisible = (periodo != "dia" || datos.Count > 1);
 
             foreach (var (etiqueta, total) in datos)
             {
                 var point = series.Points.Add((double)total);
                 point.AxisLabel = etiqueta;
-
-                // Solo mostrar marcador en puntos con valor > 0
-                if (total == 0)
-                    point.MarkerStyle = MarkerStyle.None;
-                else
-                    point.MarkerStyle = MarkerStyle.Circle;
+                point.MarkerStyle = total > 0 ? MarkerStyle.Circle : MarkerStyle.None;
             }
         }
 
